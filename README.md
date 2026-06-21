@@ -16,8 +16,9 @@ conflicting, and not-dispatched outcomes as separate facts.
 
 This repository is a public alpha. Core evidence recording is usable for local
 evaluation and fixture-backed integration work, but service deployments,
-external adapters, cloud observers, containers, and published release artifacts
-are preview surfaces until they are externally validated.
+external adapters, cloud observers, containers, package-index publication, and
+attested release artifacts are preview or external-validation surfaces until
+they are externally validated.
 
 | Surface | Maturity | Evidence |
 | --- | --- | --- |
@@ -26,7 +27,7 @@ are preview surfaces until they are externally validated.
 | Case export, graph export, grounded summary, static console | Alpha-supported | Projection and console tests |
 | Lineage Contracts, sequence detections, Lineage Lab | Local-proof | Contract, detection, and replay tests |
 | MCP, policy, OpenTelemetry, service, Postgres, cloud/Kubernetes fixtures | Preview | Optional extras and local fixture tests |
-| Signed artifacts, hosted provenance, external audits, production history | Planned or external-validation-required | See `docs/DECISIONS_REQUIRED.md` |
+| Package-index publication, attested artifacts, external audits, production history | Planned or external-validation-required | See `docs/DECISIONS_REQUIRED.md` |
 
 Full claim mapping lives in
 [docs/QUALITY_SCORECARD.md](docs/QUALITY_SCORECARD.md).
@@ -275,6 +276,8 @@ reference.
 - [Operations](docs/OPERATIONS.md): service mode, health, storage, and deployment
   notes.
 - [Release checklist](docs/RELEASE_CHECKLIST.md): public release gates.
+- [Publishing](docs/PUBLISHING.md): GitHub release workflow, artifact
+  attestations, and Trusted Publishing setup.
 - [Decisions required](docs/DECISIONS_REQUIRED.md): owner and external gates.
 
 ## Packages and Extras

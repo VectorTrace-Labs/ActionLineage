@@ -87,18 +87,23 @@ External validation:
 
 ## Phase 5: Release Packaging And Public Proof
 
-Status: Codex-executable alpha packaging proof implemented; external gates remain.
+Status: Codex-executable alpha packaging proof and release-publishing workflow implemented; external package-index gates remain.
 
 Codex-executable work:
 
 - Keep Docker build and smoke tests in CI.
 - Keep deployment docs preview-labeled.
 - Generate local wheel, sdist, SBOM, and unsigned provenance.
+- Build release artifacts in GitHub Actions.
+- Generate GitHub artifact attestations for release artifacts.
+- Prepare manual TestPyPI/PyPI Trusted Publishing jobs without package-index
+  tokens.
 
 External validation:
 
-- Publish PyPI/GHCR artifacts.
-- Add signed artifacts or hosted provenance attestations.
+- Configure TestPyPI and PyPI Trusted Publisher records for `release.yml`.
+- Run TestPyPI and PyPI publish jobs.
+- Link successful attestation verification from release notes.
 - Confirm branch protection, CodeQL, Dependabot alerts, secret scanning, push
   protection, and private vulnerability reporting in GitHub.
 

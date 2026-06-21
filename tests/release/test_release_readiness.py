@@ -49,6 +49,7 @@ def test_release_docs_are_present() -> None:
         "docs/PERFECTION_PLAN.md",
         "docs/MATURITY.md",
         "docs/DECISIONS_REQUIRED.md",
+        "docs/PUBLISHING.md",
         "SECURITY.md",
         "docs/PRIVACY.md",
     }
@@ -111,6 +112,11 @@ def test_release_checklist_covers_required_gates() -> None:
         "actionlineage demo run",
         "actionlineage projection export-console",
         "uv run --all-extras pytest",
+        "gh workflow run release.yml -f publish_target=none",
+        "gh workflow run release.yml -f publish_target=testpypi",
+        "gh workflow run release.yml -f publish_target=pypi",
+        "gh attestation verify",
+        "repository-url: https://test.pypi.org/legacy/",
     ):
         assert command in checklist
 
@@ -126,3 +132,40 @@ def test_ci_runs_local_release_proof_gates() -> None:
     assert "scripts/generate_release_provenance.py" in workflow
     assert "--dist-dir /tmp/actionlineage-dist" in workflow
     assert "--output /tmp/actionlineage-release-provenance.json" in workflow
+
+
+def test_release_workflow_builds_attests_and_uses_trusted_publishing() -> None:
+    workflow = (PROJECT_ROOT / ".github/workflows/release.yml").read_text(encoding="utf-8")
+
+    assert "name: release" in workflow
+    assert "publish_target:" in workflow
+    assert "name: Verify release candidate" in workflow
+    assert "name: Build release artifacts" in workflow
+    assert "name: Attest release artifacts" in workflow
+    assert "needs: verify" in workflow
+    assert "needs: build" in workflow
+    assert "attestations: write" in workflow
+    assert "id-token: write" in workflow
+    assert "actions/attest@" in workflow
+    assert 'subject-path: "release-artifacts/**"' in workflow
+    assert "pypa/gh-action-pypi-publish@" in workflow
+    assert "repository-url: https://test.pypi.org/legacy/" in workflow
+    assert "packages-dir: release-artifacts/dist" in workflow
+    assert "startsWith(github.ref, 'refs/tags/v')" in workflow
+    assert "environment:" in workflow
+    assert "name: testpypi" in workflow
+    assert "name: pypi" in workflow
+    assert "password:" not in workflow
+    assert "PYPI_TOKEN" not in workflow
+
+
+def test_publishing_docs_keep_package_publication_externally_gated() -> None:
+    publishing = (PROJECT_ROOT / "docs/PUBLISHING.md").read_text(encoding="utf-8")
+    maturity = (PROJECT_ROOT / "docs/MATURITY.md").read_text(encoding="utf-8")
+    decisions = (PROJECT_ROOT / "docs/DECISIONS_REQUIRED.md").read_text(encoding="utf-8")
+
+    assert "Trusted Publisher records" in publishing
+    assert "Do not add PyPI API tokens" in publishing
+    assert "External-validation-required" in publishing
+    assert "Successful TestPyPI and PyPI package publication" in maturity
+    assert "TestPyPI/PyPI trusted publishers" in decisions

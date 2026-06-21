@@ -16,8 +16,8 @@ implementation change.
 | `AGENTS.md` visibility | Keep ignored/local; publish contributor guidance through normal docs | Making local assistant instructions public |
 | Python support | Keep Python 3.13+ until 3.11/3.12 are tested and justified | Widening package metadata |
 | Service/deployment support | Keep Docker/Kubernetes/Helm preview | Production deployment claims |
-| External release targets | Decide PyPI, GHCR, both, or neither | Publishing artifacts |
-| Signing/provenance | Decide signing key and hosted attestation strategy | Signed release claims |
+| External release targets | Use GitHub Releases first; prepare TestPyPI then PyPI through Trusted Publishing; keep GHCR deferred | Publishing package-index artifacts |
+| Signing/provenance | Use GitHub artifact attestations for release artifacts; keep local provenance as a supplemental manifest | Claiming attested package artifacts |
 | Public security contact | Confirm GitHub private vulnerability reporting and contact path | Public announcement |
 | External review | Select reviewer or review venue | Any claim of independent validation |
 
@@ -31,8 +31,9 @@ implementation change.
 | Secret scanning and push protection | Repository settings confirmation |
 | Private vulnerability reporting | GitHub security settings confirmation |
 | Published packages | PyPI package page or GHCR package page |
-| Signed artifacts | Signature files, verification instructions, and key policy |
-| Hosted provenance | Attestation URL or release artifact |
+| TestPyPI/PyPI trusted publishers | Trusted Publisher records for `release.yml` environments `testpypi` and `pypi` |
+| Attested artifacts | Successful `release.yml` run with GitHub artifact attestations and verification instructions |
+| Hosted provenance | Release artifact or attestation record linked from release notes |
 | External security review | Written review output with scope and date |
 | Production evaluation | Non-sensitive deployment notes or case study |
 
@@ -44,6 +45,8 @@ implementation change.
   maturity label.
 - A release artifact requires credentials or paid service access not supplied by
   the owner.
+- A PyPI/TestPyPI publish run is attempted before the matching Trusted
+  Publisher record and GitHub environment are configured.
 - A deployment/security claim depends on GitHub or external settings that have
   not been independently checked.
 
