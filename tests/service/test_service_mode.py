@@ -354,7 +354,7 @@ def test_service_detection_endpoint_rejects_malformed_rule_ids(tmp_path) -> None
     assert "rule_ids" in response.json()["detail"]
 
 
-def test_service_export_case_is_confined_to_export_root(tmp_path) -> None:
+def test_service_export_case_is_confined_to_export_root(tmp_path: Path) -> None:
     demo = run_demo(tmp_path / "demo")
     export_root = tmp_path / "exports"
     client = _client(
