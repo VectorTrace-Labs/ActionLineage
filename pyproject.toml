@@ -1,5 +1,5 @@
 [build-system]
-requires = ["hatchling>=1.27,<2"]
+requires = ["hatchling>=1.30.1,<2"]
 build-backend = "hatchling.build"
 
 [project]
@@ -43,9 +43,9 @@ service = [
   "uvicorn>=0.34,<1",
 ]
 dev = [
-  "hypothesis>=6,<7",
+  "hypothesis>=6.155.7,<7",
   "jsonschema>=4,<5",
-  "mypy>=1,<2",
+  "mypy>=2.1.0,<3",
   "pip-audit>=2,<3",
   "pre-commit>=4,<5",
   "pytest>=8,<10",
