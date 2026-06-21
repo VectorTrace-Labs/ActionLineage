@@ -187,7 +187,7 @@ journal_path = Path("build/example/evidence.jsonl")
 journal = LocalJournal(journal_path)
 normalizer = EvidenceNormalizer(
     correlation=Correlation(trace_id="trace_example", run_id="run_example"),
-    source=Source(component="example_adapter", instance_id="local", version="0.1.0a1"),
+    source=Source(component="example_adapter", instance_id="local", version="0.1.0a2"),
     principal=Principal(principal_id="agent_example", principal_type=PrincipalType.AGENT),
     classification=Classification(sensitivity=Sensitivity.INTERNAL),
     clock=FixedClock(datetime(2026, 1, 1, tzinfo=UTC)),

@@ -10,10 +10,10 @@ and checklist wording.
 
 | Area | Current evidence |
 | --- | --- |
-| Branch | `main` at `34b3791`, release pipeline work on `codex/release-signing-pypi-pipeline` |
+| Branch | `main` at `37144a1`, release candidate work on `codex/v0.1.0a2-release-candidate` |
 | Local ignored files | `AGENTS.md`, `Uplift.md` |
 | Required checks before uplift | Ruff, format, mypy, pip-audit, build, demo, and clean tracked snapshot passed; local pytest and claim scan failed only because ignored `Uplift.md` was included |
-| Current alpha version | `0.1.0a1` |
+| Current alpha version | `0.1.0a2` |
 | Supported Python | Python 3.13+ |
 | Default demo | No model API key, cloud account, external service, or internet access |
 
