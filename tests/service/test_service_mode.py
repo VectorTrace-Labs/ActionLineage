@@ -186,7 +186,7 @@ def test_oidc_jwt_authenticator_uses_injected_jwk_client() -> None:
         algorithms=("HS256",),
         issuer="https://issuer.example.invalid",
         audience="actionlineage-service",
-        jwk_client_factory=lambda url: FakeJwkClient(url),
+        jwk_client_factory=FakeJwkClient,
     )
 
     principal = authenticator.authenticate(token)
@@ -345,8 +345,54 @@ def test_service_detection_endpoint_rejects_malformed_rule_ids(tmp_path) -> None
     assert "rule_ids" in response.json()["detail"]
 
 
+def test_service_export_case_is_confined_to_export_root(tmp_path) -> None:
+    demo = run_demo(tmp_path / "demo")
+    export_root = tmp_path / "exports"
+    client = _client(
+        demo.journal_path,
+        demo.database_path,
+        token="exporter",
+        roles=frozenset({ServiceRole.EXPORT}),
+        export_root=export_root,
+    )
+
+    valid = client.post(
+        "/export-case",
+        headers={"Authorization": "Bearer exporter"},
+        params={"output_dir": "case-1", "trace_id": demo.trace_id},
+    )
+    repeated = client.post(
+        "/export-case",
+        headers={"Authorization": "Bearer exporter"},
+        params={"output_dir": "case-1", "trace_id": demo.trace_id},
+    )
+    traversal = client.post(
+        "/export-case",
+        headers={"Authorization": "Bearer exporter"},
+        params={"output_dir": "../outside", "trace_id": demo.trace_id},
+    )
+    absolute = client.post(
+        "/export-case",
+        headers={"Authorization": "Bearer exporter"},
+        params={"output_dir": str(tmp_path / "outside"), "trace_id": demo.trace_id},
+    )
+
+    assert valid.status_code == 200
+    assert (export_root / "case-1" / "case.json").exists()
+    assert repeated.status_code == 400
+    assert "already exists" in repeated.json()["detail"]
+    assert traversal.status_code == 400
+    assert absolute.status_code == 400
+    assert not (tmp_path / "outside").exists()
+
+
 def _client(
-    journal_path, database_path, *, token: str, roles: frozenset[ServiceRole]
+    journal_path,
+    database_path,
+    *,
+    token: str,
+    roles: frozenset[ServiceRole],
+    export_root=None,
 ) -> TestClient:
     authenticator = StaticTokenAuthenticator(
         tokens={
@@ -361,6 +407,7 @@ def _client(
             journal_path=journal_path,
             database_path=database_path,
             authenticator=authenticator,
+            export_root=export_root,
         )
     )
 

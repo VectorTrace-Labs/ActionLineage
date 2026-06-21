@@ -72,6 +72,12 @@ Service endpoints:
 `/ingest` requires `write`; timeline, events, contract validation, and detection
 evaluation require `read`; case export requires `export`.
 
+Service-mode case exports are written under a configured export root. Set
+`ACTIONLINEAGE_EXPORT_ROOT` for environment-driven service startup; otherwise
+the runtime uses `/data/exports`. The `/export-case` endpoint accepts a relative
+`output_dir` below that root and rejects absolute paths, `.` components, and
+`..` traversal. Existing case bundle files are not overwritten.
+
 ### Tenant Boundaries
 
 `ServiceTenant`, `TenantRegistry`, `TenantRoleBinding`, and

@@ -24,7 +24,12 @@ from actionlineage.domain import (
 from actionlineage.errors import ActionLineageValidationError
 from actionlineage.evidence import EvidenceNormalizer, EvidenceRecord, import_evidence_batch
 from actionlineage.journal import LocalJournal
-from actionlineage.projection import export_case_bundle, query_timeline, rebuild_projection
+from actionlineage.projection import (
+    ProjectionError,
+    export_case_bundle,
+    query_timeline,
+    rebuild_projection,
+)
 from actionlineage.service.auth import (
     ServiceAuthError,
     ServicePrincipal,
@@ -44,6 +49,7 @@ def create_app(
     journal_path: Path,
     database_path: Path,
     authenticator: StaticTokenAuthenticator,
+    export_root: Path | None = None,
 ) -> Any:
     """Create the optional FastAPI service application."""
 
@@ -53,6 +59,9 @@ def create_app(
         raise ServiceDependencyError("install actionlineage[service] to use service mode") from exc
 
     app = FastAPI(title="ActionLineage Evidence Service")
+    service_export_root = (
+        Path(export_root) if export_root is not None else Path(database_path).parent / "exports"
+    )
 
     def principal(authorization: str | None = Header(default=None)) -> Any:
         token = authorization.removeprefix("Bearer ").strip() if authorization else None
@@ -98,12 +107,15 @@ def create_app(
             require_role(service_principal, ServiceRole.EXPORT)
         except ServiceAuthError as exc:
             raise HTTPException(status_code=403, detail=str(exc)) from exc
-        return export_case_bundle(
-            database_path,
-            Path(output_dir),
-            trace_id=trace_id,
-            run_id=run_id,
-        ).as_dict()
+        try:
+            return export_case_bundle(
+                database_path,
+                _service_export_dir(service_export_root, output_dir),
+                trace_id=trace_id,
+                run_id=run_id,
+            ).as_dict()
+        except (ProjectionError, ValueError) as exc:
+            raise HTTPException(status_code=400, detail=_safe_detail(exc)) from exc
 
     @app.post("/ingest")
     def ingest(
@@ -263,3 +275,18 @@ def _safe_detail(exc: Exception) -> str:
     if isinstance(exc, ValidationError):
         return "service request validation failed"
     return str(exc)
+
+
+def _service_export_dir(export_root: Path, requested_output_dir: str) -> Path:
+    if not requested_output_dir.strip():
+        raise ValueError("output_dir must be a relative directory under export_root")
+
+    requested = Path(requested_output_dir)
+    if requested.is_absolute() or any(part in {"", ".", ".."} for part in requested.parts):
+        raise ValueError("output_dir must be a relative directory under export_root")
+
+    root = Path(export_root).resolve(strict=False)
+    candidate = (root / requested).resolve(strict=False)
+    if candidate == root or not candidate.is_relative_to(root):
+        raise ValueError("output_dir must stay under export_root")
+    return candidate

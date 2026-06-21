@@ -66,7 +66,8 @@ uv run actionlineage --help
 - `actionlineage projection export-graph projection.sqlite --trace-id trace_123`:
   write dependency-free investigation graph JSON to stdout.
 - `actionlineage projection export-case projection.sqlite ./case --trace-id trace_123`:
-  write JSON, NDJSON, and Markdown case artifacts.
+  write JSON, NDJSON, and Markdown case artifacts. Existing bundle files are
+  not overwritten.
 - `actionlineage projection export-console projection.sqlite console.html --trace-id trace_123`:
   render the static investigation console.
 - `actionlineage projection export-console projection.sqlite console.html --trace-id trace_123 --case-context context.json`:

@@ -111,6 +111,9 @@ uv run actionlineage projection export-console \
   --trace-id trace_demo_evidence_plane
 ```
 
+Case bundle export creates `case.json`, `events.ndjson`, and `report.md` and
+does not overwrite existing bundle files.
+
 Open `build/actionlineage-demo/console.html` in a browser to review the static
 timeline, event detail, evidence graph, verification matrix, and sanitized case
 context.

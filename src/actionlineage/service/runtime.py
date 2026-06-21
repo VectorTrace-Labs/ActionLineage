@@ -10,6 +10,7 @@ from actionlineage.service.auth import ServicePrincipal, ServiceRole, StaticToke
 
 DEFAULT_JOURNAL_PATH = Path("/data/actionlineage.journal")
 DEFAULT_DATABASE_PATH = Path("/data/projection.sqlite")
+DEFAULT_EXPORT_ROOT = Path("/data/exports")
 
 
 class ServiceRuntimeConfigError(RuntimeError):
@@ -30,12 +31,14 @@ def create_service_app_from_env() -> object:
 
     journal_path = Path(os.environ.get("ACTIONLINEAGE_JOURNAL_PATH", str(DEFAULT_JOURNAL_PATH)))
     database_path = Path(os.environ.get("ACTIONLINEAGE_DATABASE_PATH", str(DEFAULT_DATABASE_PATH)))
+    export_root = Path(os.environ.get("ACTIONLINEAGE_EXPORT_ROOT", str(DEFAULT_EXPORT_ROOT)))
     principal_id = os.environ.get("ACTIONLINEAGE_SERVICE_PRINCIPAL", "service-admin")
     roles = _roles_from_env(os.environ.get("ACTIONLINEAGE_SERVICE_ROLES", "admin"))
 
     return create_app(
         journal_path=journal_path,
         database_path=database_path,
+        export_root=export_root,
         authenticator=StaticTokenAuthenticator(
             tokens={
                 token: ServicePrincipal(

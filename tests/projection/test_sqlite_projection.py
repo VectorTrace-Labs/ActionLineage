@@ -18,6 +18,7 @@ from actionlineage.domain import (
 )
 from actionlineage.journal import LocalJournal
 from actionlineage.projection import (
+    ProjectionQueryError,
     ProjectionVerificationError,
     explain_event,
     export_case_bundle,
@@ -126,6 +127,19 @@ def test_projection_rebuild_is_repeatable_and_rebuilds_after_delete(tmp_path: Pa
         "evt_3",
         "evt_4",
     ]
+
+
+def test_timeline_selector_values_are_bound_as_data(tmp_path: Path) -> None:
+    journal_path = tmp_path / "events.jsonl"
+    database_path = tmp_path / "projection.sqlite"
+    write_journal(journal_path, complete_timeline_events())
+    rebuild_projection(journal_path, database_path)
+
+    injection_shaped = query_timeline(database_path, trace_id="trace_01' OR 1=1 --")
+    normal = query_timeline(database_path, trace_id="trace_01")
+
+    assert injection_shaped.events == ()
+    assert normal.as_dict()["event_count"] == 5
 
 
 def test_event_indexing_is_idempotent_for_the_same_projected_event(tmp_path: Path) -> None:
@@ -499,6 +513,22 @@ def test_case_bundle_export_writes_redacted_reports_without_absence_overclaim(
     assert len(ndjson_lines) == 5
     assert "No observation recorded is not proof" in markdown
     assert "did not happen" not in markdown
+
+
+def test_case_bundle_export_refuses_existing_artifacts(tmp_path: Path) -> None:
+    journal_path = tmp_path / "events.jsonl"
+    database_path = tmp_path / "projection.sqlite"
+    bundle_dir = tmp_path / "case"
+    write_journal(journal_path, complete_timeline_events())
+    rebuild_projection(journal_path, database_path)
+    bundle_dir.mkdir()
+    existing = bundle_dir / "case.json"
+    existing.write_text("existing\n", encoding="utf-8")
+
+    with pytest.raises(ProjectionQueryError, match="already exists"):
+        export_case_bundle(database_path, bundle_dir, trace_id="trace_01")
+
+    assert existing.read_text(encoding="utf-8") == "existing\n"
 
 
 def test_projection_cli_rebuild_timeline_and_incident_export(tmp_path: Path) -> None:

@@ -24,6 +24,7 @@ CASE_BUNDLE_VERSION = "actionlineage.dev/case-bundle-v0"
 GROUNDED_SUMMARY_VERSION = "actionlineage.dev/grounded-summary-v0"
 INVESTIGATION_GRAPH_VERSION = "actionlineage.dev/investigation-graph-v0"
 TIMELINE_ORDER_DESCRIPTION = "occurred_at, causality.sequence, journal_record_number, event_id"
+CASE_BUNDLE_FILENAMES = ("case.json", "events.ndjson", "report.md")
 
 
 class ProjectionError(RuntimeError):
@@ -433,31 +434,58 @@ def query_timeline(
     try:
         with _connect(database_path) as connection:
             ensure_schema(connection)
-            rows = connection.execute(
-                f"""
-                SELECT
-                    journal_record_number,
-                    event_id,
-                    event_type,
-                    occurred_at,
-                    observed_at,
-                    trace_id,
-                    run_id,
-                    sequence,
-                    event_hash,
-                    verification_status,
-                    evidence_subject_event_id,
-                    evidence_event_id,
-                    event_json
-                FROM events
-                WHERE {selector_type} = ?
-                ORDER BY occurred_at ASC,
-                         sequence ASC,
-                         journal_record_number ASC,
-                         event_id ASC
-                """,
-                (selector_value,),
-            ).fetchall()
+            if selector_type == "trace_id":
+                rows = connection.execute(
+                    """
+                    SELECT
+                        journal_record_number,
+                        event_id,
+                        event_type,
+                        occurred_at,
+                        observed_at,
+                        trace_id,
+                        run_id,
+                        sequence,
+                        event_hash,
+                        verification_status,
+                        evidence_subject_event_id,
+                        evidence_event_id,
+                        event_json
+                    FROM events
+                    WHERE trace_id = ?
+                    ORDER BY occurred_at ASC,
+                             sequence ASC,
+                             journal_record_number ASC,
+                             event_id ASC
+                    """,
+                    (selector_value,),
+                ).fetchall()
+            else:
+                rows = connection.execute(
+                    """
+                    SELECT
+                        journal_record_number,
+                        event_id,
+                        event_type,
+                        occurred_at,
+                        observed_at,
+                        trace_id,
+                        run_id,
+                        sequence,
+                        event_hash,
+                        verification_status,
+                        evidence_subject_event_id,
+                        evidence_event_id,
+                        event_json
+                    FROM events
+                    WHERE run_id = ?
+                    ORDER BY occurred_at ASC,
+                             sequence ASC,
+                             journal_record_number ASC,
+                             event_id ASC
+                    """,
+                    (selector_value,),
+                ).fetchall()
     except sqlite3.Error as exc:
         raise ProjectionQueryError("sqlite projection query failed") from exc
 
@@ -804,19 +832,21 @@ def export_case_bundle(
     incident = export_incident(database_path, trace_id=trace_id, run_id=run_id)
     output_dir = Path(output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
-    json_path = output_dir / "case.json"
-    ndjson_path = output_dir / "events.ndjson"
-    markdown_path = output_dir / "report.md"
+    json_path, ndjson_path, markdown_path = _case_bundle_paths(output_dir)
 
     incident_data = incident.as_dict()
     event_objects = cast(list[object], incident_data["events"])
-    json_path.write_bytes(deterministic_json_bytes(cast(dict[str, Any], incident_data)) + b"\n")
-    ndjson_path.write_bytes(
+    _write_new_case_bundle_file(
+        json_path,
+        deterministic_json_bytes(cast(dict[str, Any], incident_data)) + b"\n",
+    )
+    _write_new_case_bundle_file(
+        ndjson_path,
         b"".join(
             deterministic_json_bytes(cast(dict[str, Any], event)) + b"\n" for event in event_objects
-        )
+        ),
     )
-    markdown_path.write_text(_case_markdown(incident_data), encoding="utf-8")
+    _write_new_case_bundle_file(markdown_path, _case_markdown(incident_data).encode("utf-8"))
 
     return CaseBundleExport(
         output_dir=output_dir,
@@ -1008,9 +1038,25 @@ def _require_one_selector(
         raise ProjectionQueryError("provide exactly one of trace_id or run_id")
     if trace_id is not None:
         return "trace_id", trace_id
-    if run_id is not None:
-        return "run_id", run_id
-    raise AssertionError("unreachable selector state")
+    assert run_id is not None
+    return "run_id", run_id
+
+
+def _case_bundle_paths(output_dir: Path) -> tuple[Path, Path, Path]:
+    paths = tuple(output_dir / filename for filename in CASE_BUNDLE_FILENAMES)
+    if any(path.parent != output_dir for path in paths):
+        raise ProjectionQueryError("case bundle output path escaped output directory")
+    return cast(tuple[Path, Path, Path], paths)
+
+
+def _write_new_case_bundle_file(path: Path, data: bytes) -> None:
+    try:
+        with path.open("xb") as handle:
+            handle.write(data)
+    except FileExistsError as exc:
+        raise ProjectionQueryError(f"case bundle output already exists: {path.name}") from exc
+    except OSError as exc:
+        raise ProjectionQueryError(f"failed to write case bundle output: {path.name}") from exc
 
 
 def _evidence_projection_values(

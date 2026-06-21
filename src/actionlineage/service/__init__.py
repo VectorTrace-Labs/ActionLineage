@@ -14,6 +14,7 @@ from actionlineage.service.auth import (
 from actionlineage.service.health import HealthIssue, HealthReport, HealthState, check_local_health
 from actionlineage.service.runtime import (
     DEFAULT_DATABASE_PATH,
+    DEFAULT_EXPORT_ROOT,
     DEFAULT_JOURNAL_PATH,
     ServiceRuntimeConfigError,
     create_service_app_from_env,
@@ -28,6 +29,7 @@ from actionlineage.service.tenancy import (
 
 __all__ = [
     "DEFAULT_DATABASE_PATH",
+    "DEFAULT_EXPORT_ROOT",
     "DEFAULT_JOURNAL_PATH",
     "HealthIssue",
     "HealthReport",

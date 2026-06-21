@@ -101,13 +101,18 @@ def test_path_url_normalization_mutation_is_semantics_preserving() -> None:
         seed=23,
     )
     payload_text = json.dumps([event.payload for event in mutation.events], sort_keys=True)
+    destination_values = [
+        event.payload["destination"]
+        for event in mutation.events
+        if isinstance(event.payload, dict) and "destination" in event.payload
+    ]
 
     assert mutation.expected_match is True
     assert mutation.semantic_property == (
         "path and URL representation variants preserve side-effect meaning"
     )
     assert "demo://workspace/./" in payload_text
-    assert "http://receiver.local:80/" in payload_text
+    assert destination_values == ["http://receiver.local:80/collect"]
     assert not score_detection_robustness(
         verified_file_read_rule(),
         (mutation.as_replay_case(),),
