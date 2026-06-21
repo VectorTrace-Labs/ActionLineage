@@ -87,6 +87,9 @@ def test_release_checklist_covers_required_gates() -> None:
         "scripts/generate_sbom.py",
         "uv run pip-audit",
         "uv build",
+        "docker build -f deploy/docker/Dockerfile -t actionlineage:ci .",
+        "docker run --rm actionlineage:ci version",
+        "actionlineage:ci demo run",
         "actionlineage demo run",
         "actionlineage projection export-console",
     ):

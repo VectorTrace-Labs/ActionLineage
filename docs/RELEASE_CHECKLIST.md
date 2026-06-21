@@ -32,6 +32,28 @@ uv run actionlineage projection export-console build/actionlineage-demo/projecti
   --trace-id trace_demo_evidence_plane
 ```
 
+## Container Gates
+
+These gates run in GitHub Actions on hosted Ubuntu runners. They do not depend
+on a contributor's local Docker daemon.
+
+```bash
+docker build -f deploy/docker/Dockerfile -t actionlineage:ci .
+docker run --rm actionlineage:ci version
+docker run --rm actionlineage:ci doctor
+docker run --rm -v "$PWD/build/docker-ci:/artifacts" \
+  actionlineage:ci demo run --output-dir /artifacts/demo
+docker run --rm -v "$PWD/build/docker-ci:/artifacts" \
+  actionlineage:ci journal verify /artifacts/demo/evidence.jsonl
+docker run --rm -v "$PWD/build/docker-ci:/artifacts" \
+  actionlineage:ci projection timeline /artifacts/demo/projection.sqlite \
+  --trace-id trace_demo_evidence_plane
+docker run --rm -v "$PWD/build/docker-ci:/artifacts" \
+  actionlineage:ci contract validate \
+  /app/contracts/examples/restricted-exfiltration.json \
+  /artifacts/demo/evidence.jsonl
+```
+
 ## Release Artifacts
 
 - Source distribution and wheel.
@@ -48,6 +70,8 @@ uv run actionlineage projection export-console build/actionlineage-demo/projecti
 
 - CodeQL workflow is present and code scanning has completed successfully.
 - Dependency Review workflow is present for pull requests.
+- Docker image build and runtime smoke validation are required in CI before
+  merging Docker base-image changes.
 - Dependabot version updates are configured for uv, GitHub Actions, and Docker.
 - Dependabot alerts and Dependabot security updates are enabled.
 - Secret scanning and push protection are enabled.

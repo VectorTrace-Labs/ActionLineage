@@ -17,6 +17,19 @@ def test_docker_compose_runs_optional_service_factory() -> None:
     assert "actionlineage-data:/data" in compose
 
 
+def test_ci_builds_and_smoke_tests_docker_image() -> None:
+    workflow = (PROJECT_ROOT / ".github/workflows/ci.yml").read_text(encoding="utf-8")
+
+    assert "container:" in workflow
+    assert "docker build -f deploy/docker/Dockerfile -t actionlineage:ci ." in workflow
+    assert "docker run --rm actionlineage:ci version" in workflow
+    assert "docker run --rm actionlineage:ci doctor" in workflow
+    assert "actionlineage:ci demo run --output-dir /artifacts/demo" in workflow
+    assert "actionlineage:ci journal verify /artifacts/demo/evidence.jsonl" in workflow
+    assert "actionlineage:ci projection timeline /artifacts/demo/projection.sqlite" in workflow
+    assert "actionlineage:ci contract validate" in workflow
+
+
 def test_kubernetes_manifest_preserves_local_first_service_posture() -> None:
     manifest = (PROJECT_ROOT / "deploy/kubernetes/actionlineage-service.yaml").read_text(
         encoding="utf-8"
