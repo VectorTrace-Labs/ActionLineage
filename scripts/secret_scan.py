@@ -39,6 +39,12 @@ SKIPPED_NAMES: Final = {
     ".coverage",
     "uv.lock",
 }
+LOCAL_ONLY_NAMES: Final = {
+    "AGENTS.md",
+    "CLAUDE.md",
+    "GEMINI.md",
+    "Uplift.md",
+}
 ALLOWLIST_SUBSTRINGS: Final = (
     "[REDACTED",
     "al_canary_token",
@@ -79,11 +85,11 @@ class SecretFinding:
     fingerprint: str
 
 
-def scan_paths(paths: list[Path]) -> list[SecretFinding]:
+def scan_paths(paths: list[Path], *, include_local_only: bool = False) -> list[SecretFinding]:
     """Scan paths for high-confidence secret patterns."""
 
     findings: list[SecretFinding] = []
-    for file_path in _iter_files(paths):
+    for file_path in _iter_files(paths, include_local_only=include_local_only):
         try:
             text = file_path.read_text(encoding="utf-8")
         except UnicodeDecodeError:
@@ -118,27 +124,37 @@ def main() -> int:
 
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("paths", nargs="+", type=Path)
+    parser.add_argument(
+        "--include-local-only",
+        action="store_true",
+        help="Also scan ignored local assistant/planning files such as AGENTS.md and Uplift.md.",
+    )
     args = parser.parse_args()
 
-    findings = scan_paths(args.paths)
+    findings = scan_paths(args.paths, include_local_only=args.include_local_only)
     print(json.dumps({"ok": not findings, "findings": [asdict(f) for f in findings]}, indent=2))
     return 1 if findings else 0
 
 
-def _iter_files(paths: list[Path]) -> list[Path]:
+def _iter_files(paths: list[Path], *, include_local_only: bool) -> list[Path]:
     files: list[Path] = []
     for path in paths:
-        if path.is_file() and _should_scan(path):
+        if path.is_file() and _should_scan(path, include_local_only=include_local_only):
             files.append(path)
         elif path.is_dir():
             for candidate in path.rglob("*"):
-                if candidate.is_file() and _should_scan(candidate):
+                if candidate.is_file() and _should_scan(
+                    candidate,
+                    include_local_only=include_local_only,
+                ):
                     files.append(candidate)
     return sorted(files)
 
 
-def _should_scan(path: Path) -> bool:
+def _should_scan(path: Path, *, include_local_only: bool) -> bool:
     if any(part in SKIPPED_DIRS for part in path.parts):
+        return False
+    if not include_local_only and path.name in LOCAL_ONLY_NAMES:
         return False
     if path.name in SKIPPED_NAMES:
         return False

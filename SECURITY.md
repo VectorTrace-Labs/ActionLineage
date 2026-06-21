@@ -2,7 +2,7 @@
 
 ## Supported Versions
 
-Security fixes are applied to the latest `1.0.x` release and to `main`.
+Security fixes are applied to the latest public alpha release and to `main`.
 Public compatibility guarantees are documented in `docs/COMPATIBILITY.md`.
 
 ## Reporting a Vulnerability
@@ -38,7 +38,7 @@ Core security invariants:
 
 ## Release Security Gates
 
-Before a public release, run:
+Before a public alpha release, run:
 
 ```bash
 uv run ruff check .

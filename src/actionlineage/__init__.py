@@ -250,7 +250,7 @@ from actionlineage.service import (
     require_tenant_role,
 )
 
-__version__ = "1.0.0"
+__version__ = "0.1.0a1"
 
 __all__ = [
     "COMPATIBILITY_POLICY_VERSION",

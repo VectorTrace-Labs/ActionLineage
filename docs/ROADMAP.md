@@ -1,14 +1,14 @@
 # Roadmap
 
-ActionLineage 1.0 is a vendor-neutral evidence and detection plane for
-tool-using agents. The current release includes the local journal, neutral event
+ActionLineage is a public alpha vendor-neutral evidence and detection plane for
+tool-using agents. The current alpha includes the local journal, neutral event
 model, source-neutral ingestion, investigation exports, contracts, detections,
 replay robustness, optional adapters, service boundary, and static console.
 
 This roadmap describes active public direction without treating future work as
 already delivered.
 
-## Current Release Surface
+## Current Alpha Release Surface
 
 - Core event envelope, redaction boundary, evidence links, and verification
   states.
@@ -17,8 +17,8 @@ already delivered.
 - Rebuildable SQLite projection and optional Postgres projection schema.
 - Source-neutral ingestion for local, file, HTTP, MCP-mapped, framework, and
   external JSON evidence.
-- Deterministic local demo with verified, unverified, and not-dispatched
-  outcomes.
+- Deterministic local demo with verified, unverified, conflicting, and
+  not-dispatched outcomes.
 - Investigation timeline, filters, event explanation, case bundle, graph export,
   grounded summary, static console, and desktop bundle export.
 - Lineage Contracts, sequence detections, replay mutation testing, minimized
@@ -28,7 +28,7 @@ already delivered.
 - Security hardening scripts, release checklist, issue templates, privacy model,
   and vulnerability disclosure policy.
 
-## Near-Term 1.x Priorities
+## Near-Term Alpha Priorities
 
 1. Fresh-clone release validation on macOS and Linux.
 2. More public fixture packs for common agent and tool patterns.
@@ -40,8 +40,9 @@ already delivered.
 
 ## Optional / Ecosystem Tracks
 
-These areas are intentionally visible but should remain optional unless a future
-ADR moves them into the required release surface:
+These areas are intentionally visible but remain preview, planned, or
+external-validation-required unless a future ADR moves them into the required
+release surface:
 
 - Hardware-backed signing or remote-attestation verification.
 - Live eBPF, EDR, process, network, and file collectors.

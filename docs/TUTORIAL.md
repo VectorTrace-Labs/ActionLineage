@@ -70,3 +70,5 @@ uv run actionlineage contract validate \
 ```
 
 Contracts are CI evidence requirements, not runtime policy.
+The stricter `contracts/examples/restricted-exfiltration.json` example is for
+detection-coverage design review and is not the five-minute demo contract.

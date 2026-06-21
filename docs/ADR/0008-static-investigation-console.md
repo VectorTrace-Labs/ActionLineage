@@ -6,7 +6,7 @@
 
 ## Context
 
-ActionLineage needs an analyst-facing investigation view for public 1.0, but the
+ActionLineage needs an analyst-facing investigation view for public alpha, but the
 core product must remain a local-first evidence plane. A full single-page
 application, graph renderer, saved cases, and multi-user console would add
 front-end build tooling, service assumptions, and new operational attack surface.
@@ -17,7 +17,7 @@ not a new evidence store.
 
 ## Decision
 
-Provide a dependency-free static HTML console exporter for 1.0. The exporter
+Provide a dependency-free static HTML console exporter for the public alpha. The exporter
 renders deterministic projection timelines with:
 
 - Timeline and event details.

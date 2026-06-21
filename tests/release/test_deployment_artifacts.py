@@ -17,6 +17,13 @@ def test_docker_compose_runs_optional_service_factory() -> None:
     assert "actionlineage-data:/data" in compose
 
 
+def test_operations_docs_label_deployment_examples_preview() -> None:
+    operations = (PROJECT_ROOT / "docs/OPERATIONS.md").read_text(encoding="utf-8")
+
+    assert "Deployment examples are preview support surfaces" in operations
+    assert "do not make the service production-supported" in operations
+
+
 def test_ci_builds_and_smoke_tests_docker_image() -> None:
     workflow = (PROJECT_ROOT / ".github/workflows/ci.yml").read_text(encoding="utf-8")
 
@@ -28,6 +35,7 @@ def test_ci_builds_and_smoke_tests_docker_image() -> None:
     assert "actionlineage:ci journal verify /artifacts/demo/evidence.jsonl" in workflow
     assert "actionlineage:ci projection timeline /artifacts/demo/projection.sqlite" in workflow
     assert "actionlineage:ci contract validate" in workflow
+    assert "/app/contracts/examples/outbound-http.json" in workflow
 
 
 def test_kubernetes_manifest_preserves_local_first_service_posture() -> None:

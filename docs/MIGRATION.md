@@ -2,7 +2,7 @@
 
 ## From MCP-First Planning to Evidence Plane
 
-ActionLineage 1.0 centers the neutral evidence model and append-only journal.
+ActionLineage public alpha centers the neutral evidence model and append-only journal.
 MCP interception, policy enforcement, telemetry export, service mode, and the
 console are optional adapters or views.
 
@@ -20,9 +20,9 @@ Migration steps:
 
 ## Supported Journal Compatibility
 
-`actionlineage.dev/v1alpha1` remains readable for 1.0. Projection databases are
-disposable and may be rebuilt. If a future envelope migration is required, it
-must include an ADR, fixtures, and a reader compatibility test.
+`actionlineage.dev/v1alpha1` remains readable for the public alpha. Projection
+databases are disposable and may be rebuilt. If a future envelope migration is
+required, it must include an ADR, fixtures, and a reader compatibility test.
 
 ## Package Extras
 

@@ -103,6 +103,11 @@ using separate journal/projection paths or storage prefixes for each tenant.
 The repository includes Docker, Compose, Kubernetes, and Helm examples for local
 or lab evaluation of optional service mode.
 
+Deployment examples are preview support surfaces. They prove packaging and smoke
+behavior for the public alpha, but they do not make the service production-supported
+or replace deployment-specific reviews for authentication, storage, network
+policy, observability, retention, and incident response.
+
 Build and run the local Compose service:
 
 ```bash

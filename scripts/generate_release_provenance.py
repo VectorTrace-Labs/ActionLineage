@@ -12,6 +12,7 @@ from pathlib import Path
 from typing import Any
 
 PROVENANCE_FORMAT = "actionlineage.dev/release-provenance-v0"
+RELEASE_ARTIFACT_SUFFIXES = (".whl", ".tar.gz", ".zip")
 
 
 def build_release_provenance(project_path: Path, dist_dir: Path) -> dict[str, Any]:
@@ -76,7 +77,11 @@ def main() -> int:
 def _dist_files(dist_dir: Path) -> tuple[Path, ...]:
     if not dist_dir.exists():
         return ()
-    return tuple(path for path in dist_dir.rglob("*") if path.is_file())
+    return tuple(
+        path
+        for path in dist_dir.rglob("*")
+        if path.is_file() and path.name.endswith(RELEASE_ARTIFACT_SUFFIXES)
+    )
 
 
 def _artifact_row(path: Path, *, root: Path) -> dict[str, object]:

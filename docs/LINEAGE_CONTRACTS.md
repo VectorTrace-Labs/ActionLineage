@@ -20,7 +20,8 @@ A contract states what evidence must exist for a system or action to be supporta
 
 The core parser accepts JSON Lineage Contract files using only the Python
 standard library. YAML examples remain useful for design review, but JSON is the
-portable 1.0 validation boundary unless an ADR promotes YAML support into core.
+portable public-alpha validation boundary unless an ADR promotes YAML support
+into core.
 
 ## JSON example
 

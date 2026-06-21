@@ -1,6 +1,6 @@
 # Schema Reference
 
-ActionLineage 1.0 supports the `actionlineage.dev/v1alpha1` event envelope.
+ActionLineage public alpha supports the `actionlineage.dev/v1alpha1` event envelope.
 The JSON Schema lives at `schemas/actionlineage-event-v1alpha1.schema.json`.
 
 ## Envelope Fields

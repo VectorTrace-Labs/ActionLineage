@@ -51,7 +51,7 @@ spec:
         fsGroup: 10001
       containers:
         - name: actionlineage
-          image: ghcr.io/vectortrace-labs/actionlineage:1.0.0
+          image: ghcr.io/vectortrace-labs/actionlineage:0.1.0a1
           imagePullPolicy: IfNotPresent
           command:
             - python
