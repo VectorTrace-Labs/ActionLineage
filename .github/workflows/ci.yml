@@ -1,0 +1,42 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  python:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - name: Install uv
+        run: python -m pip install --upgrade uv
+      - name: Sync
+        run: uv sync --all-extras
+      - name: CLI smoke
+        run: |
+          uv run actionlineage version
+          uv run actionlineage doctor
+      - name: Lint
+        run: uv run ruff check .
+      - name: Format check
+        run: uv run ruff format --check .
+      - name: Type check
+        run: uv run mypy src
+      - name: Test
+        run: uv run pytest
+      - name: Claim-language guard
+        run: uv run python scripts/check_claims_language.py .
+      - name: Secret scan
+        run: uv run python scripts/secret_scan.py .
+      - name: Generate SBOM
+        run: uv run python scripts/generate_sbom.py --output /tmp/actionlineage-sbom.json
+      - name: Dependency audit
+        run: uv run pip-audit

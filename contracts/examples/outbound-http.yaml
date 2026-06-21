@@ -1,0 +1,45 @@
+apiVersion: actionlineage.dev/v1alpha1
+kind: LineageContract
+metadata:
+  name: outbound-http-evidence
+  owner: security-platform
+spec:
+  appliesTo:
+    toolNames:
+      - safe_http.send
+  requirements:
+    events:
+      - type: tool.execution.requested
+        requiredFields:
+          - correlation.trace_id
+          - causality.parent_event_id
+          - payload.tool_identity.name
+      - type: tool.execution.dispatched
+        requiredFields:
+          - payload.tool_identity.name
+      - type: tool.execution.acknowledged
+        requiredFields:
+          - payload.acknowledgement.status
+      - type: side_effect.observed
+        requiredFields:
+          - payload.observer_identity
+          - payload.observed_resource.type
+      - type: side_effect.verified
+        requiredFields:
+          - payload.evidence_link.subject_event_id
+          - payload.evidence_link.evidence_event_id
+          - payload.evidence_link.verification_status
+    relationships:
+      - child: tool.execution.dispatched
+        parent: tool.execution.authorized
+      - child: tool.execution.acknowledged
+        parent: tool.execution.dispatched
+      - child: side_effect.verified
+        parent: side_effect.observed
+    verification:
+      requiredStatus: verified
+    integrity:
+      hashChainRequired: true
+    coverage:
+      threats:
+        - restricted-data-to-verified-untrusted-destination

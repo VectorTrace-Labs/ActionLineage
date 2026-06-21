@@ -1,0 +1,58 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://actionlineage.dev/schemas/evidence-link-v1alpha1.json",
+  "title": "ActionLineage Evidence Link Payload v1alpha1",
+  "type": "object",
+  "required": [
+    "subject_event_id",
+    "relationship",
+    "evidence_event_id",
+    "corroboration_type",
+    "observer_identity",
+    "confidence",
+    "verification_status",
+    "limitations"
+  ],
+  "properties": {
+    "subject_event_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "relationship": {
+      "enum": ["corroborates", "contradicts", "observes", "limits"]
+    },
+    "evidence_event_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "corroboration_type": {
+      "enum": [
+        "independent_observer",
+        "post_action_readback",
+        "fixture_oracle",
+        "self_reported",
+        "unknown"
+      ]
+    },
+    "observer_identity": {
+      "type": "string",
+      "minLength": 1
+    },
+    "confidence": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 1
+    },
+    "verification_status": {
+      "enum": ["unknown", "unverified", "timed_out", "conflicting", "observed", "verified"]
+    },
+    "limitations": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    }
+  },
+  "additionalProperties": false
+}

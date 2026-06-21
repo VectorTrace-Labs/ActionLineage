@@ -1,0 +1,27 @@
+name: Detection rule
+about: Propose or improve a sequence detection
+body:
+  - type: textarea
+    attributes:
+      label: Threat behavior
+      description: Describe the behavior and required evidence quality.
+    validations:
+      required: true
+  - type: textarea
+    attributes:
+      label: Rule logic
+      description: List stages, grouping, time window, suppressions, and unknown semantics.
+    validations:
+      required: true
+  - type: textarea
+    attributes:
+      label: Fixtures
+      description: Provide positive, benign, ambiguous, and adversarial fixtures.
+    validations:
+      required: true
+  - type: textarea
+    attributes:
+      label: Robustness expectations
+      description: Include replay or mutation survival expectations.
+    validations:
+      required: true

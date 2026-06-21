@@ -1,0 +1,190 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://actionlineage.dev/schemas/event-v1alpha1.json",
+  "title": "ActionLineage Event Envelope v1alpha1",
+  "type": "object",
+  "required": [
+    "spec_version",
+    "event_id",
+    "event_type",
+    "occurred_at",
+    "observed_at",
+    "source",
+    "correlation",
+    "causality",
+    "principal",
+    "classification",
+    "payload",
+    "integrity"
+  ],
+  "properties": {
+    "spec_version": {
+      "const": "actionlineage.dev/v1alpha1"
+    },
+    "event_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "event_type": {
+      "type": "string",
+      "minLength": 1
+    },
+    "occurred_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "observed_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "source": {
+      "$ref": "#/$defs/source"
+    },
+    "correlation": {
+      "$ref": "#/$defs/correlation"
+    },
+    "causality": {
+      "$ref": "#/$defs/causality"
+    },
+    "principal": {
+      "$ref": "#/$defs/principal"
+    },
+    "classification": {
+      "$ref": "#/$defs/classification"
+    },
+    "payload": {
+      "type": "object"
+    },
+    "integrity": {
+      "$ref": "#/$defs/integrity"
+    }
+  },
+  "additionalProperties": false,
+  "$defs": {
+    "source": {
+      "type": "object",
+      "required": ["component", "instance_id", "version"],
+      "properties": {
+        "component": {
+          "type": "string",
+          "minLength": 1
+        },
+        "instance_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "version": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "additionalProperties": false
+    },
+    "correlation": {
+      "type": "object",
+      "required": ["trace_id", "run_id", "span_id", "session_id"],
+      "properties": {
+        "trace_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "run_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "span_id": {
+          "type": ["string", "null"],
+          "minLength": 1
+        },
+        "session_id": {
+          "type": ["string", "null"],
+          "minLength": 1
+        }
+      },
+      "additionalProperties": false
+    },
+    "causality": {
+      "type": "object",
+      "required": ["root_event_id", "sequence", "parent_event_id"],
+      "properties": {
+        "root_event_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "sequence": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "parent_event_id": {
+          "type": ["string", "null"],
+          "minLength": 1
+        }
+      },
+      "additionalProperties": false
+    },
+    "principal": {
+      "type": "object",
+      "required": [
+        "principal_id",
+        "principal_type",
+        "on_behalf_of",
+        "model_id",
+        "credential_id"
+      ],
+      "properties": {
+        "principal_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "principal_type": {
+          "enum": ["human", "service", "agent", "model", "workload", "credential", "unknown"]
+        },
+        "on_behalf_of": {
+          "type": ["string", "null"],
+          "minLength": 1
+        },
+        "model_id": {
+          "type": ["string", "null"],
+          "minLength": 1
+        },
+        "credential_id": {
+          "type": ["string", "null"],
+          "minLength": 1
+        }
+      },
+      "additionalProperties": false
+    },
+    "classification": {
+      "type": "object",
+      "required": ["sensitivity", "trust"],
+      "properties": {
+        "sensitivity": {
+          "enum": ["public", "internal", "confidential", "restricted", "secret", "unknown"]
+        },
+        "trust": {
+          "enum": ["trusted", "untrusted", "local", "external", "unknown"]
+        }
+      },
+      "additionalProperties": false
+    },
+    "integrity": {
+      "type": "object",
+      "required": ["canonicalization", "previous_event_hash", "event_hash"],
+      "properties": {
+        "canonicalization": {
+          "type": "string",
+          "minLength": 1
+        },
+        "previous_event_hash": {
+          "type": ["string", "null"],
+          "minLength": 1
+        },
+        "event_hash": {
+          "type": ["string", "null"],
+          "minLength": 1
+        }
+      },
+      "additionalProperties": false
+    }
+  }
+}

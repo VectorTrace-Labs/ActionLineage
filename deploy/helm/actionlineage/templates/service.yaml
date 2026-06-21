@@ -1,0 +1,16 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "actionlineage.fullname" . }}
+  labels:
+    {{- include "actionlineage.labels" . | nindent 4 }}
+spec:
+  type: {{ .Values.service.type }}
+  selector:
+    app.kubernetes.io/name: {{ include "actionlineage.name" . }}
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/component: evidence-service
+  ports:
+    - name: http
+      port: {{ .Values.service.port }}
+      targetPort: http

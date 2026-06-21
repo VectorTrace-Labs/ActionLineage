@@ -1,0 +1,57 @@
+{
+  "apiVersion": "actionlineage.dev/contract/v1",
+  "kind": "LineageContract",
+  "metadata": {
+    "name": "cloud-object-write-evidence"
+  },
+  "spec": {
+    "requirements": {
+      "events": [
+        {
+          "type": "action.normalized",
+          "requiredFields": [
+            "payload.action.action_type",
+            "payload.action.resources.0.resource_type",
+            "payload.action.resources.0.identifier"
+          ]
+        },
+        {
+          "type": "side_effect.observed",
+          "requiredFields": [
+            "payload.observer_identity",
+            "payload.resource.identifier",
+            "payload.verification_status"
+          ]
+        },
+        {
+          "type": "side_effect.verified",
+          "requiredFields": [
+            "payload.evidence_link.subject_event_id",
+            "payload.evidence_link.evidence_event_id",
+            "payload.evidence_link.verification_status"
+          ]
+        }
+      ],
+      "evidenceLinks": [
+        {
+          "eventType": "side_effect.verified",
+          "verificationStatus": "verified",
+          "corroborationTypes": [
+            "independent_observer",
+            "post_action_readback"
+          ]
+        }
+      ],
+      "latency": [
+        {
+          "startEventType": "tool.execution.acknowledged",
+          "endEventType": "side_effect.observed",
+          "maxSeconds": 300
+        }
+      ],
+      "integrity": {
+        "hashChainRequired": true
+      }
+    }
+  }
+}

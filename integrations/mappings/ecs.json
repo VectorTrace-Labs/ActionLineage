@@ -1,0 +1,12 @@
+{
+  "profile": "ecs",
+  "canonical_source": "actionlineage event envelope",
+  "fields": {
+    "@timestamp": "occurred_at",
+    "actionlineage": "redacted event",
+    "agent.name": "source.component",
+    "event.id": "event_id",
+    "event.type": "event_type",
+    "trace.id": "correlation.trace_id"
+  }
+}

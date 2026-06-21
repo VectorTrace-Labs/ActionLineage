@@ -1,0 +1,61 @@
+{
+  "fixture_version": "actionlineage.dev/adversarial-fixtures-v0",
+  "cases": [
+    {
+      "case_id": "adv-prompt-injection-chain",
+      "category": "prompt_injection",
+      "expected_controls": [
+        "agent.intent.recorded",
+        "tool.execution.requested",
+        "side_effect.unverified"
+      ],
+      "description": "Untrusted content influences a requested tool action; detection must preserve the causal parent chain."
+    },
+    {
+      "case_id": "adv-descriptor-drift-before-sensitive-action",
+      "category": "descriptor_drift",
+      "expected_controls": [
+        "descriptor_hash_changed",
+        "tool.execution.requested"
+      ],
+      "description": "A tool descriptor changes before a sensitive action and must be represented as evidence."
+    },
+    {
+      "case_id": "adv-malformed-adapter-payload",
+      "category": "malformed_adapter_payload",
+      "expected_controls": [
+        "source-neutral-ingestion",
+        "malformed-input-rejection"
+      ],
+      "description": "Adapter input with malformed fields must fail without persisting raw payload material."
+    },
+    {
+      "case_id": "adv-replayed-approval",
+      "category": "replayed_approval",
+      "expected_controls": [
+        "approval_nonce",
+        "approval_scope",
+        "tool.execution.not_dispatched"
+      ],
+      "description": "A replayed approval artifact must not authorize a different action or target."
+    },
+    {
+      "case_id": "adv-conflicting-observers",
+      "category": "conflicting_observer",
+      "expected_controls": [
+        "side_effect.observed",
+        "side_effect.conflict_detected"
+      ],
+      "description": "Conflicting observer evidence must be preserved instead of overwritten."
+    },
+    {
+      "case_id": "adv-oversized-payload",
+      "category": "oversized_payload",
+      "expected_controls": [
+        "bounded-capture",
+        "payload-digest"
+      ],
+      "description": "Oversized payloads must be bounded and represented with capture metadata and a digest."
+    }
+  ]
+}

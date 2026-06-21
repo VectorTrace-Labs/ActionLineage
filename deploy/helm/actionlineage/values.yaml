@@ -1,0 +1,35 @@
+image:
+  repository: ghcr.io/vectortrace-labs/actionlineage
+  tag: "1.0.0"
+  pullPolicy: IfNotPresent
+
+replicaCount: 1
+
+service:
+  type: ClusterIP
+  port: 8000
+
+persistence:
+  enabled: true
+  size: 5Gi
+  mountPath: /data
+
+serviceRuntime:
+  journalPath: /data/actionlineage.journal
+  databasePath: /data/projection.sqlite
+  principal: helm-admin
+  roles: admin
+  token: local-token
+
+podSecurityContext:
+  runAsNonRoot: true
+  runAsUser: 10001
+  runAsGroup: 10001
+  fsGroup: 10001
+
+containerSecurityContext:
+  allowPrivilegeEscalation: false
+  readOnlyRootFilesystem: true
+  capabilities:
+    drop:
+      - ALL

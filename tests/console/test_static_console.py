@@ -1,0 +1,302 @@
+from __future__ import annotations
+
+import json
+from pathlib import Path
+
+from typer.testing import CliRunner
+
+from actionlineage.cli import app
+from actionlineage.console import (
+    ConsoleNote,
+    ConsoleSavedView,
+    load_console_context,
+    render_console_html,
+    write_console,
+    write_desktop_bundle,
+)
+from actionlineage.demo import run_demo
+from actionlineage.projection import TimelineEvent, TimelineResult
+
+runner = CliRunner()
+
+
+def test_write_console_renders_demo_timeline_and_verification_matrix(tmp_path: Path) -> None:
+    demo = run_demo(tmp_path / "demo")
+    output_path = tmp_path / "console" / "index.html"
+
+    export = write_console(demo.database_path, output_path, trace_id=demo.trace_id)
+    html = output_path.read_text(encoding="utf-8")
+
+    assert export.output_path == output_path
+    assert export.event_count == demo.verification.records_verified
+    assert "ActionLineage Investigation Console" in html
+    assert "Verification Matrix" in html
+    assert "Evidence Graph" in html
+    assert "Evidence Links" in html
+    assert "edge-causal" in html
+    assert "edge-evidence" in html
+    assert "evidence:corroborates: evt_demo_05 -&gt; evt_demo_06" in html
+    assert "evt_demo_07" in html
+    assert "verified" in html
+    assert "unverified" in html
+    assert "acknowledgement is not side-effect verification" in html
+    assert "proof " + "of absence" not in html.lower()
+
+
+def test_console_cli_exports_static_html(tmp_path: Path) -> None:
+    demo = run_demo(tmp_path / "demo")
+    output_path = tmp_path / "console.html"
+
+    result = runner.invoke(
+        app,
+        [
+            "projection",
+            "export-console",
+            str(demo.database_path),
+            str(output_path),
+            "--trace-id",
+            demo.trace_id,
+        ],
+    )
+    payload = json.loads(result.stdout)
+
+    assert result.exit_code == 0
+    assert payload["ok"] is True
+    assert payload["event_count"] == demo.verification.records_verified
+    assert output_path.exists()
+
+
+def test_write_desktop_bundle_creates_manifest_and_console(tmp_path: Path) -> None:
+    demo = run_demo(tmp_path / "demo")
+    output_dir = tmp_path / "desktop"
+
+    export = write_desktop_bundle(demo.database_path, output_dir, trace_id=demo.trace_id)
+    manifest = json.loads(export.manifest_path.read_text(encoding="utf-8"))
+    html = export.console_path.read_text(encoding="utf-8")
+
+    assert export.output_dir == output_dir
+    assert export.console_path == output_dir / "index.html"
+    assert export.event_count == demo.verification.records_verified
+    assert manifest["bundle_version"] == "actionlineage.dev/desktop-bundle-v0"
+    assert manifest["entrypoint"] == "index.html"
+    assert manifest["canonical_source"] == "append-only local journal"
+    assert any("No observation recorded is not proof" in item for item in manifest["limitations"])
+    assert "ActionLineage Investigation Console" in html
+
+
+def test_desktop_bundle_cli_exports_manifest_and_console(tmp_path: Path) -> None:
+    demo = run_demo(tmp_path / "demo")
+    output_dir = tmp_path / "desktop"
+
+    result = runner.invoke(
+        app,
+        [
+            "projection",
+            "export-desktop-bundle",
+            str(demo.database_path),
+            str(output_dir),
+            "--trace-id",
+            demo.trace_id,
+        ],
+    )
+    payload = json.loads(result.stdout)
+
+    assert result.exit_code == 0
+    assert payload["ok"] is True
+    assert payload["bundle_version"] == "actionlineage.dev/desktop-bundle-v0"
+    assert Path(payload["console_path"]).exists()
+    assert Path(payload["manifest_path"]).exists()
+
+
+def test_write_console_renders_sanitized_notes_and_saved_views(tmp_path: Path) -> None:
+    demo = run_demo(tmp_path / "demo")
+    output_path = tmp_path / "console" / "annotated.html"
+    note = ConsoleNote(
+        title="Triage <note>",
+        body="Token=supersecretvalue should be redacted",
+        event_id="evt_demo_07",
+        author="analyst@example.invalid",
+    )
+    saved_view = ConsoleSavedView(
+        name="Verified only",
+        query="verification_status:verified",
+        description="Focus on corroborated outcomes",
+    )
+
+    export = write_console(
+        demo.database_path,
+        output_path,
+        trace_id=demo.trace_id,
+        notes=(note,),
+        saved_views=(saved_view,),
+    )
+    html = output_path.read_text(encoding="utf-8")
+
+    assert export.note_count == 1
+    assert export.saved_view_count == 1
+    assert "Case Notes" in html
+    assert "Saved Views" in html
+    assert "Analyst annotations are not journal evidence" in html
+    assert "Triage &lt;note&gt;" in html
+    assert "supersecretvalue" not in html
+    assert "Token=[REDACTED:secret]" in html
+
+
+def test_console_cli_loads_case_context_file(tmp_path: Path) -> None:
+    demo = run_demo(tmp_path / "demo")
+    output_path = tmp_path / "console.html"
+    context_path = tmp_path / "context.json"
+    context_path.write_text(
+        json.dumps(
+            {
+                "notes": [{"title": "Reviewer", "body": "acknowledged is not verified"}],
+                "saved_views": [
+                    {
+                        "name": "Open questions",
+                        "query": "verification_status:unknown",
+                        "description": "Events needing analyst follow-up",
+                    }
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    result = runner.invoke(
+        app,
+        [
+            "projection",
+            "export-console",
+            str(demo.database_path),
+            str(output_path),
+            "--trace-id",
+            demo.trace_id,
+            "--case-context",
+            str(context_path),
+        ],
+    )
+    payload = json.loads(result.stdout)
+    html = output_path.read_text(encoding="utf-8")
+
+    assert result.exit_code == 0
+    assert payload["note_count"] == 1
+    assert payload["saved_view_count"] == 1
+    assert "Reviewer" in html
+    assert "Open questions" in html
+
+
+def test_load_console_context_rejects_secret_values_without_leaking(tmp_path: Path) -> None:
+    path = tmp_path / "context.json"
+    path.write_text(
+        json.dumps(
+            {
+                "notes": [
+                    {
+                        "title": "Secret test",
+                        "body": "Bearer abcdefghijklmnop",
+                    }
+                ]
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    notes, saved_views = load_console_context(path)
+
+    assert saved_views == ()
+    assert "abcdefghijklmnop" not in notes[0].body
+    assert notes[0].body == "Bearer [REDACTED:bearer_token]"
+
+
+def test_render_console_html_escapes_selector_and_payload() -> None:
+    event = TimelineEvent(
+        journal_record_number=1,
+        event_id="evt_escape",
+        event_type="agent.intent.recorded",
+        occurred_at="2026-06-21T18:42:12Z",
+        observed_at="2026-06-21T18:42:12Z",
+        trace_id="<trace>",
+        run_id="run_escape",
+        sequence=1,
+        event_hash="sha256:escape",
+        verification_status=None,
+        evidence_subject_event_id=None,
+        evidence_event_id=None,
+        event={
+            "causality": {"parent_event_id": None},
+            "payload": {"body": "<script>alert('x')</script>"},
+        },
+    )
+    timeline = TimelineResult(
+        selector_type="trace_id",
+        selector_value="<trace>",
+        events=(event,),
+    )
+
+    html = render_console_html(timeline, title="<Console>")
+
+    assert "<script>alert" not in html
+    assert "&lt;script&gt;alert" in html
+    assert "&lt;trace&gt;" in html
+    assert "<title>&lt;Console&gt;</title>" in html
+
+
+def test_render_console_graph_escapes_event_identifiers() -> None:
+    parent = TimelineEvent(
+        journal_record_number=1,
+        event_id="evt_<parent>",
+        event_type="agent.intent.recorded",
+        occurred_at="2026-06-21T18:42:12Z",
+        observed_at="2026-06-21T18:42:12Z",
+        trace_id="trace_graph",
+        run_id="run_graph",
+        sequence=0,
+        event_hash="sha256:parent",
+        verification_status=None,
+        evidence_subject_event_id=None,
+        evidence_event_id=None,
+        event={
+            "causality": {"parent_event_id": None},
+            "payload": {"body": "root"},
+        },
+    )
+    child = TimelineEvent(
+        journal_record_number=2,
+        event_id="evt_<child>",
+        event_type="side_effect.verified",
+        occurred_at="2026-06-21T18:42:13Z",
+        observed_at="2026-06-21T18:42:13Z",
+        trace_id="trace_graph",
+        run_id="run_graph",
+        sequence=1,
+        event_hash="sha256:child",
+        verification_status="verified",
+        evidence_subject_event_id="evt_<parent>",
+        evidence_event_id="evt_<child>",
+        event={
+            "causality": {"parent_event_id": "evt_<parent>"},
+            "payload": {
+                "evidence_link": {
+                    "relationship": "corroborates",
+                    "subject_event_id": "evt_<parent>",
+                    "evidence_event_id": "evt_<child>",
+                    "observer_identity": "observer_<x>",
+                    "confidence": 0.9,
+                    "verification_status": "verified",
+                }
+            },
+        },
+    )
+    timeline = TimelineResult(
+        selector_type="trace_id",
+        selector_value="trace_graph",
+        events=(parent, child),
+    )
+
+    html = render_console_html(timeline)
+
+    assert "Evidence Graph" in html
+    assert "evt_<parent>" not in html
+    assert "evt_&lt;parent&gt;" in html
+    assert "causal: evt_&lt;parent&gt; -&gt; evt_&lt;child&gt;" in html
+    assert "evidence:corroborates: evt_&lt;parent&gt; -&gt; evt_&lt;child&gt;" in html

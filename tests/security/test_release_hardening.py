@@ -1,0 +1,152 @@
+from __future__ import annotations
+
+import importlib.util
+import json
+import string
+import sys
+from pathlib import Path
+from types import ModuleType
+
+from hypothesis import given, settings
+from hypothesis import strategies as st
+
+from actionlineage.domain import RedactionPolicy, capture_string, serialize_event_for_persistence
+from tests.domain.test_events import build_event
+
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
+ADVERSARIAL_FIXTURE = PROJECT_ROOT / "tests/fixtures/adversarial/security-regressions.json"
+
+
+def test_claim_language_guard_passes_current_repository() -> None:
+    scanner = _load_script("check_claims_language")
+
+    findings = scanner.scan_paths([PROJECT_ROOT])
+
+    assert findings == []
+
+
+def test_claim_language_guard_flags_positive_overclaim(tmp_path: Path) -> None:
+    scanner = _load_script("check_claims_language")
+    claim_file = tmp_path / "claim.md"
+    claim_file.write_text("This product is tamper" + "-proof.\n", encoding="utf-8")
+
+    findings = scanner.scan_paths([claim_file])
+
+    assert len(findings) == 1
+    assert findings[0].phrase == "tamper" + "-proof"
+
+
+def test_secret_scan_passes_current_repository() -> None:
+    scanner = _load_script("secret_scan")
+
+    findings = scanner.scan_paths([PROJECT_ROOT])
+
+    assert findings == []
+
+
+def test_secret_scan_flags_private_key(tmp_path: Path) -> None:
+    scanner = _load_script("secret_scan")
+    secret_file = tmp_path / "leak.txt"
+    secret_file.write_text(
+        "-----BEGIN " + "PRIVATE KEY-----\nnot-a-real-key\n-----END PRIVATE KEY-----\n",
+        encoding="utf-8",
+    )
+
+    findings = scanner.scan_paths([secret_file])
+
+    assert len(findings) == 1
+    assert findings[0].kind == "private_key"
+
+
+def test_lightweight_sbom_includes_runtime_dependency() -> None:
+    generator = _load_script("generate_sbom")
+
+    sbom = generator.build_sbom(PROJECT_ROOT / "pyproject.toml")
+    packages = {(package["scope"], package["name"]) for package in sbom["packages"]}
+
+    assert sbom["bom_format"] == "actionlineage.dev/simple-sbom-v0"
+    assert ("runtime:pydantic>=2.10,<3", "pydantic") in packages
+    assert all("license" in package for package in sbom["packages"])
+
+
+def test_release_provenance_hashes_dist_artifacts_without_signing_claims(tmp_path: Path) -> None:
+    generator = _load_script("generate_release_provenance")
+    dist_dir = tmp_path / "dist"
+    dist_dir.mkdir()
+    artifact = dist_dir / "actionlineage-1.0.0-py3-none-any.whl"
+    artifact.write_bytes(b"wheel-bytes")
+
+    provenance = generator.build_release_provenance(PROJECT_ROOT / "pyproject.toml", dist_dir)
+
+    assert provenance["provenance_format"] == "actionlineage.dev/release-provenance-v0"
+    assert provenance["builder"]["signature"] is None
+    assert "unsigned local manifest" in provenance["builder"]["limitations"]
+    assert provenance["subjects"] == [
+        {
+            "path": "actionlineage-1.0.0-py3-none-any.whl",
+            "sha256": ("sha256:9ceb18f15662bb87e54af2f5953c0484d2ef76f5444d87913360b9ef87d7296d"),
+            "size_bytes": 11,
+        }
+    ]
+
+
+def test_adversarial_fixture_categories_are_complete() -> None:
+    fixture = json.loads(ADVERSARIAL_FIXTURE.read_text(encoding="utf-8"))
+
+    categories = {case["category"] for case in fixture["cases"]}
+
+    assert categories == {
+        "conflicting_observer",
+        "descriptor_drift",
+        "malformed_adapter_payload",
+        "oversized_payload",
+        "prompt_injection",
+        "replayed_approval",
+    }
+
+
+@settings(max_examples=25, derandomize=True)
+@given(st.text(alphabet=string.ascii_letters + string.digits, min_size=8, max_size=48))
+def test_bearer_token_redaction_property(token: str) -> None:
+    bearer = f"Bearer {token}"
+    event = build_event(payload={"headers": {"authorization": bearer}, "note": bearer})
+
+    serialized = serialize_event_for_persistence(event).decode("utf-8")
+
+    assert token not in serialized
+    assert bearer not in serialized
+
+
+@settings(max_examples=25, derandomize=True)
+@given(st.text(min_size=0, max_size=256))
+def test_capture_string_respects_configured_bound(value: str) -> None:
+    captured = capture_string(value, max_length=16)
+
+    if isinstance(captured, dict):
+        assert captured["captured_length"] <= 16
+        assert len(str(captured["value"])) <= 16
+        assert captured["digest"].startswith("sha256:")
+    else:
+        assert len(captured) <= 16
+
+
+@settings(max_examples=20, derandomize=True)
+@given(st.dictionaries(st.sampled_from(["password", "api_key", "note"]), st.text(max_size=64)))
+def test_sensitive_field_names_are_redacted_property(payload: dict[str, str]) -> None:
+    redacted = RedactionPolicy().apply(payload)
+
+    if "password" in payload:
+        assert redacted["password"]["marker"] == "actionlineage.redacted.v1"
+    if "api_key" in payload:
+        assert redacted["api_key"]["marker"] == "actionlineage.redacted.v1"
+
+
+def _load_script(name: str) -> ModuleType:
+    script_path = PROJECT_ROOT / "scripts" / f"{name}.py"
+    spec = importlib.util.spec_from_file_location(name, script_path)
+    assert spec is not None
+    assert spec.loader is not None
+    module = importlib.util.module_from_spec(spec)
+    sys.modules[name] = module
+    spec.loader.exec_module(module)
+    return module

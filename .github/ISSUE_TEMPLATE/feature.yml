@@ -1,0 +1,26 @@
+name: Feature
+about: Propose a bounded feature or capability
+body:
+  - type: textarea
+    attributes:
+      label: Problem
+      description: What user/security problem should be solved?
+    validations:
+      required: true
+  - type: textarea
+    attributes:
+      label: Proposed scope
+      description: Include explicit non-goals.
+    validations:
+      required: true
+  - type: textarea
+    attributes:
+      label: Security and privacy considerations
+    validations:
+      required: true
+  - type: textarea
+    attributes:
+      label: Acceptance criteria
+      description: List executable evidence.
+    validations:
+      required: true

@@ -1,0 +1,20 @@
+{
+  "profile": "stix",
+  "status": "stix-style-local-mapping",
+  "canonical_evidence": "append-only local journal",
+  "object_types": [
+    "bundle",
+    "observed-data",
+    "note"
+  ],
+  "fields": {
+    "bundle.id": "stable UUIDv5 derived from ActionLineage event ID",
+    "objects[0].x_actionlineage_redacted_event": "redacted ActionLineage event envelope",
+    "objects[1].content": "sharing note that points back to the canonical journal"
+  },
+  "not_claimed": [
+    "TAXII server implementation",
+    "full STIX conformance certification",
+    "canonical evidence storage"
+  ]
+}

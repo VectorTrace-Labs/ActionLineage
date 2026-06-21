@@ -1,0 +1,27 @@
+name: Adapter request
+about: Request or scope an optional adapter integration
+body:
+  - type: textarea
+    attributes:
+      label: Adapter target
+      description: Name the framework, protocol, service, or runtime.
+    validations:
+      required: true
+  - type: textarea
+    attributes:
+      label: Evidence mapping
+      description: Which neutral lifecycle events and evidence links should it emit?
+    validations:
+      required: true
+  - type: textarea
+    attributes:
+      label: Dependencies and trust boundary
+      description: List new dependencies, credentials, network access, and redaction concerns.
+    validations:
+      required: true
+  - type: textarea
+    attributes:
+      label: Acceptance tests
+      description: Include local fixture or mock-server tests.
+    validations:
+      required: true

@@ -1,0 +1,27 @@
+name: Compatibility report
+about: Report journal, schema, API, or CLI compatibility behavior
+body:
+  - type: textarea
+    attributes:
+      label: Compatibility surface
+      description: Event schema, journal fixture, public API import, CLI command, or package extra.
+    validations:
+      required: true
+  - type: textarea
+    attributes:
+      label: Version and artifact
+      description: Include ActionLineage version and a minimized non-sensitive fixture.
+    validations:
+      required: true
+  - type: textarea
+    attributes:
+      label: Expected behavior
+      description: Link to the compatibility policy if applicable.
+    validations:
+      required: true
+  - type: textarea
+    attributes:
+      label: Actual behavior
+      description: Include command output with secrets removed.
+    validations:
+      required: true

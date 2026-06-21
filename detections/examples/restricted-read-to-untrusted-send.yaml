@@ -1,0 +1,29 @@
+apiVersion: actionlineage.dev/v1alpha1
+kind: SequenceDetection
+metadata:
+  name: restricted-read-followed-by-verified-untrusted-send
+spec:
+  groupBy:
+    - correlation.run_id
+  within: 2m
+  ordered: true
+  stages:
+    - eventType: action.normalized
+      where:
+        action.type: data.read
+        resource.sensitivity:
+          in:
+            - restricted
+            - secret
+    - eventType: tool.execution.acknowledged
+      where:
+        tool_identity.name: safe_http.send
+    - eventType: side_effect.verified
+      where:
+        evidence_link.verification_status: verified
+        evidence_link.corroboration_type:
+          in:
+            - independent_observer
+            - fixture_oracle
+  severity: high
+  rationale: Detect a possible agent-mediated restricted-data flow only when side-effect evidence is verified.

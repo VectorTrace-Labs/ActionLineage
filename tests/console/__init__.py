@@ -1,0 +1,1 @@
+"""Static console tests."""

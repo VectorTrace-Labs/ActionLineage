@@ -1,0 +1,11 @@
+{
+  "profile": "sigma",
+  "canonical_source": "actionlineage event envelope",
+  "fields": {
+    "detection.condition": "selection",
+    "detection.selection.event_id": "event_id",
+    "detection.selection.event_type": "event_type",
+    "logsource.product": "actionlineage",
+    "title": "event_type"
+  }
+}

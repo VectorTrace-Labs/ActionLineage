@@ -1,0 +1,26 @@
+services:
+  actionlineage:
+    build:
+      context: ../..
+      dockerfile: deploy/docker/Dockerfile
+    entrypoint: ["python", "-m", "uvicorn"]
+    command:
+      - "actionlineage.service.runtime:create_service_app_from_env"
+      - "--factory"
+      - "--host"
+      - "0.0.0.0"
+      - "--port"
+      - "8000"
+    environment:
+      ACTIONLINEAGE_DATABASE_PATH: /data/projection.sqlite
+      ACTIONLINEAGE_JOURNAL_PATH: /data/actionlineage.journal
+      ACTIONLINEAGE_SERVICE_PRINCIPAL: compose-admin
+      ACTIONLINEAGE_SERVICE_ROLES: admin
+      ACTIONLINEAGE_SERVICE_TOKEN: local-token
+    ports:
+      - "8000:8000"
+    volumes:
+      - actionlineage-data:/data
+
+volumes:
+  actionlineage-data:

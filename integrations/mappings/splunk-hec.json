@@ -1,0 +1,10 @@
+{
+  "profile": "splunk_hec",
+  "canonical_source": "actionlineage event envelope",
+  "fields": {
+    "event": "redacted event",
+    "source": "actionlineage",
+    "sourcetype": "actionlineage:evidence",
+    "time": "occurred_at"
+  }
+}

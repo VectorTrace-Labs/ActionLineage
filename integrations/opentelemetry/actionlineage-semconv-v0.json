@@ -1,0 +1,71 @@
+{
+  "schema_url": "https://actionlineage.dev/semconv/actionlineage/v0",
+  "status": "proposal",
+  "namespace": "actionlineage",
+  "version": "0.1.0",
+  "stability": "experimental",
+  "canonical_source": "append-only local journal",
+  "description": "Proposed OpenTelemetry attribute names for redacted ActionLineage evidence exports.",
+  "attributes": [
+    {
+      "name": "actionlineage.event_id",
+      "type": "string",
+      "requirement_level": "required",
+      "source": "event_id",
+      "notes": "Stable event identifier from the ActionLineage envelope."
+    },
+    {
+      "name": "actionlineage.event_type",
+      "type": "string",
+      "requirement_level": "required",
+      "source": "event_type",
+      "notes": "Known or preserved future event type string."
+    },
+    {
+      "name": "actionlineage.spec_version",
+      "type": "string",
+      "requirement_level": "required",
+      "source": "spec_version",
+      "notes": "ActionLineage envelope version."
+    },
+    {
+      "name": "actionlineage.trace_id",
+      "type": "string",
+      "requirement_level": "required",
+      "source": "correlation.trace_id",
+      "notes": "Trace identifier from the redacted event envelope."
+    },
+    {
+      "name": "actionlineage.run_id",
+      "type": "string",
+      "requirement_level": "required",
+      "source": "correlation.run_id",
+      "notes": "Agent run identifier from the redacted event envelope."
+    },
+    {
+      "name": "actionlineage.source.component",
+      "type": "string",
+      "requirement_level": "required",
+      "source": "source.component",
+      "notes": "Component that emitted the evidence event."
+    },
+    {
+      "name": "actionlineage.payload_json",
+      "type": "string",
+      "requirement_level": "opt_in",
+      "source": "payload",
+      "notes": "Redacted payload JSON string. Raw secrets and raw authorization material are never exported."
+    }
+  ],
+  "event_semantics": {
+    "acknowledged": "A successful tool response is represented as acknowledgement only.",
+    "observed": "Independent observation must be represented with side-effect evidence.",
+    "verified": "Verification requires independent or explicitly identified corroborating evidence.",
+    "absence": "No observation recorded is not proof that a side effect did not occur."
+  },
+  "not_claimed": [
+    "upstream OpenTelemetry standardization",
+    "canonical evidence storage",
+    "side-effect verification by export alone"
+  ]
+}

@@ -1,0 +1,90 @@
+{
+  "apiVersion": "actionlineage.dev/contract/v1",
+  "kind": "LineageContract",
+  "metadata": {
+    "name": "outbound-http-evidence"
+  },
+  "spec": {
+    "requirements": {
+      "events": [
+        {
+          "type": "tool.execution.requested",
+          "requiredFields": [
+            "payload.tool_identity.name",
+            "payload.tool_identity.descriptor_hash"
+          ]
+        },
+        {
+          "type": "tool.execution.dispatched",
+          "requiredFields": [
+            "payload.dispatch.state"
+          ]
+        },
+        {
+          "type": "tool.execution.acknowledged",
+          "requiredFields": [
+            "payload.acknowledgement.status"
+          ]
+        },
+        {
+          "type": "side_effect.observed",
+          "requiredFields": [
+            "payload.observer_identity",
+            "payload.observation.status"
+          ]
+        },
+        {
+          "type": "side_effect.verified",
+          "requiredFields": [
+            "payload.evidence_link.subject_event_id",
+            "payload.evidence_link.evidence_event_id",
+            "payload.evidence_link.verification_status"
+          ]
+        }
+      ],
+      "relationships": [
+        {
+          "child": "tool.execution.dispatched",
+          "parent": "tool.execution.authorized"
+        },
+        {
+          "child": "tool.execution.acknowledged",
+          "parent": "tool.execution.dispatched"
+        },
+        {
+          "child": "side_effect.verified",
+          "parent": "side_effect.observed"
+        }
+      ],
+      "evidenceLinks": [
+        {
+          "eventType": "side_effect.verified",
+          "subjectEventType": "tool.execution.acknowledged",
+          "evidenceEventType": "side_effect.observed",
+          "verificationStatus": "verified",
+          "corroborationTypes": [
+            "independent_observer",
+            "post_action_readback"
+          ]
+        }
+      ],
+      "descriptors": [
+        {
+          "eventType": "tool.execution.requested"
+        }
+      ],
+      "verification": {
+        "allowedStatuses": [
+          "observed",
+          "verified",
+          "unverified",
+          "timed_out",
+          "conflicting"
+        ]
+      },
+      "integrity": {
+        "hashChainRequired": true
+      }
+    }
+  }
+}

@@ -1,0 +1,62 @@
+{
+  "apiVersion": "actionlineage.dev/contract/v1",
+  "kind": "LineageContract",
+  "metadata": {
+    "name": "restricted-exfiltration-detection-coverage"
+  },
+  "spec": {
+    "requirements": {
+      "events": [
+        {
+          "type": "action.normalized",
+          "requiredFields": [
+            "payload.action.resources.0.attributes.sensitivity"
+          ]
+        },
+        {
+          "type": "side_effect.verified",
+          "requiredFields": [
+            "payload.evidence_link.verification_status",
+            "payload.evidence_link.corroboration_type"
+          ]
+        }
+      ],
+      "evidenceLinks": [
+        {
+          "eventType": "side_effect.verified",
+          "verificationStatus": "verified",
+          "corroborationTypes": [
+            "independent_observer",
+            "fixture_oracle"
+          ]
+        }
+      ],
+      "detections": [
+        {
+          "ruleId": "AL-DET-001",
+          "required": true,
+          "requiredEventTypes": [
+            "action.normalized",
+            "side_effect.verified"
+          ],
+          "requiredVerificationStatuses": [
+            "verified"
+          ]
+        }
+      ],
+      "verification": {
+        "allowedStatuses": [
+          "observed",
+          "verified",
+          "unverified",
+          "timed_out",
+          "conflicting"
+        ],
+        "requiredStatus": "verified"
+      },
+      "integrity": {
+        "hashChainRequired": true
+      }
+    }
+  }
+}

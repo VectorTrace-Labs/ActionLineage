@@ -1,0 +1,124 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: actionlineage
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: actionlineage-service-token
+  namespace: actionlineage
+type: Opaque
+stringData:
+  ACTIONLINEAGE_SERVICE_TOKEN: local-token
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: actionlineage-data
+  namespace: actionlineage
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 5Gi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: actionlineage-service
+  namespace: actionlineage
+  labels:
+    app.kubernetes.io/name: actionlineage
+    app.kubernetes.io/component: evidence-service
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: actionlineage
+      app.kubernetes.io/component: evidence-service
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: actionlineage
+        app.kubernetes.io/component: evidence-service
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001
+        runAsGroup: 10001
+        fsGroup: 10001
+      containers:
+        - name: actionlineage
+          image: ghcr.io/vectortrace-labs/actionlineage:1.0.0
+          imagePullPolicy: IfNotPresent
+          command:
+            - python
+            - -m
+            - uvicorn
+          args:
+            - actionlineage.service.runtime:create_service_app_from_env
+            - --factory
+            - --host
+            - 0.0.0.0
+            - --port
+            - "8000"
+          ports:
+            - name: http
+              containerPort: 8000
+          env:
+            - name: ACTIONLINEAGE_JOURNAL_PATH
+              value: /data/actionlineage.journal
+            - name: ACTIONLINEAGE_DATABASE_PATH
+              value: /data/projection.sqlite
+            - name: ACTIONLINEAGE_SERVICE_PRINCIPAL
+              value: kubernetes-admin
+            - name: ACTIONLINEAGE_SERVICE_ROLES
+              value: admin
+            - name: ACTIONLINEAGE_SERVICE_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: actionlineage-service-token
+                  key: ACTIONLINEAGE_SERVICE_TOKEN
+          volumeMounts:
+            - name: actionlineage-data
+              mountPath: /data
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: http
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: http
+            periodSeconds: 30
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop:
+                - ALL
+      volumes:
+        - name: actionlineage-data
+          persistentVolumeClaim:
+            claimName: actionlineage-data
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: actionlineage-service
+  namespace: actionlineage
+  labels:
+    app.kubernetes.io/name: actionlineage
+    app.kubernetes.io/component: evidence-service
+spec:
+  type: ClusterIP
+  selector:
+    app.kubernetes.io/name: actionlineage
+    app.kubernetes.io/component: evidence-service
+  ports:
+    - name: http
+      port: 8000
+      targetPort: http

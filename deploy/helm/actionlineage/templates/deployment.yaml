@@ -1,0 +1,73 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "actionlineage.fullname" . }}
+  labels:
+    {{- include "actionlineage.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: {{ include "actionlineage.name" . }}
+      app.kubernetes.io/instance: {{ .Release.Name }}
+      app.kubernetes.io/component: evidence-service
+  template:
+    metadata:
+      labels:
+        {{- include "actionlineage.labels" . | nindent 8 }}
+    spec:
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      containers:
+        - name: actionlineage
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          command:
+            - python
+            - -m
+            - uvicorn
+          args:
+            - actionlineage.service.runtime:create_service_app_from_env
+            - --factory
+            - --host
+            - 0.0.0.0
+            - --port
+            - {{ .Values.service.port | quote }}
+          ports:
+            - name: http
+              containerPort: {{ .Values.service.port }}
+          env:
+            - name: ACTIONLINEAGE_JOURNAL_PATH
+              value: {{ .Values.serviceRuntime.journalPath | quote }}
+            - name: ACTIONLINEAGE_DATABASE_PATH
+              value: {{ .Values.serviceRuntime.databasePath | quote }}
+            - name: ACTIONLINEAGE_SERVICE_PRINCIPAL
+              value: {{ .Values.serviceRuntime.principal | quote }}
+            - name: ACTIONLINEAGE_SERVICE_ROLES
+              value: {{ .Values.serviceRuntime.roles | quote }}
+            - name: ACTIONLINEAGE_SERVICE_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "actionlineage.fullname" . }}-token
+                  key: ACTIONLINEAGE_SERVICE_TOKEN
+          volumeMounts:
+            - name: actionlineage-data
+              mountPath: {{ .Values.persistence.mountPath | quote }}
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: http
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: http
+          securityContext:
+            {{- toYaml .Values.containerSecurityContext | nindent 12 }}
+      volumes:
+        - name: actionlineage-data
+          {{- if .Values.persistence.enabled }}
+          persistentVolumeClaim:
+            claimName: {{ include "actionlineage.fullname" . }}-data
+          {{- else }}
+          emptyDir: {}
+          {{- end }}

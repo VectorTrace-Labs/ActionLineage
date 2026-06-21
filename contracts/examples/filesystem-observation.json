@@ -1,0 +1,62 @@
+{
+  "apiVersion": "actionlineage.dev/contract/v1",
+  "kind": "LineageContract",
+  "metadata": {
+    "name": "filesystem-observation-evidence"
+  },
+  "spec": {
+    "requirements": {
+      "events": [
+        {
+          "type": "tool.execution.acknowledged",
+          "requiredFields": [
+            "payload.tool_identity.name",
+            "payload.acknowledgement.status"
+          ]
+        },
+        {
+          "type": "side_effect.observed",
+          "requiredFields": [
+            "payload.observer_identity",
+            "payload.observed_resource.type",
+            "payload.observation.status"
+          ]
+        },
+        {
+          "type": "side_effect.verified",
+          "requiredFields": [
+            "payload.evidence_link.subject_event_id",
+            "payload.evidence_link.evidence_event_id",
+            "payload.evidence_link.limitations"
+          ]
+        }
+      ],
+      "evidenceLinks": [
+        {
+          "eventType": "side_effect.verified",
+          "subjectEventType": "tool.execution.acknowledged",
+          "evidenceEventType": "side_effect.observed",
+          "verificationStatus": "verified",
+          "corroborationTypes": [
+            "independent_observer",
+            "post_action_readback",
+            "fixture_oracle"
+          ]
+        }
+      ],
+      "verification": {
+        "allowedStatuses": [
+          "observed",
+          "verified",
+          "unverified",
+          "timed_out",
+          "conflicting"
+        ],
+        "requiredStatus": "verified"
+      },
+      "integrity": {
+        "hashChainRequired": true
+      }
+    }
+  }
+}

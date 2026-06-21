@@ -1,0 +1,26 @@
+name: Security report
+about: Non-sensitive security hardening issue
+body:
+  - type: markdown
+    attributes:
+      value: |
+        For sensitive vulnerabilities, follow SECURITY.md and report privately.
+        Do not paste live credentials, private data, or exploit payloads here.
+  - type: textarea
+    attributes:
+      label: Area
+      description: Redaction, journal integrity, adapter boundary, policy behavior, service auth, supply chain, or documentation claim.
+    validations:
+      required: true
+  - type: textarea
+    attributes:
+      label: Risk
+      description: What could go wrong, and what evidence supports the concern?
+    validations:
+      required: true
+  - type: textarea
+    attributes:
+      label: Safe reproduction
+      description: Use synthetic/local data only.
+    validations:
+      required: true

@@ -1,0 +1,21 @@
+{
+  "profile": "opentelemetry",
+  "canonical_source": "actionlineage event envelope",
+  "sink": "OpenTelemetrySpanSink",
+  "semantic_convention_proposal": "integrations/opentelemetry/actionlineage-semconv-v0.json",
+  "fields": {
+    "actionlineage.event_id": "event_id",
+    "actionlineage.event_type": "event_type",
+    "actionlineage.payload_json": "redacted payload JSON string",
+    "actionlineage.run_id": "correlation.run_id",
+    "actionlineage.source.component": "source.component",
+    "actionlineage.spec_version": "spec_version",
+    "actionlineage.trace_id": "correlation.trace_id"
+  },
+  "failure_semantics": "collector failure is reported as export failure after journal persistence",
+  "not_claimed": [
+    "canonical evidence storage",
+    "upstream OpenTelemetry semantic convention standardization",
+    "side-effect verification"
+  ]
+}

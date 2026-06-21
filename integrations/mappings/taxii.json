@@ -1,0 +1,16 @@
+{
+  "profile": "taxii",
+  "status": "taxii-style-local-envelope",
+  "canonical_evidence": "append-only local journal",
+  "sink": "TaxiiHttpSink",
+  "fields": {
+    "more": "false for deterministic one-event envelopes",
+    "objects": "STIX observed-data and note objects derived from the redacted event"
+  },
+  "failure_semantics": "TAXII sink failure is reported as export failure after journal persistence",
+  "not_claimed": [
+    "TAXII server implementation",
+    "external standard conformance certification",
+    "canonical evidence storage"
+  ]
+}

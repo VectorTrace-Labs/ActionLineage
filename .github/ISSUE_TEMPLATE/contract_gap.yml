@@ -1,0 +1,27 @@
+name: Contract gap
+about: Report missing or ambiguous telemetry contract coverage
+body:
+  - type: textarea
+    attributes:
+      label: Control or detection dependency
+      description: What requirement cannot currently be expressed or validated?
+    validations:
+      required: true
+  - type: textarea
+    attributes:
+      label: Required evidence
+      description: List events, fields, causal links, evidence links, and statuses.
+    validations:
+      required: true
+  - type: textarea
+    attributes:
+      label: Failure mode
+      description: How should the contract fail when evidence is missing or stale?
+    validations:
+      required: true
+  - type: textarea
+    attributes:
+      label: Fixture
+      description: Provide a minimal valid or invalid journal fixture.
+    validations:
+      required: true

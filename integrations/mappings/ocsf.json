@@ -1,0 +1,12 @@
+{
+  "profile": "ocsf",
+  "canonical_source": "actionlineage event envelope",
+  "fields": {
+    "activity_name": "event_type",
+    "actor": "principal",
+    "metadata.version": "spec_version",
+    "raw_data": "redacted event",
+    "time": "occurred_at",
+    "uid": "event_id"
+  }
+}

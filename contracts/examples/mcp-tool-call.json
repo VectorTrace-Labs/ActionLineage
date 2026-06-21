@@ -1,0 +1,52 @@
+{
+  "apiVersion": "actionlineage.dev/contract/v1",
+  "kind": "LineageContract",
+  "metadata": {
+    "name": "mcp-tool-call-evidence"
+  },
+  "spec": {
+    "requirements": {
+      "events": [
+        {
+          "type": "tool.execution.requested",
+          "requiredFields": [
+            "correlation.trace_id",
+            "payload.tool_identity.name",
+            "payload.tool_identity.descriptor_hash"
+          ]
+        },
+        {
+          "type": "tool.execution.dispatched",
+          "requiredFields": [
+            "payload.tool_identity.name",
+            "payload.dispatch.state"
+          ]
+        },
+        {
+          "type": "tool.execution.acknowledged",
+          "requiredFields": [
+            "payload.acknowledgement.status"
+          ]
+        }
+      ],
+      "relationships": [
+        {
+          "child": "tool.execution.dispatched",
+          "parent": "tool.execution.authorized"
+        },
+        {
+          "child": "tool.execution.acknowledged",
+          "parent": "tool.execution.dispatched"
+        }
+      ],
+      "descriptors": [
+        {
+          "eventType": "tool.execution.requested"
+        }
+      ],
+      "integrity": {
+        "hashChainRequired": true
+      }
+    }
+  }
+}
