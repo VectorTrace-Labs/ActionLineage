@@ -304,7 +304,7 @@ def test_service_ingest_endpoint_writes_and_rebuilds_projection(tmp_path) -> Non
     assert timeline.json()["event_count"] == 1
 
 
-def test_service_contract_and_detection_endpoints(tmp_path) -> None:
+def test_service_contract_and_detection_endpoints(tmp_path: Path) -> None:
     demo = run_demo(tmp_path / "demo")
     client = _client(
         demo.journal_path,
