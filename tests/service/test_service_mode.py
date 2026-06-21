@@ -266,7 +266,7 @@ def test_service_runtime_factory_rejects_unknown_roles(
         create_service_app_from_env()
 
 
-def test_service_ingest_endpoint_writes_and_rebuilds_projection(tmp_path) -> None:
+def test_service_ingest_endpoint_writes_and_rebuilds_projection(tmp_path: Path) -> None:
     demo = run_demo(tmp_path / "demo")
     client = _client(
         demo.journal_path,
