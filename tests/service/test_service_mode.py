@@ -197,7 +197,7 @@ def test_oidc_jwt_authenticator_uses_injected_jwk_client() -> None:
     assert principal.roles == frozenset({ServiceRole.READ, ServiceRole.EXPORT})
 
 
-def test_local_health_reports_ok_and_projection_missing(tmp_path) -> None:
+def test_local_health_reports_ok_and_projection_missing(tmp_path: Path) -> None:
     demo = run_demo(tmp_path / "demo")
     ok = check_local_health(journal_path=demo.journal_path, database_path=demo.database_path)
     degraded = check_local_health(
@@ -266,7 +266,7 @@ def test_service_runtime_factory_rejects_unknown_roles(
         create_service_app_from_env()
 
 
-def test_service_ingest_endpoint_writes_and_rebuilds_projection(tmp_path) -> None:
+def test_service_ingest_endpoint_writes_and_rebuilds_projection(tmp_path: Path) -> None:
     demo = run_demo(tmp_path / "demo")
     client = _client(
         demo.journal_path,
@@ -304,7 +304,7 @@ def test_service_ingest_endpoint_writes_and_rebuilds_projection(tmp_path) -> Non
     assert timeline.json()["event_count"] == 1
 
 
-def test_service_contract_and_detection_endpoints(tmp_path) -> None:
+def test_service_contract_and_detection_endpoints(tmp_path: Path) -> None:
     demo = run_demo(tmp_path / "demo")
     client = _client(
         demo.journal_path,
@@ -335,7 +335,7 @@ def test_service_contract_and_detection_endpoints(tmp_path) -> None:
     assert detection_response.json()["match_count"] == 1
 
 
-def test_service_detection_endpoint_rejects_malformed_rule_ids(tmp_path) -> None:
+def test_service_detection_endpoint_rejects_malformed_rule_ids(tmp_path: Path) -> None:
     demo = run_demo(tmp_path / "demo")
     client = _client(
         demo.journal_path,
@@ -354,7 +354,7 @@ def test_service_detection_endpoint_rejects_malformed_rule_ids(tmp_path) -> None
     assert "rule_ids" in response.json()["detail"]
 
 
-def test_service_export_case_is_confined_to_export_root(tmp_path) -> None:
+def test_service_export_case_is_confined_to_export_root(tmp_path: Path) -> None:
     demo = run_demo(tmp_path / "demo")
     export_root = tmp_path / "exports"
     client = _client(
