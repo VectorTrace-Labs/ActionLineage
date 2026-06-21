@@ -77,9 +77,9 @@ After a successful release workflow run, verify downloaded artifacts with GitHub
 CLI:
 
 ```bash
-gh attestation verify actionlineage-0.1.0a1-py3-none-any.whl \
+gh attestation verify actionlineage-0.1.0a2-py3-none-any.whl \
   --repo VectorTrace-Labs/ActionLineage
-gh attestation verify actionlineage-0.1.0a1.tar.gz \
+gh attestation verify actionlineage-0.1.0a2.tar.gz \
   --repo VectorTrace-Labs/ActionLineage
 ```
 

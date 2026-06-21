@@ -8,7 +8,7 @@ implementation change.
 
 | Decision | Recommended default | Needed before |
 | --- | --- | --- |
-| Public version posture | Keep `0.1.0a1` and `Development Status :: 3 - Alpha` | Any public announcement |
+| Public version posture | Keep `0.1.0a2` and `Development Status :: 3 - Alpha` | Any public announcement |
 | Schema namespace | Keep `actionlineage.dev/v1alpha1` | External integrations depend on schemas |
 | API promise | Core event/journal/projection/ingestion are alpha-supported; optional service/cloud/adapter exports are preview | 1.0 planning |
 | Demo contract | Use `outbound-http.json` for five-minute demo | README quickstart changes |

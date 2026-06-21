@@ -15,8 +15,8 @@ PYPROJECT = PROJECT_ROOT / "pyproject.toml"
 def test_package_metadata_is_public_alpha_ready() -> None:
     project = tomllib.loads(PYPROJECT.read_text(encoding="utf-8"))["project"]
 
-    assert project["version"] == "0.1.0a1"
-    assert actionlineage.__version__ == "0.1.0a1"
+    assert project["version"] == "0.1.0a2"
+    assert actionlineage.__version__ == "0.1.0a2"
     assert "Development Status :: 3 - Alpha" in project["classifiers"]
     assert "Development Status :: 5 - Production/Stable" not in project["classifiers"]
     assert "Typing :: Typed" in project["classifiers"]
@@ -76,7 +76,7 @@ def test_cli_version_matches_package_metadata() -> None:
     result = CliRunner().invoke(app, ["version"])
 
     assert result.exit_code == 0
-    assert result.stdout.strip() == "0.1.0a1"
+    assert result.stdout.strip() == "0.1.0a2"
 
 
 def test_readme_quickstart_uses_demo_aligned_contract() -> None:
