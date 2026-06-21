@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from pathlib import Path
+
 import pytest
 from fastapi.testclient import TestClient
 
@@ -208,7 +210,7 @@ def test_local_health_reports_ok_and_projection_missing(tmp_path) -> None:
     assert degraded.issues[0].code == "projection_missing"
 
 
-def test_create_app_factory_is_available_with_optional_dependencies(tmp_path) -> None:
+def test_create_app_factory_is_available_with_optional_dependencies(tmp_path: Path) -> None:
     demo = run_demo(tmp_path / "demo")
     authenticator = StaticTokenAuthenticator(
         tokens={
@@ -228,7 +230,10 @@ def test_create_app_factory_is_available_with_optional_dependencies(tmp_path) ->
     assert app.title == "ActionLineage Evidence Service"
 
 
-def test_service_runtime_factory_reads_environment(monkeypatch, tmp_path) -> None:
+def test_service_runtime_factory_reads_environment(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
     journal_path = tmp_path / "runtime.journal"
     database_path = tmp_path / "runtime.sqlite"
     monkeypatch.setenv("ACTIONLINEAGE_SERVICE_TOKEN", "runtime-token")
@@ -242,14 +247,18 @@ def test_service_runtime_factory_reads_environment(monkeypatch, tmp_path) -> Non
     assert app.title == "ActionLineage Evidence Service"
 
 
-def test_service_runtime_factory_requires_explicit_token(monkeypatch) -> None:
+def test_service_runtime_factory_requires_explicit_token(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     monkeypatch.delenv("ACTIONLINEAGE_SERVICE_TOKEN", raising=False)
 
     with pytest.raises(ServiceRuntimeConfigError, match="ACTIONLINEAGE_SERVICE_TOKEN"):
         create_service_app_from_env()
 
 
-def test_service_runtime_factory_rejects_unknown_roles(monkeypatch) -> None:
+def test_service_runtime_factory_rejects_unknown_roles(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     monkeypatch.setenv("ACTIONLINEAGE_SERVICE_TOKEN", "runtime-token")
     monkeypatch.setenv("ACTIONLINEAGE_SERVICE_ROLES", "read,root")
 
