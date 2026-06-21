@@ -70,7 +70,7 @@ coverage language.
 
 ## Phase 4: Correctness, Recovery, Security, Compatibility
 
-Status: partially implemented; ongoing.
+Status: Codex-executable alpha gates implemented; external validation remains.
 
 Codex-executable work:
 
@@ -87,7 +87,7 @@ External validation:
 
 ## Phase 5: Release Packaging And Public Proof
 
-Status: partially implemented; external gates remain.
+Status: Codex-executable alpha packaging proof implemented; external gates remain.
 
 Codex-executable work:
 

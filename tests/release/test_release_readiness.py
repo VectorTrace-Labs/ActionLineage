@@ -102,6 +102,9 @@ def test_release_checklist_covers_required_gates() -> None:
         "scripts/generate_sbom.py",
         "uv run pip-audit",
         "uv build",
+        "uv build --out-dir /tmp/actionlineage-dist",
+        "scripts/generate_release_provenance.py",
+        "--dist-dir /tmp/actionlineage-dist",
         "docker build -f deploy/docker/Dockerfile -t actionlineage:ci .",
         "docker run --rm actionlineage:ci version",
         "actionlineage:ci demo run",
@@ -110,3 +113,16 @@ def test_release_checklist_covers_required_gates() -> None:
         "uv run --all-extras pytest",
     ):
         assert command in checklist
+
+
+def test_ci_runs_local_release_proof_gates() -> None:
+    workflow = (PROJECT_ROOT / ".github/workflows/ci.yml").read_text(encoding="utf-8")
+
+    assert (
+        "uv run python scripts/generate_sbom.py --output /tmp/actionlineage-sbom.json" in workflow
+    )
+    assert "uv run pip-audit" in workflow
+    assert "uv build --out-dir /tmp/actionlineage-dist" in workflow
+    assert "scripts/generate_release_provenance.py" in workflow
+    assert "--dist-dir /tmp/actionlineage-dist" in workflow
+    assert "--output /tmp/actionlineage-release-provenance.json" in workflow

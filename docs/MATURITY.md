@@ -33,6 +33,8 @@ evidence and limitations.
 - Built-in sequence detections and Lineage Lab replay/mutation/minimization.
 - Release hardening scripts for claim language, secret scanning, SBOM, local
   provenance, and dependency audit.
+- CI release-proof gates for wheel/sdist build, SBOM, dependency audit, and
+  unsigned local provenance generation.
 
 ## Preview Surface
 

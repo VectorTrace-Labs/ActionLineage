@@ -50,6 +50,7 @@ and checklist wording.
 | Cloud/Kubernetes observers exist as fixture-backed observers | `src/actionlineage/observers/cloud.py` | `tests/observers/test_cloud_observers.py` | No live cloud required | Preview |
 | Public release metadata is alpha | `pyproject.toml`, `src/actionlineage/__init__.py` | `tests/release/test_release_readiness.py` | CLI `version` output | Alpha-supported |
 | Release hardening scripts exist | `scripts/` | `tests/security/test_release_hardening.py` | SBOM and provenance generated locally | Local-proof |
+| CI runs local release proof gates | `.github/workflows/ci.yml` | `tests/release/test_release_readiness.py` | Wheel, sdist, SBOM, audit, and unsigned provenance are generated in CI | Local-proof |
 | GitHub security controls are enabled | `.github/workflows` plus repository settings | Workflow files only | GitHub UI/API required | External-validation-required |
 | PyPI/GHCR/signed artifacts exist | Release checklist only | Not executable locally | Owner release workflow required | Planned |
 
@@ -76,9 +77,9 @@ uv run pytest
 uv run python scripts/check_claims_language.py .
 uv run python scripts/secret_scan.py .
 uv run python scripts/generate_sbom.py --output /tmp/actionlineage-sbom.json
-uv run python scripts/generate_release_provenance.py --dist-dir dist --output /tmp/actionlineage-provenance.json
 uv run pip-audit
 uv build --out-dir /tmp/actionlineage-dist
+uv run python scripts/generate_release_provenance.py --dist-dir /tmp/actionlineage-dist --output /tmp/actionlineage-provenance.json
 ```
 
 Clean-snapshot validation should also run from `git archive HEAD` with
