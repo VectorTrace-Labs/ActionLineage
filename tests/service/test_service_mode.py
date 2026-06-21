@@ -197,7 +197,7 @@ def test_oidc_jwt_authenticator_uses_injected_jwk_client() -> None:
     assert principal.roles == frozenset({ServiceRole.READ, ServiceRole.EXPORT})
 
 
-def test_local_health_reports_ok_and_projection_missing(tmp_path) -> None:
+def test_local_health_reports_ok_and_projection_missing(tmp_path: Path) -> None:
     demo = run_demo(tmp_path / "demo")
     ok = check_local_health(journal_path=demo.journal_path, database_path=demo.database_path)
     degraded = check_local_health(
