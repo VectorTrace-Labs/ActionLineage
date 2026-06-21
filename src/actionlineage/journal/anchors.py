@@ -79,7 +79,7 @@ class JournalAnchor:
 class JournalSegmentManifest:
     """Manifest for one journal segment.
 
-    A single-segment manifest is enough for local 1.0 evidence. Multi-segment
+    A single-segment manifest is enough for local alpha evidence. Multi-segment
     archives can use the same shape for each segment without changing journal
     event bytes.
     """

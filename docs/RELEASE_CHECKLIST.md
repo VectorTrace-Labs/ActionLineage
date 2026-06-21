@@ -1,6 +1,6 @@
-# Release Checklist
+# Alpha Release Checklist
 
-Use this checklist for every public release candidate and final release.
+Use this checklist for every public alpha candidate and alpha release.
 
 ## Required Local Gates
 
@@ -18,6 +18,18 @@ uv build
 uv run python scripts/generate_release_provenance.py \
   --dist-dir dist \
   --output build/actionlineage-release-provenance.json
+```
+
+## Clean Snapshot Gate
+
+Run tests from tracked repository content so ignored local planning files do not
+hide public-snapshot failures:
+
+```bash
+clean_dir="$(mktemp -d /tmp/actionlineage-clean-XXXXXX)"
+git archive HEAD | tar -x -C "$clean_dir"
+cd "$clean_dir"
+uv run --all-extras pytest
 ```
 
 ## Demo Gates
@@ -50,7 +62,7 @@ docker run --rm -v "$PWD/build/docker-ci:/artifacts" \
   --trace-id trace_demo_evidence_plane
 docker run --rm -v "$PWD/build/docker-ci:/artifacts" \
   actionlineage:ci contract validate \
-  /app/contracts/examples/restricted-exfiltration.json \
+  /app/contracts/examples/outbound-http.json \
   /artifacts/demo/evidence.jsonl
 ```
 
@@ -64,7 +76,19 @@ docker run --rm -v "$PWD/build/docker-ci:/artifacts" \
 - Compatibility fixture status.
 - Dependency audit output or documented exception.
 - Signed artifacts and hosted provenance attestations when release
-  infrastructure is available.
+  infrastructure is available. Until then, label these as
+  external-validation-required.
+
+Generate local alpha artifacts without committing them:
+
+```bash
+rm -rf /tmp/actionlineage-dist
+uv build --out-dir /tmp/actionlineage-dist
+uv run python scripts/generate_sbom.py --output /tmp/actionlineage-sbom.json
+uv run python scripts/generate_release_provenance.py \
+  --dist-dir /tmp/actionlineage-dist \
+  --output /tmp/actionlineage-provenance.json
+```
 
 ## GitHub Security Controls
 
@@ -83,7 +107,8 @@ docker run --rm -v "$PWD/build/docker-ci:/artifacts" \
 - API, CLI, schema, tutorial, migration, FAQ, security, privacy, and operations
   docs are present.
 - Public claims avoid unsupported wording.
-- Deferred 1.x and enterprise features are not represented as implemented.
+- Preview, planned, and external-validation-required features are not
+  represented as alpha-supported.
 
 ## Compatibility Gates
 

@@ -40,7 +40,7 @@ def _write_manifest(
                 "license": "Apache-2.0",
                 "description": "Reviewed local pack fixture.",
                 "tags": ["demo", "detection"],
-                "compatibility": {"actionlineage": ">=1.0,<2"},
+                "compatibility": {"actionlineage": ">=0.1.0a1,<0.2"},
                 "artifacts": artifacts,
             },
             sort_keys=True,

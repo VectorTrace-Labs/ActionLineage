@@ -69,5 +69,5 @@ jobs:
           docker run --rm \
             -v "$PWD/build/docker-ci:/artifacts" \
             actionlineage:ci contract validate \
-              /app/contracts/examples/restricted-exfiltration.json \
+              /app/contracts/examples/outbound-http.json \
               /artifacts/demo/evidence.jsonl

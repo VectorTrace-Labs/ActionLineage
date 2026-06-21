@@ -2,7 +2,7 @@
 
 ## Is ActionLineage an MCP firewall?
 
-No. MCP interception can be an adapter, but ActionLineage 1.0 is a
+No. MCP interception can be an adapter, but ActionLineage public alpha is a
 vendor-neutral evidence and detection plane.
 
 ## Does a successful tool response prove the side effect happened?

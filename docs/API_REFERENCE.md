@@ -1,7 +1,8 @@
 # API Reference
 
-This reference lists the stable public Python imports for ActionLineage 1.0.
-Import from `actionlineage` unless a lower-level module is explicitly needed.
+This reference lists the alpha-supported public Python imports for
+ActionLineage. Import from `actionlineage` unless a lower-level module is
+explicitly needed.
 
 ## Core Event Model
 
@@ -48,6 +49,10 @@ Import from `actionlineage` unless a lower-level module is explicitly needed.
 
 ## Observers, Exporters, Service, and Console
 
+These imports are available in the alpha package, but service, cloud,
+OpenTelemetry, MCP, and deployment-oriented surfaces are preview APIs until
+external validation and production operating guidance are complete.
+
 - `FilesystemObserver`, `MockHttpReceiverObserver`, `HttpServerLogObserver`
 - `HttpResponseReadbackObserver`
 - `WebhookReceiptObserver`
@@ -85,6 +90,6 @@ part of the core top-level API:
 
 ## Compatibility
 
-The `actionlineage.dev/v1alpha1` envelope is the supported 1.0 read boundary.
+The `actionlineage.dev/v1alpha1` envelope is the supported alpha read boundary.
 Unknown event types are preserved but not interpreted as safe behavior. See
 `docs/COMPATIBILITY.md` for migration policy.

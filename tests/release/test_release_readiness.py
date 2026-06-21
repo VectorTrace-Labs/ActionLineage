@@ -12,13 +12,13 @@ PROJECT_ROOT = Path(__file__).resolve().parents[2]
 PYPROJECT = PROJECT_ROOT / "pyproject.toml"
 
 
-def test_package_metadata_is_public_1_0_ready() -> None:
+def test_package_metadata_is_public_alpha_ready() -> None:
     project = tomllib.loads(PYPROJECT.read_text(encoding="utf-8"))["project"]
 
-    assert project["version"] == "1.0.0"
-    assert actionlineage.__version__ == "1.0.0"
-    assert "Development Status :: 5 - Production/Stable" in project["classifiers"]
-    assert "Development Status :: 2 - Pre-Alpha" not in project["classifiers"]
+    assert project["version"] == "0.1.0a1"
+    assert actionlineage.__version__ == "0.1.0a1"
+    assert "Development Status :: 3 - Alpha" in project["classifiers"]
+    assert "Development Status :: 5 - Production/Stable" not in project["classifiers"]
     assert "Typing :: Typed" in project["classifiers"]
 
 
@@ -45,6 +45,10 @@ def test_release_docs_are_present() -> None:
         "docs/MIGRATION.md",
         "docs/FAQ.md",
         "docs/RELEASE_CHECKLIST.md",
+        "docs/QUALITY_SCORECARD.md",
+        "docs/PERFECTION_PLAN.md",
+        "docs/MATURITY.md",
+        "docs/DECISIONS_REQUIRED.md",
         "SECURITY.md",
         "docs/PRIVACY.md",
     }
@@ -71,7 +75,18 @@ def test_cli_version_matches_package_metadata() -> None:
     result = CliRunner().invoke(app, ["version"])
 
     assert result.exit_code == 0
-    assert result.stdout.strip() == "1.0.0"
+    assert result.stdout.strip() == "0.1.0a1"
+
+
+def test_readme_quickstart_uses_demo_aligned_contract() -> None:
+    readme = (PROJECT_ROOT / "README.md").read_text(encoding="utf-8")
+
+    assert "contracts/examples/outbound-http.json" in readme
+    assert (
+        "uv run actionlineage contract validate contracts/examples/restricted-exfiltration.json"
+    ) not in readme
+    assert "public alpha" in readme
+    assert "Preview" in readme
 
 
 def test_release_checklist_covers_required_gates() -> None:
@@ -92,5 +107,6 @@ def test_release_checklist_covers_required_gates() -> None:
         "actionlineage:ci demo run",
         "actionlineage demo run",
         "actionlineage projection export-console",
+        "uv run --all-extras pytest",
     ):
         assert command in checklist

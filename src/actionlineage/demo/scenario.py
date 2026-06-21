@@ -39,7 +39,7 @@ from actionlineage.projection import (
 DEMO_TRACE_ID = "trace_demo_evidence_plane"
 DEMO_RUN_ID = "run_demo_evidence_plane"
 DEMO_TIME = datetime(2026, 6, 21, 18, 42, 12, tzinfo=UTC)
-DEMO_EVENT_IDS = tuple(f"evt_demo_{index:02d}" for index in range(16))
+DEMO_EVENT_IDS = tuple(f"evt_demo_{index:02d}" for index in range(18))
 
 
 @dataclass(frozen=True, slots=True)
@@ -171,6 +171,11 @@ def build_demo_events() -> tuple[EventEnvelope, ...]:
         instance_id="demo_filesystem",
         version="0.1.0",
     )
+    receiver_source = Source(
+        component="receiver_observer",
+        instance_id="demo_receiver",
+        version="0.1.0",
+    )
     policy_source = Source(component="policy_adapter", instance_id="demo_policy", version="0.1.0")
 
     events: list[EventEnvelope] = []
@@ -262,6 +267,45 @@ def build_demo_events() -> tuple[EventEnvelope, ...]:
             },
             source=verifier_source,
             parent_event_id=send_ack.event_id,
+        )
+    )
+    conflicting_observation = normalizer.record(
+        EventType.SIDE_EFFECT_OBSERVED,
+        {
+            "observer_identity": "receiver_observer",
+            "observed_resource": {
+                "type": "url",
+                "uri": "demo://receiver/local-webhook",
+                "trust": "local",
+            },
+            "observation": {
+                "status": "conflicting",
+                "expected_body_digest": "sha256:demo_http_send",
+                "observed_body_digest": "sha256:demo_conflicting_body",
+            },
+        },
+        source=receiver_source,
+        classification=Classification(sensitivity=Sensitivity.INTERNAL, trust=TrustLevel.LOCAL),
+        parent_event_id=send_ack.event_id,
+    )
+    events.append(conflicting_observation)
+    events.append(
+        normalizer.record(
+            EventType.SIDE_EFFECT_CONFLICT_DETECTED,
+            {
+                "evidence_link": EvidenceLink(
+                    subject_event_id=send_ack.event_id,
+                    relationship=EvidenceRelationship.CONTRADICTS,
+                    evidence_event_id=conflicting_observation.event_id,
+                    corroboration_type=CorroborationType.INDEPENDENT_OBSERVER,
+                    observer_identity="receiver_observer",
+                    confidence=0.8,
+                    verification_status=VerificationStatus.CONFLICTING,
+                    limitations=("deterministic receiver fixture observed mismatched metadata",),
+                ).as_payload()
+            },
+            source=verifier_source,
+            parent_event_id=conflicting_observation.event_id,
         )
     )
 

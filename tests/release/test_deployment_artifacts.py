@@ -28,6 +28,7 @@ def test_ci_builds_and_smoke_tests_docker_image() -> None:
     assert "actionlineage:ci journal verify /artifacts/demo/evidence.jsonl" in workflow
     assert "actionlineage:ci projection timeline /artifacts/demo/projection.sqlite" in workflow
     assert "actionlineage:ci contract validate" in workflow
+    assert "/app/contracts/examples/outbound-http.json" in workflow
 
 
 def test_kubernetes_manifest_preserves_local_first_service_posture() -> None:

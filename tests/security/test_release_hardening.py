@@ -36,6 +36,15 @@ def test_claim_language_guard_flags_positive_overclaim(tmp_path: Path) -> None:
     assert findings[0].phrase == "tamper" + "-proof"
 
 
+def test_claim_language_guard_skips_local_assistant_docs_by_default(tmp_path: Path) -> None:
+    scanner = _load_script("check_claims_language")
+    local_doc = tmp_path / "Uplift.md"
+    local_doc.write_text("This includes the phrase tamper" + "-proof.\n", encoding="utf-8")
+
+    assert scanner.scan_paths([tmp_path]) == []
+    assert len(scanner.scan_paths([tmp_path], include_local_only=True)) == 1
+
+
 def test_secret_scan_passes_current_repository() -> None:
     scanner = _load_script("secret_scan")
 
@@ -58,6 +67,15 @@ def test_secret_scan_flags_private_key(tmp_path: Path) -> None:
     assert findings[0].kind == "private_key"
 
 
+def test_secret_scan_skips_local_assistant_docs_by_default(tmp_path: Path) -> None:
+    scanner = _load_script("secret_scan")
+    local_doc = tmp_path / "AGENTS.md"
+    local_doc.write_text("Bearer " + "local-only-token-value-1234567890\n", encoding="utf-8")
+
+    assert scanner.scan_paths([tmp_path]) == []
+    assert len(scanner.scan_paths([tmp_path], include_local_only=True)) == 1
+
+
 def test_lightweight_sbom_includes_runtime_dependency() -> None:
     generator = _load_script("generate_sbom")
 
@@ -73,8 +91,9 @@ def test_release_provenance_hashes_dist_artifacts_without_signing_claims(tmp_pat
     generator = _load_script("generate_release_provenance")
     dist_dir = tmp_path / "dist"
     dist_dir.mkdir()
-    artifact = dist_dir / "actionlineage-1.0.0-py3-none-any.whl"
+    artifact = dist_dir / "actionlineage-0.1.0a1-py3-none-any.whl"
     artifact.write_bytes(b"wheel-bytes")
+    (dist_dir / ".gitignore").write_text("*\n", encoding="utf-8")
 
     provenance = generator.build_release_provenance(PROJECT_ROOT / "pyproject.toml", dist_dir)
 
@@ -83,7 +102,7 @@ def test_release_provenance_hashes_dist_artifacts_without_signing_claims(tmp_pat
     assert "unsigned local manifest" in provenance["builder"]["limitations"]
     assert provenance["subjects"] == [
         {
-            "path": "actionlineage-1.0.0-py3-none-any.whl",
+            "path": "actionlineage-0.1.0a1-py3-none-any.whl",
             "sha256": ("sha256:9ceb18f15662bb87e54af2f5953c0484d2ef76f5444d87913360b9ef87d7296d"),
             "size_bytes": 11,
         }

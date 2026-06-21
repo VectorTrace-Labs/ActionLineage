@@ -62,8 +62,9 @@ Generated files are written under `build/actionlineage-demo/` by default:
 - `timeline.json`: compact event-order summary.
 - `incident.json`: investigation-ready incident export.
 
-The deterministic demo currently emits 16 events and covers:
+The deterministic demo currently emits 18 events and covers:
 
 - A verified file-read side effect corroborated by `filesystem_observer`.
 - An acknowledged HTTP send that remains unverified because there is no independent receiver observation.
+- A conflicting receiver observation represented as `side_effect.conflict_detected`.
 - A blocked shell-like tool request represented as `tool.execution.not_dispatched` with `downstream_forwarded=false`.

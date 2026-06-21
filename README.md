@@ -1,76 +1,48 @@
 # ActionLineage
 
-**Vendor-neutral evidence and detection for tool-using agents.**
+**Know what the agent did, and show what changed.**
 
-ActionLineage records investigation-ready evidence across agent intent, tool
-execution, delegated identity, independently observed side effects, and explicit
-verification links. It is built for security teams and agent platform engineers
-who need to answer what happened, which identity and tool were involved, which
-side effects were corroborated, and which outcomes remain unknown or
-unverified.
+ActionLineage is an alpha-stage, vendor-neutral evidence and detection plane for
+tool-using agents. It correlates agent intent, delegated identity, tool
+execution, and independently observed side effects into investigation-ready
+local evidence.
 
-The core is a local, append-only evidence journal plus a neutral event model.
-MCP interception, policy enforcement, OpenTelemetry export, service mode, cloud
-observers, and investigation UIs are optional surfaces that translate into the
-same evidence model.
+The central rule is simple: a successful tool response is an acknowledgement,
+not proof of a side effect. ActionLineage records requested, authorized,
+dispatched, acknowledged, observed, verified, unverified, timed-out,
+conflicting, and not-dispatched outcomes as separate facts.
 
-## Why ActionLineage
+## Current Maturity
 
-Traditional logs often show isolated API calls. Tool-using agents create a more
-complex chain:
+This repository is a public alpha. Core evidence recording is usable for local
+evaluation and fixture-backed integration work, but service deployments,
+external adapters, cloud observers, containers, and published release artifacts
+are preview surfaces until they are externally validated.
 
-- untrusted content can influence a later tool call;
-- tool descriptors can drift after approval;
-- delegated credentials can change the effective actor;
-- a successful tool response can be mistaken for a completed side effect;
-- missing telemetry can make a detection look stronger than it is.
+| Surface | Maturity | Evidence |
+| --- | --- | --- |
+| Event envelope, redaction, local journal, SQLite projection | Alpha-supported | Unit, compatibility, projection, and security tests |
+| Deterministic verified/unverified/conflicting/not-dispatched demo | Alpha-supported | `make demo`, demo tests, contract validation |
+| Case export, graph export, grounded summary, static console | Alpha-supported | Projection and console tests |
+| Lineage Contracts, sequence detections, Lineage Lab | Local-proof | Contract, detection, and replay tests |
+| MCP, policy, OpenTelemetry, service, Postgres, cloud/Kubernetes fixtures | Preview | Optional extras and local fixture tests |
+| Signed artifacts, hosted provenance, external audits, production history | Planned or external-validation-required | See `docs/DECISIONS_REQUIRED.md` |
 
-ActionLineage keeps those facts separate. Requested, authorized, dispatched,
-acknowledged, observed, verified, unverified, timed-out, conflicting, and
-not-dispatched outcomes are first-class evidence states. Reports are designed to
-say exactly what was observed and which limits apply.
+Full claim mapping lives in
+[docs/QUALITY_SCORECARD.md](docs/QUALITY_SCORECARD.md).
 
-## What You Get
-
-- Versioned `actionlineage.dev/v1alpha1` event envelope with strict parsing and
-  compatibility tests.
-- Redaction before journal persistence, export, telemetry mapping, and error
-  serialization.
-- Append-only local journal with deterministic hash-chain verification, optional
-  anchors, archive manifests, Git anchor statements, and external attestation
-  sidecars.
-- Rebuildable SQLite projection and optional Postgres projection schema.
-- Source-neutral ingestion SDK for local, file, HTTP, MCP-mapped, framework, and
-  external JSON evidence.
-- Evidence links that identify the subject event, corroborating evidence,
-  observer identity, confidence, verification status, and limitations.
-- Investigation timeline, event explanation, incident export, case bundle,
-  deterministic graph export, grounded summary, static console, and desktop
-  bundle export.
-- Sequence detections with bounded expressions, grouping, windows, suppression,
-  deduplication, evidence references, and starter rules.
-- Lineage Contracts for telemetry requirements, causal links, evidence links,
-  integrity, latency, and detection coverage.
-- Lineage Lab replay, mutation, minimization, and robustness scorecards.
-- Optional MCP, policy, OpenTelemetry, SIEM/export, service, tenant, and observer
-  adapter boundaries.
-- Release hardening scripts for claim-language checks, secret scanning, SBOM
-  generation, provenance metadata, and dependency audits.
-
-## Quickstart
+## Five-Minute Local Evaluation
 
 Prerequisites:
 
 - Python 3.13 or newer
 - `uv`
-- `make` for the convenience targets
+- `make` for convenience targets
 
-Install all release extras and run the standard checks:
+Install all optional extras used by the test suite:
 
 ```bash
 uv sync --locked --all-extras
-make check
-uv run pip-audit
 ```
 
 Run the deterministic local demo:
@@ -79,12 +51,12 @@ Run the deterministic local demo:
 make demo
 ```
 
-The demo requires no model API key, cloud account, or internet access. It writes
-artifacts under `build/actionlineage-demo/`:
+The demo requires no model API key, cloud account, external service, or internet
+access. It writes artifacts under `build/actionlineage-demo/`:
 
-- `evidence.jsonl`: canonical append-only evidence journal.
+- `evidence.jsonl`: canonical append-only local journal.
 - `projection.sqlite`: rebuildable query projection.
-- `timeline.json`: compact timeline summary.
+- `timeline.json`: compact event-order summary.
 - `incident.json`: machine-readable incident export.
 
 Inspect the evidence:
@@ -109,18 +81,32 @@ uv run actionlineage projection export-console \
   build/actionlineage-demo/projection.sqlite \
   build/actionlineage-demo/console.html \
   --trace-id trace_demo_evidence_plane
+
+uv run actionlineage contract validate \
+  contracts/examples/outbound-http.json \
+  build/actionlineage-demo/evidence.jsonl
 ```
 
-Case bundle export creates `case.json`, `events.ndjson`, and `report.md` and
-does not overwrite existing bundle files.
-
 Open `build/actionlineage-demo/console.html` in a browser to review the static
-timeline, event detail, evidence graph, verification matrix, and sanitized case
-context.
+timeline, event details, graph, verification matrix, and case context.
+
+The stricter `contracts/examples/restricted-exfiltration.json` contract is a
+design example for detection coverage; it is not the five-minute demo contract.
+
+## What The Demo Shows
+
+The default scenario emits a deterministic local journal that includes:
+
+- a recorded human intent and agent run;
+- a verified file-read side effect corroborated by a local filesystem observer;
+- an acknowledged HTTP send that remains unverified because acknowledgement is
+  not side-effect evidence;
+- a conflicting receiver observation represented as
+  `side_effect.conflict_detected`;
+- a policy-denied shell-like request represented as
+  `tool.execution.not_dispatched` with `downstream_forwarded=false`.
 
 ## Evidence Lifecycle
-
-ActionLineage deliberately separates facts that are often conflated:
 
 | State | Meaning |
 | --- | --- |
@@ -136,9 +122,8 @@ ActionLineage deliberately separates facts that are often conflated:
 | `side_effect.conflict_detected` | Evidence sources disagree and both sides are retained. |
 | `tool.execution.not_dispatched` | A request was blocked, denied, or not sent downstream. |
 
-A successful tool response is acknowledgement, not proof that a side effect
-occurred. Verification requires independent or explicitly identified
-corroborating evidence.
+Verification requires independent or explicitly identified corroborating
+evidence. Missing observations are reported as missing observations only.
 
 ## Architecture
 
@@ -151,16 +136,23 @@ flowchart LR
     Observer["Observer adapters"] --> Journal
     Verifier["Verification helpers"] --> Journal
     Journal --> Projection["Rebuildable projection"]
-    Projection --> Timeline["Timeline and filters"]
-    Projection --> Case["Incident and case export"]
-    Projection --> Console["Static console"]
+    Projection --> Timeline["Timeline, export, console"]
     Journal --> Contracts["Lineage Contracts"]
     Journal --> Lab["Lineage Lab"]
     Journal --> Exporters["Optional exporters"]
 ```
 
 Core packages do not import MCP, OpenTelemetry, model-provider SDKs, FastAPI, or
-cloud SDKs. Those surfaces live behind adapter or service extras.
+cloud SDKs. Those surfaces live behind optional adapter or service boundaries.
+
+## How This Differs
+
+| Tooling category | Main focus | ActionLineage difference |
+| --- | --- | --- |
+| Distributed tracing | Request flow and latency | Adds evidence status, side-effect verification, and investigation exports |
+| Agent gateway | Mediation or policy enforcement | Treats enforcement as optional adapter behavior |
+| Guardrail | Preventing or blocking actions | Preserves evidence, uncertainty, and conflicts even when no block occurs |
+| SIEM/logging | Event collection and search | Adds causal evidence links and telemetry contract validation |
 
 ## Python API Example
 
@@ -194,7 +186,7 @@ journal_path = Path("build/example/evidence.jsonl")
 journal = LocalJournal(journal_path)
 normalizer = EvidenceNormalizer(
     correlation=Correlation(trace_id="trace_example", run_id="run_example"),
-    source=Source(component="example_adapter", instance_id="local", version="1.0.0"),
+    source=Source(component="example_adapter", instance_id="local", version="0.1.0a1"),
     principal=Principal(principal_id="agent_example", principal_type=PrincipalType.AGENT),
     classification=Classification(sensitivity=Sensitivity.INTERNAL),
     clock=FixedClock(datetime(2026, 1, 1, tzinfo=UTC)),
@@ -234,9 +226,8 @@ assert result.ok
 assert verify_journal(journal_path).ok
 ```
 
-See [docs/API_REFERENCE.md](docs/API_REFERENCE.md) for the stable public import
-surface and [docs/INGESTION.md](docs/INGESTION.md) for source-neutral ingestion
-patterns.
+See [docs/API_REFERENCE.md](docs/API_REFERENCE.md) for alpha-supported public
+imports and preview API boundaries.
 
 ## CLI Highlights
 
@@ -249,7 +240,7 @@ uv run actionlineage projection explain-event build/actionlineage-demo/projectio
 uv run actionlineage projection export-incident build/actionlineage-demo/projection.sqlite --trace-id trace_demo_evidence_plane
 uv run actionlineage projection export-graph build/actionlineage-demo/projection.sqlite --trace-id trace_demo_evidence_plane
 uv run actionlineage projection export-desktop-bundle build/actionlineage-demo/projection.sqlite build/actionlineage-demo/desktop --trace-id trace_demo_evidence_plane
-uv run actionlineage contract validate contracts/examples/restricted-exfiltration.json build/actionlineage-demo/evidence.jsonl
+uv run actionlineage contract validate contracts/examples/outbound-http.json build/actionlineage-demo/evidence.jsonl
 ```
 
 See [docs/CLI_REFERENCE.md](docs/CLI_REFERENCE.md) for the full command
@@ -257,6 +248,9 @@ reference.
 
 ## Documentation Map
 
+- [Maturity model](docs/MATURITY.md): supported, preview, planned, and external
+  validation labels.
+- [Quality scorecard](docs/QUALITY_SCORECARD.md): public claim-to-evidence map.
 - [Architecture](ARCHITECTURE.md): component boundaries and runtime flow.
 - [Threat model](THREAT_MODEL.md): assets, adversaries, trust boundaries, and
   claim language.
@@ -280,10 +274,8 @@ reference.
   adapters.
 - [Operations](docs/OPERATIONS.md): service mode, health, storage, and deployment
   notes.
-- [Security](SECURITY.md): vulnerability reporting.
-- [Privacy](docs/PRIVACY.md): data minimization and sharing guidance.
 - [Release checklist](docs/RELEASE_CHECKLIST.md): public release gates.
-- [Roadmap](docs/ROADMAP.md): current status and future work.
+- [Decisions required](docs/DECISIONS_REQUIRED.md): owner and external gates.
 
 ## Packages and Extras
 
@@ -300,12 +292,12 @@ Core dependencies are intentionally small: Pydantic and Typer. Optional extras
 hold MCP, OpenTelemetry, SQLAlchemy, FastAPI, JWT, and related integration
 dependencies.
 
-## Security Model in One Paragraph
+## Security Model In One Paragraph
 
 ActionLineage is not a sandbox, model guardrail, DLP engine, or universal proof
 system. It records redacted, structured, causally linked evidence and verifies
-local journal consistency under the documented trust assumptions. When a report
-says an outcome is verified, it means the named evidence source corroborated it
+local journal consistency under documented trust assumptions. When a report says
+an outcome is verified, it means the named evidence source corroborated it
 within the stated limitations. When no observation exists, the system reports
 that no observation was recorded.
 
@@ -327,6 +319,7 @@ Before release, also run:
 ```bash
 uv run python scripts/generate_sbom.py --output build/actionlineage-sbom.json
 uv run python scripts/generate_release_provenance.py \
+  --dist-dir dist \
   --output build/actionlineage-release-provenance.json
 uv build
 ```

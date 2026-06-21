@@ -10,7 +10,7 @@ The local append-only journal is canonical evidence, but a local hash chain alon
 cannot detect tail truncation or full rewrite unless a trusted record count or
 last event hash exists outside the journal bytes being verified.
 
-The 1.0 roadmap requires local anchoring, segment manifests, recovery helpers,
+The release roadmap requires local anchoring, segment manifests, recovery helpers,
 and precise integrity claims without introducing custom cryptography.
 
 ## Decision
@@ -20,7 +20,7 @@ verified record count, last event hash, and creation time.
 
 Add `actionlineage.dev/journal-segment-manifest-v1` manifests that wrap an
 anchor for one journal segment. A single-segment manifest is sufficient for the
-local 1.0 evidence path and leaves room for multi-segment archives later.
+local alpha evidence path and leaves room for multi-segment archives later.
 
 Add `actionlineage.dev/journal-anchor-log-v1` as a local append-only sidecar for
 trusted anchors. Each log entry records the anchor, sequence, previous entry

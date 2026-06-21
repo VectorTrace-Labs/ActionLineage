@@ -6,7 +6,7 @@
 
 ## Context
 
-ActionLineage is local-first, but public 1.0 planning includes optional service
+ActionLineage is local-first, but public roadmap planning includes optional service
 mode for ingest, query, export, health, contract validation, and detection
 evaluation.
 

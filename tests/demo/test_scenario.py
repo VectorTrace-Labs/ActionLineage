@@ -15,7 +15,7 @@ from actionlineage.projection import query_timeline
 runner = CliRunner()
 
 
-def test_demo_events_cover_verified_unverified_and_not_dispatched_outcomes() -> None:
+def test_demo_events_cover_verified_unverified_conflicting_and_not_dispatched_outcomes() -> None:
     events = build_demo_events()
     event_types = [event.event_type for event in events]
     status_values = json.dumps([event.payload for event in events], sort_keys=True)
@@ -27,9 +27,11 @@ def test_demo_events_cover_verified_unverified_and_not_dispatched_outcomes() -> 
     assert EventType.SIDE_EFFECT_OBSERVED in event_types
     assert EventType.SIDE_EFFECT_VERIFIED in event_types
     assert EventType.SIDE_EFFECT_UNVERIFIED in event_types
+    assert EventType.SIDE_EFFECT_CONFLICT_DETECTED in event_types
     assert EventType.TOOL_EXECUTION_NOT_DISPATCHED in event_types
     assert '"verified"' in status_values
     assert '"unverified"' in status_values
+    assert '"conflicting"' in status_values
     assert '"downstream_forwarded": false' in status_values
 
 
@@ -47,7 +49,12 @@ def test_run_demo_writes_verified_journal_projection_and_incident_export(tmp_pat
     assert result.projection.records_indexed == result.verification.records_verified
     assert timeline.as_dict()["event_count"] == result.verification.records_verified
     assert incident["event_count"] == result.verification.records_verified
-    assert result.as_dict()["statuses"] == {"observed": 1, "unverified": 2, "verified": 1}
+    assert result.as_dict()["statuses"] == {
+        "conflicting": 1,
+        "observed": 1,
+        "unverified": 2,
+        "verified": 1,
+    }
 
 
 def test_demo_cli_outputs_investigation_commands(tmp_path: Path) -> None:

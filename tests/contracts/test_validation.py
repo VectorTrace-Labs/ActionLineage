@@ -96,7 +96,9 @@ def evidence_contract() -> LineageContract:
         descriptor_requirements=(
             ContractDescriptorRequirement(event_type="tool.execution.requested"),
         ),
-        allowed_verification_statuses=frozenset({"observed", "verified", "unverified"}),
+        allowed_verification_statuses=frozenset(
+            {"conflicting", "observed", "verified", "unverified"}
+        ),
         required_verification_status="verified",
         hash_chain_required=True,
     )

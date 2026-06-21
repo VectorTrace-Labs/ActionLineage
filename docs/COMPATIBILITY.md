@@ -2,9 +2,10 @@
 
 ## Scope
 
-This policy governs public ActionLineage event compatibility before the 1.0
-schema freeze. It applies to checked-in journals, generated demo journals, and
-fixtures used by contracts, detections, replay, and incident export.
+This policy governs public ActionLineage event compatibility during the public
+alpha and before a future schema freeze. It applies to checked-in journals,
+generated demo journals, and fixtures used by contracts, detections, replay,
+and incident export.
 
 Policy version: `actionlineage.dev/compatibility-policy-v1`
 

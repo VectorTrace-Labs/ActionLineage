@@ -280,6 +280,7 @@ def test_built_in_rule_pack_is_stable_and_demo_aligned() -> None:
         "AL-DET-005",
     }
     assert evaluate_sequence_rule(build_demo_events(), rules["AL-DET-003"])
+    assert evaluate_sequence_rule(build_demo_events(), rules["AL-DET-004"])
     assert evaluate_sequence_rule(build_demo_events(), rules["AL-DET-005"])
 
 

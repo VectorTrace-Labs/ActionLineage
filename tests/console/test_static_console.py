@@ -39,6 +39,7 @@ def test_write_console_renders_demo_timeline_and_verification_matrix(tmp_path: P
     assert "evt_demo_07" in html
     assert "verified" in html
     assert "unverified" in html
+    assert "conflicting" in html
     assert "acknowledgement is not side-effect verification" in html
     assert "proof " + "of absence" not in html.lower()
 
