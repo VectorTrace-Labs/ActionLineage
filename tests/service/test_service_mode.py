@@ -335,7 +335,7 @@ def test_service_contract_and_detection_endpoints(tmp_path) -> None:
     assert detection_response.json()["match_count"] == 1
 
 
-def test_service_detection_endpoint_rejects_malformed_rule_ids(tmp_path) -> None:
+def test_service_detection_endpoint_rejects_malformed_rule_ids(tmp_path: Path) -> None:
     demo = run_demo(tmp_path / "demo")
     client = _client(
         demo.journal_path,
