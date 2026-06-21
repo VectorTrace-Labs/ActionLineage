@@ -25,6 +25,7 @@ node_modules/
 AGENTS.md
 CLAUDE.md
 GEMINI.md
+Uplift.md
 .aider*
 .continue/
 .cursor/
