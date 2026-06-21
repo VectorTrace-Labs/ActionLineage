@@ -10,7 +10,7 @@ and checklist wording.
 
 | Area | Current evidence |
 | --- | --- |
-| Branch | `main` at `cdc377a`, implementation work on `codex/public-truth-uplift` |
+| Branch | `main` at `34b3791`, release pipeline work on `codex/release-signing-pypi-pipeline` |
 | Local ignored files | `AGENTS.md`, `Uplift.md` |
 | Required checks before uplift | Ruff, format, mypy, pip-audit, build, demo, and clean tracked snapshot passed; local pytest and claim scan failed only because ignored `Uplift.md` was included |
 | Current alpha version | `0.1.0a1` |
@@ -51,8 +51,10 @@ and checklist wording.
 | Public release metadata is alpha | `pyproject.toml`, `src/actionlineage/__init__.py` | `tests/release/test_release_readiness.py` | CLI `version` output | Alpha-supported |
 | Release hardening scripts exist | `scripts/` | `tests/security/test_release_hardening.py` | SBOM and provenance generated locally | Local-proof |
 | CI runs local release proof gates | `.github/workflows/ci.yml` | `tests/release/test_release_readiness.py` | Wheel, sdist, SBOM, audit, and unsigned provenance are generated in CI | Local-proof |
-| GitHub security controls are enabled | `.github/workflows` plus repository settings | Workflow files only | GitHub UI/API required | External-validation-required |
-| PyPI/GHCR/signed artifacts exist | Release checklist only | Not executable locally | Owner release workflow required | Planned |
+| Release workflow builds and attests artifacts | `.github/workflows/release.yml`, `docs/PUBLISHING.md` | `tests/release/test_release_readiness.py` | GitHub Actions run required to generate attestations | Local-proof |
+| TestPyPI/PyPI Trusted Publishing path exists | `.github/workflows/release.yml`, `docs/PUBLISHING.md` | `tests/release/test_release_readiness.py` | Trusted Publisher records required before publishing | Preview |
+| GitHub security controls are enabled | `.github/workflows` plus repository settings | Workflow files and API validation | GitHub UI/API required | External-validation-required |
+| PyPI/GHCR packages exist | Release checklist and publishing guide | Not executable locally | Package-index publication required | Planned |
 
 ## Known Highest Risks
 
@@ -80,6 +82,7 @@ uv run python scripts/generate_sbom.py --output /tmp/actionlineage-sbom.json
 uv run pip-audit
 uv build --out-dir /tmp/actionlineage-dist
 uv run python scripts/generate_release_provenance.py --dist-dir /tmp/actionlineage-dist --output /tmp/actionlineage-provenance.json
+gh workflow run release.yml -f publish_target=none
 ```
 
 Clean-snapshot validation should also run from `git archive HEAD` with

@@ -1,0 +1,104 @@
+# Publishing
+
+ActionLineage uses a GitHub-first alpha release path. The repository builds
+release artifacts in GitHub Actions, generates GitHub artifact attestations, and
+is prepared for PyPI/TestPyPI Trusted Publishing. Package-index publication
+still requires the trusted publisher records described below.
+
+## Release Workflow
+
+The release workflow is `.github/workflows/release.yml`.
+
+It runs on:
+
+- tag pushes matching `v*`
+- manual `workflow_dispatch`
+
+Every run performs these stages:
+
+1. Verify the release candidate with lint, format, type checking, tests,
+   claim-language guard, secret scan, and dependency audit.
+2. Build the wheel and source distribution.
+3. Generate SBOM, local release provenance, and checksums.
+4. Upload the release artifact bundle.
+5. Generate GitHub artifact attestations for the uploaded artifacts.
+
+Manual runs can additionally choose `publish_target`:
+
+- `none`: build and attest only
+- `testpypi`: publish distributions to TestPyPI
+- `pypi`: publish distributions to PyPI
+
+The publishing jobs use job-level `id-token: write` and do not use package
+registry API tokens. The TestPyPI and PyPI jobs run only when the manual
+workflow is dispatched against a tag whose ref starts with `refs/tags/v`.
+
+## Trusted Publisher Setup
+
+Before package publishing can succeed, configure Trusted Publisher records in
+TestPyPI and PyPI.
+
+For TestPyPI:
+
+- owner: `VectorTrace-Labs`
+- repository: `ActionLineage`
+- workflow: `release.yml`
+- environment: `testpypi`
+- package/project: `actionlineage`
+
+For PyPI:
+
+- owner: `VectorTrace-Labs`
+- repository: `ActionLineage`
+- workflow: `release.yml`
+- environment: `pypi`
+- package/project: `actionlineage`
+
+Do not add PyPI API tokens to the repository. Trusted Publishing uses GitHub
+OIDC and short-lived credentials issued by the package index.
+
+## GitHub Environments
+
+Create two GitHub environments before enabling package publication:
+
+- `testpypi`
+- `pypi`
+
+Recommended defaults:
+
+- require a maintainer review for `pypi`
+- restrict `pypi` to protected branches and tags
+- allow `testpypi` for validation runs
+- keep environment URLs set to the corresponding package pages
+
+## Artifact Attestation Verification
+
+After a successful release workflow run, verify downloaded artifacts with GitHub
+CLI:
+
+```bash
+gh attestation verify actionlineage-0.1.0a1-py3-none-any.whl \
+  --repo VectorTrace-Labs/ActionLineage
+gh attestation verify actionlineage-0.1.0a1.tar.gz \
+  --repo VectorTrace-Labs/ActionLineage
+```
+
+Also verify checksums:
+
+```bash
+shasum -a 256 -c SHA256SUMS.txt
+```
+
+## Current Alpha Boundary
+
+The workflow makes release signing and package publication operationally ready,
+but public package publication is not claimed until:
+
+- the trusted publisher records exist
+- a TestPyPI publish run succeeds
+- a PyPI publish run succeeds
+- release notes link the published package pages and attestation verification
+  instructions
+
+Until then, package-index publication remains
+`External-validation-required` in the maturity docs.

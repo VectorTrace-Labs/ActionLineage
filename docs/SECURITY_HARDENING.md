@@ -15,14 +15,17 @@ uv run python scripts/generate_release_provenance.py \
   --dist-dir dist \
   --output build/actionlineage-release-provenance.json
 uv run pip-audit
+gh workflow run release.yml -f publish_target=none
 ```
 
 The claim-language scan catches unsupported public claims. The secret scan is a
 high-confidence repository guard and does not replace dedicated enterprise
 secret scanning. The SBOM generator emits a lightweight JSON inventory from
 `pyproject.toml` and installed package metadata. The release provenance
-generator emits an unsigned local manifest with artifact hashes; it does not
-replace signed release artifacts or hosted attestations.
+generator emits a local manifest with artifact hashes. The `release.yml`
+workflow builds release artifacts in GitHub Actions and generates GitHub
+artifact attestations; package-index publication still requires the configured
+Trusted Publisher records described in `docs/PUBLISHING.md`.
 
 ## Resource Bounds
 
@@ -60,7 +63,9 @@ cloud credentials, model providers, or internet access.
 - Keep adapter dependencies behind optional extras.
 - Run `pip-audit` for known third-party advisories.
 - Generate an SBOM for release candidates.
-- Generate an unsigned local release provenance manifest for built artifacts.
+- Generate a local release provenance manifest for built artifacts.
+- Generate GitHub artifact attestations from the release workflow before
+  describing release assets as attested.
 - Review licenses before adding dependencies.
 - Do not add generated SBOM files to source control unless they are intentional
   release artifacts.

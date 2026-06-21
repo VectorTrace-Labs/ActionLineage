@@ -35,6 +35,8 @@ evidence and limitations.
   provenance, and dependency audit.
 - CI release-proof gates for wheel/sdist build, SBOM, dependency audit, and
   unsigned local provenance generation.
+- Release workflow for CI-built artifacts, GitHub artifact attestations, and
+  manual Trusted Publishing jobs.
 
 ## Preview Surface
 
@@ -48,8 +50,8 @@ evidence and limitations.
 
 ## Planned Or External Validation
 
-- PyPI and GHCR publication.
-- Signed artifacts and hosted provenance attestations.
+- Successful TestPyPI and PyPI package publication.
+- Published release artifacts with completed GitHub artifact attestations.
 - Branch protection and GitHub security-control status.
 - Independent security review, outside user evaluation, production operating
   history, and public feedback.
