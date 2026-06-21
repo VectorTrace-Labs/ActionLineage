@@ -2,14 +2,13 @@
 
 ## Supported Versions
 
-ActionLineage is pre-1.0. Security fixes are applied to `main` until the first
-release branch exists. Public compatibility guarantees are documented in
-`docs/COMPATIBILITY.md`.
+Security fixes are applied to the latest `1.0.x` release and to `main`.
+Public compatibility guarantees are documented in `docs/COMPATIBILITY.md`.
 
 ## Reporting a Vulnerability
 
-Report suspected vulnerabilities privately to the project owner before opening a
-public issue. Include:
+Report suspected vulnerabilities privately through GitHub private vulnerability
+reporting or to the project owner before opening a public issue. Include:
 
 - Affected version or commit.
 - Reproduction steps or a minimized fixture.
@@ -51,3 +50,7 @@ uv run python scripts/secret_scan.py .
 uv run python scripts/generate_sbom.py --output build/actionlineage-sbom.json
 uv run pip-audit
 ```
+
+The public repository should also have GitHub code scanning, Dependabot alerts,
+Dependabot security updates, secret scanning, push protection, and private
+vulnerability reporting enabled.

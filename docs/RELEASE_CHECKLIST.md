@@ -44,6 +44,15 @@ uv run actionlineage projection export-console build/actionlineage-demo/projecti
 - Signed artifacts and hosted provenance attestations when release
   infrastructure is available.
 
+## GitHub Security Controls
+
+- CodeQL workflow is present and code scanning has completed successfully.
+- Dependency Review workflow is present for pull requests.
+- Dependabot version updates are configured for uv, GitHub Actions, and Docker.
+- Dependabot alerts and Dependabot security updates are enabled.
+- Secret scanning and push protection are enabled.
+- Private vulnerability reporting is enabled.
+
 ## Documentation Gates
 
 - README quickstart works from a fresh clone.
