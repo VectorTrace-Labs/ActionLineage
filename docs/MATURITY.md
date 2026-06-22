@@ -37,7 +37,7 @@ evidence and limitations.
 - Agent Validation Lab scenario validation, no-model replay, provenance, and
   artifact audits as a development-only evaluation surface.
 - Release hardening scripts for claim language, secret scanning, SBOM, local
-  provenance, and dependency audit.
+  provenance, dependency audit, and release consistency.
 - CI release-proof gates for wheel/sdist build, SBOM, dependency audit, and
   unsigned local provenance generation.
 - Release workflow for CI-built artifacts, GitHub artifact attestations, and
@@ -58,6 +58,10 @@ evidence and limitations.
 
 - PyPI/TestPyPI package ownership transfer to the organization account after
   package-index organization approval.
+- GitHub Release object and hosted release artifacts for `v0.1.0a3`; the tag
+  exists, but creating or repairing the release object is an owner action.
+- Public package metadata project URLs for PyPI/TestPyPI after the next
+  owner-approved release publishes corrected metadata.
 - Homebrew tap and formula publication.
 - conda-forge recipe publication.
 - Branch protection and GitHub security-control status.

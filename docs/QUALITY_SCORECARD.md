@@ -10,12 +10,14 @@ and checklist wording.
 
 | Area | Current evidence |
 | --- | --- |
-| Branch | `main` after the public-alpha package publication workflow; docs update on `codex/pypi-publication-proof` |
-| Local ignored files | `AGENTS.md`, `Uplift.md` |
-| Required checks before uplift | Ruff, format, mypy, pip-audit, build, demo, and clean tracked snapshot passed; local pytest and claim scan failed only because ignored `Uplift.md` was included |
+| Branch | Baseline captured on `codex/public-alpha-hardening` from commit `0e500d65d90fbda691d13e63ab58091e85083525` |
+| Hardening baseline | `docs/PUBLIC_ALPHA_HARDENING_PLAN.md` |
+| Public claim audit | `docs/PUBLIC_CLAIM_AUDIT.md` |
+| Required checks before hardening edits | Ruff, format, mypy, pytest, coverage, claim scan, secret scan, SBOM, pip-audit, build, provenance, demo, public PyPI smoke, and no-model Agent Validation baseline passed |
 | Current alpha version | `0.1.0a3` |
 | Supported Python | Python 3.12+ |
 | Default demo | No model API key, cloud account, external service, or internet access |
+| Known release blocker | GitHub tag `v0.1.0a3` exists, but no GitHub Release object for `v0.1.0a3` was visible in read-only release listing |
 
 ## Claim Matrix
 
@@ -52,15 +54,15 @@ and checklist wording.
 | Public release metadata is alpha and supports Python 3.12+ | `pyproject.toml`, `src/actionlineage/__init__.py` | `tests/release/test_release_readiness.py`, CI/release workflow matrices | CLI `version` output | Alpha-supported |
 | Release hardening scripts exist | `scripts/` | `tests/security/test_release_hardening.py` | SBOM and provenance generated locally | Local-proof |
 | CI runs local release proof gates | `.github/workflows/ci.yml` | `tests/release/test_release_readiness.py` | Wheel, sdist, SBOM, audit, and unsigned provenance are generated in CI | Local-proof |
-| Release workflow builds, verifies on Python 3.12/3.13, and attests artifacts | `.github/workflows/release.yml`, `docs/PUBLISHING.md` | `tests/release/test_release_readiness.py` | GitHub Actions release runs `27973425840`, `27973522992`, and `27973832210` passed for `v0.1.0a3` | Local-proof |
-| GHCR container publishing path exists | `.github/workflows/release.yml`, `docs/PACKAGE_MANAGERS.md` | `tests/release/test_release_readiness.py` | `v0.1.0a3` release run `27973832210` built, smoke-tested, and pushed the preview image | Preview |
+| Release workflow builds, verifies on Python 3.12/3.13, and attests artifacts | `.github/workflows/release.yml`, `docs/PUBLISHING.md` | `tests/release/test_release_readiness.py`, `scripts/check_release_consistency.py` | Local workflow definition and package-index proof exist; GitHub Release object for `v0.1.0a3` remains owner-gated | Local-proof / External-validation-required |
+| GHCR container publishing path exists | `.github/workflows/release.yml`, `docs/PACKAGE_MANAGERS.md` | `tests/release/test_release_readiness.py` | Workflow path can build, smoke-test, and push tagged preview images; public GHCR visibility requires external validation | Preview |
 | TestPyPI/PyPI Trusted Publishing publishes packages | `.github/workflows/release.yml`, `docs/PUBLISHING.md` | `tests/release/test_release_readiness.py` | TestPyPI run `27973522992`; PyPI run `27973832210`; fresh Python 3.12 `uvx` install, demo, and journal verify passed | Alpha-supported |
 | GitHub security controls are enabled | `.github/workflows` plus repository settings | Workflow files and API validation | GitHub UI/API required | External-validation-required |
 | Homebrew tap exists | `docs/PACKAGE_MANAGERS.md` | Documentation tests | Tap repository and validated formula required | Planned |
-| PyPI package exists | `docs/PUBLISHING.md`, `docs/PACKAGE_MANAGERS.md` | Fresh package install smoke | `https://pypi.org/project/actionlineage/` publishes `0.1.0a3` with `Requires-Python: >=3.12`; fresh install/demo smoke passed | Alpha-supported |
-| TestPyPI package exists | `docs/PUBLISHING.md`, `docs/PACKAGE_MANAGERS.md` | Fresh package install smoke | `https://test.pypi.org/project/actionlineage/` publishes `0.1.0a3` with `Requires-Python: >=3.12`; fresh install/demo smoke passed | Alpha-supported |
+| PyPI package exists | `docs/PUBLISHING.md`, `docs/PACKAGE_MANAGERS.md` | Fresh package install smoke and release-consistency checker | `https://pypi.org/project/actionlineage/` publishes `0.1.0a3` with `Requires-Python: >=3.12`; fresh install/demo smoke passed | Alpha-supported |
+| TestPyPI package exists | `docs/PUBLISHING.md`, `docs/PACKAGE_MANAGERS.md` | Fresh package install smoke and release-consistency checker | `https://test.pypi.org/project/actionlineage/` publishes `0.1.0a3` with `Requires-Python: >=3.12`; fresh install/demo smoke passed | Alpha-supported |
 | Package-index organization ownership transfer | `docs/PACKAGE_MANAGERS.md`, `docs/DECISIONS_REQUIRED.md` | Not executable locally | PyPI/TestPyPI organization approval and ownership transfer required | External-validation-required |
-| GHCR package exists | Release checklist and publishing guide | Release workflow container smoke | `v0.1.0a3` release run `27973832210` pushed the preview GHCR image | Preview |
+| GHCR package exists | Release checklist and publishing guide | Release workflow container smoke | Public GHCR package visibility has not been independently confirmed in this baseline | External-validation-required |
 
 ## Known Highest Risks
 
@@ -71,6 +73,8 @@ and checklist wording.
 | Service/deployment examples are not production hardened | Operational misuse | Preview labels and security docs | External deployment review before broader claims |
 | Demo and contract examples can drift | Broken onboarding | Demo tests and contract validation | Keep README quickstart tied to passing contract |
 | Local hash chains can be overinterpreted | Integrity overclaim | Threat model and journal integrity docs | Continue using precise trust-limit wording |
+| GitHub Release object can drift from tags/package indexes | Broken release audit trail | Release-consistency checker and owner gate | Create/repair `v0.1.0a3` GitHub Release only with owner approval |
+| Test runs emit database `ResourceWarning`s | Reliability signal can be missed | Baseline hardening plan records warning class | Close SQLite handles in a reliability-hardening slice |
 
 ## Release Gate Summary
 
@@ -87,6 +91,7 @@ uv run python scripts/secret_scan.py .
 uv run python scripts/generate_sbom.py --output /tmp/actionlineage-sbom.json
 uv run pip-audit
 uv build --out-dir /tmp/actionlineage-dist
+uv run python scripts/check_release_consistency.py --dist-dir /tmp/actionlineage-dist
 uv run python scripts/generate_release_provenance.py --dist-dir /tmp/actionlineage-dist --output /tmp/actionlineage-provenance.json
 gh workflow run release.yml -f publish_target=none
 ```

@@ -83,6 +83,7 @@ def test_lightweight_sbom_includes_runtime_dependency() -> None:
     packages = {(package["scope"], package["name"]) for package in sbom["packages"]}
 
     assert sbom["bom_format"] == "actionlineage.dev/simple-sbom-v0"
+    assert sbom["project"]["license"] == "Apache-2.0"
     assert ("runtime:pydantic>=2.10,<3", "pydantic") in packages
     assert all("license" in package for package in sbom["packages"])
 

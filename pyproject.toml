@@ -8,14 +8,19 @@ version = "0.1.0a3"
 description = "Vendor-neutral evidence and detection plane for tool-using agents"
 readme = "README.md"
 requires-python = ">=3.12"
-license = { text = "Apache-2.0" }
+license = "Apache-2.0"
 authors = [{ name = "Marq Mercado" }]
+maintainers = [{ name = "Marq Mercado" }]
 classifiers = [
   "Development Status :: 3 - Alpha",
+  "Intended Audience :: Developers",
+  "Intended Audience :: Information Technology",
   "License :: OSI Approved :: Apache Software License",
+  "Operating System :: OS Independent",
   "Programming Language :: Python :: 3",
   "Programming Language :: Python :: 3.12",
   "Programming Language :: Python :: 3.13",
+  "Topic :: Software Development :: Libraries :: Python Modules",
   "Typing :: Typed",
   "Topic :: Security",
 ]
@@ -70,8 +75,29 @@ eval = [
 [project.scripts]
 actionlineage = "actionlineage.cli:app"
 
+[project.urls]
+Homepage = "https://github.com/VectorTrace-Labs/ActionLineage"
+Repository = "https://github.com/VectorTrace-Labs/ActionLineage"
+Documentation = "https://github.com/VectorTrace-Labs/ActionLineage#readme"
+Issues = "https://github.com/VectorTrace-Labs/ActionLineage/issues"
+Changelog = "https://github.com/VectorTrace-Labs/ActionLineage/blob/main/CHANGELOG.md"
+"Security policy" = "https://github.com/VectorTrace-Labs/ActionLineage/security/policy"
+
 [tool.hatch.build.targets.wheel]
 packages = ["src/actionlineage"]
+
+[tool.hatch.build.targets.sdist]
+exclude = [
+  "/.hypothesis",
+  "/.mypy_cache",
+  "/.pytest_cache",
+  "/.ruff_cache",
+  "/.venv",
+  "/build",
+  "/dist",
+  "**/__pycache__",
+  "**/*.pyc",
+]
 
 [tool.ruff]
 target-version = "py312"

@@ -153,7 +153,8 @@ uvx --prerelease allow --from actionlineage==0.1.0a3 actionlineage journal verif
 Current alpha distribution priorities:
 
 - GitHub Releases remain the canonical public alpha release channel.
-- GHCR publishes preview container images from version tags.
+- GHCR preview container images remain version-tagged when owner-approved
+  publication is in scope.
 - PyPI/TestPyPI publish the public alpha through Trusted Publishing.
 - Homebrew tap work is planned after package-index publication or a validated
   source formula path.
@@ -164,14 +165,16 @@ See `docs/PACKAGE_MANAGERS.md`.
 
 ## GitHub Security Controls
 
-- CodeQL workflow is present and code scanning has completed successfully.
+- CodeQL workflow is present; latest public code-scanning status must be
+  confirmed before using a public badge or announcement claim.
 - Dependency Review workflow is present for pull requests.
 - Docker image build and runtime smoke validation are required in CI before
   merging Docker base-image changes.
 - Dependabot version updates are configured for uv, GitHub Actions, and Docker.
-- Dependabot alerts and Dependabot security updates are enabled.
-- Secret scanning and push protection are enabled.
-- Private vulnerability reporting is enabled.
+- Dependabot alerts and Dependabot security updates require repository-setting
+  confirmation.
+- Secret scanning and push protection require repository-setting confirmation.
+- Private vulnerability reporting requires repository-setting confirmation.
 
 ## Documentation Gates
 

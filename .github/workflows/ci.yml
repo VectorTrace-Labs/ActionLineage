@@ -47,6 +47,10 @@ jobs:
         run: uv run pip-audit
       - name: Build distribution artifacts
         run: uv build --out-dir /tmp/actionlineage-dist
+      - name: Release consistency check
+        run: |
+          uv run python scripts/check_release_consistency.py \
+            --dist-dir /tmp/actionlineage-dist
       - name: Generate release provenance
         run: |
           uv run python scripts/generate_release_provenance.py \

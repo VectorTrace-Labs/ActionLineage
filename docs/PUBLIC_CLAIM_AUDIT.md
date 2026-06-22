@@ -1,0 +1,36 @@
+# Public Claim Audit
+
+Last reviewed: 2026-06-22.
+
+This audit maps public-facing claims to current implementation, tests, demo or
+fixture evidence, limitations, and remediation. A claim is safe only when it
+maps to implementation, tests, deterministic evidence, or an explicit maturity
+label.
+
+## Claim Matrix
+
+| Claim | Current maturity | Implementation | Test evidence | Demo or fixture evidence | Limitation | Safe? | Remediation |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| ActionLineage is a vendor-neutral evidence and detection plane for tool-using agents. | Alpha-supported | `PROJECT_CHARTER.md`, `ARCHITECTURE.md`, `src/actionlineage/domain` | `tests/domain`, `tests/compatibility`, `tests/evidence` | Default deterministic demo | Not a SIEM, SOAR, DLP, sandbox, or universal proof system | Yes | Keep limitations adjacent in README and docs |
+| A successful tool response is acknowledgement, not side-effect proof. | Alpha-supported | Event lifecycle models and demo scenario | `tests/demo/test_scenario.py`, `tests/detection/test_sequence.py`, `tests/contracts/test_validation.py` | `tool.execution.acknowledged`, `side_effect.unverified`, and `side_effect.verified` in demo | Verification only means named evidence source corroborated within stated limits | Yes | Preserve wording in README visual and quickstart |
+| The local journal is canonical evidence and projections are rebuildable. | Alpha-supported | `src/actionlineage/journal`, `src/actionlineage/projection/sqlite.py` | `tests/journal`, `tests/projection`, compatibility tests | Demo journal and rebuilt projection | Local hash chain is not tamper-proof against a host attacker who can rewrite roots | Yes | Keep trust assumptions explicit |
+| Redaction happens before persistence and export. | Alpha-supported | `src/actionlineage/domain/redaction.py`, serializers, exporters | `tests/domain/test_redaction.py`, `tests/security/test_release_hardening.py`, exporter tests | Demo authorization marker and adversarial canaries | Covers configured and detected patterns, not arbitrary semantic sensitivity | Yes | Continue cross-sink canary tests |
+| Default demo is deterministic and credential-free. | Alpha-supported | `src/actionlineage/demo/scenario.py`, CLI demo command | `tests/demo/test_scenario.py`, release tests | Local and PyPI smoke produced 18-event journal with expected last hash | PyPI installation needs internet; demo itself is local after install | Yes | Add generated README visual from demo artifacts |
+| PyPI and TestPyPI publish `0.1.0a3` with Python 3.12+ support. | Alpha-supported | `pyproject.toml`, release workflow, package indexes | Release tests and public smoke commands | PyPI/TestPyPI JSON and `uvx` smoke on 2026-06-22 | Package metadata project URLs remain absent until the next release | Mostly | Keep post-publication checker; publish corrected metadata only with owner approval |
+| GitHub release artifacts and attestations exist for `v0.1.0a3`. | Mismatch | `release.yml` can build and attest artifacts | Release workflow tests | Local tag exists; read-only release listing showed no `v0.1.0a3` GitHub Release object | Creating or editing release objects requires owner action | No | Owner must create/repair GitHub Release or docs must avoid this claim |
+| GHCR container publication is preview. | Preview | `.github/workflows/release.yml`, `deploy/docker/Dockerfile` | Release/deployment artifact tests | Workflow path exists; public package visibility still needs external validation | Container publication and visibility are owner/external gates | Yes if labeled Preview | Do not use production-ready wording |
+| MCP, policy, service, OpenTelemetry, Postgres, cloud, and Kubernetes surfaces exist. | Preview | Optional packages under `src/actionlineage/adapters`, `service`, `projection`, `observers`, `deploy` | Adapter, service, projection, observer, deployment tests | Local fixtures and smoke tests | Not production deployment support | Yes if labeled Preview | Keep optional dependencies behind extras |
+| Agent Validation Lab provides deterministic no-model evaluation evidence. | Local-proof | `evals/`, `docs/AGENT_VALIDATION_ARCHITECTURE.md` | `tests/evals/test_agent_validation_lab.py`, eval CLI commands | 11 scripted scorecards, 47/47 declared capability coverage, 0 artifact leaks | Development-only; model output is never authoritative | Yes | Commit a deterministic baseline report in Phase 6 |
+| CodeQL, dependency review, pip-audit, claim-language guard, and secret scanning are quality evidence. | Local-proof / External-validation-required | `.github/workflows`, `scripts/` | Local guard tests and workflow files | Local commands passed; CodeQL settings require GitHub visibility | Repository settings and latest public workflow status require external validation | Partly | Display badges only when public systems are confirmed passing |
+| Homebrew, conda-forge, production use, external audit, and independent validation exist. | Planned or external-validation-required | Planning docs only | None | None | No current evidence | No | Do not claim until real external evidence exists |
+
+## Prioritized Findings
+
+| ID | Priority | Finding | Required remediation |
+| --- | --- | --- | --- |
+| CLAIM-001 | P0 | GitHub Release claim for `v0.1.0a3` is unsafe until a release object and artifacts are externally observable. | Owner creates/repairs release, or public docs remove the claim |
+| CLAIM-002 | P0 | Changelog `1.0.0` heading conflicted with alpha package version. | Fixed locally by changing heading to `0.1.0a3 - 2026-06-22` |
+| CLAIM-003 | P1 | Package metadata did not expose project URLs on current public packages. | Fixed locally in `pyproject.toml`; public metadata changes after next release |
+| CLAIM-004 | P1 | README currently has no generated visual proof from demo artifacts. | Phase 3 generated SVG and freshness check |
+| CLAIM-005 | P1 | Quality badges must not be added until backed by public passing systems. | Confirm public workflow status before badge additions |
+| CLAIM-006 | P1 | Service/deployment surfaces are easy to overread as production-ready. | Keep Preview labels and avoid operational readiness claims |

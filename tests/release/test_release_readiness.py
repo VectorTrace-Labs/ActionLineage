@@ -21,9 +21,22 @@ def test_package_metadata_is_public_alpha_ready() -> None:
     assert actionlineage.__version__ == "0.1.0a3"
     assert "Development Status :: 3 - Alpha" in project["classifiers"]
     assert "Development Status :: 5 - Production/Stable" not in project["classifiers"]
+    assert "Intended Audience :: Developers" in project["classifiers"]
+    assert "Intended Audience :: Information Technology" in project["classifiers"]
+    assert "Operating System :: OS Independent" in project["classifiers"]
     assert "Programming Language :: Python :: 3.12" in project["classifiers"]
     assert "Programming Language :: Python :: 3.13" in project["classifiers"]
+    assert "Topic :: Software Development :: Libraries :: Python Modules" in project["classifiers"]
     assert "Typing :: Typed" in project["classifiers"]
+    assert project["license"] == "Apache-2.0"
+    assert project["urls"] == {
+        "Homepage": "https://github.com/VectorTrace-Labs/ActionLineage",
+        "Repository": "https://github.com/VectorTrace-Labs/ActionLineage",
+        "Documentation": "https://github.com/VectorTrace-Labs/ActionLineage#readme",
+        "Issues": "https://github.com/VectorTrace-Labs/ActionLineage/issues",
+        "Changelog": "https://github.com/VectorTrace-Labs/ActionLineage/blob/main/CHANGELOG.md",
+        "Security policy": "https://github.com/VectorTrace-Labs/ActionLineage/security/policy",
+    }
     assert pyproject["tool"]["ruff"]["target-version"] == "py312"
     assert pyproject["tool"]["mypy"]["python_version"] == "3.12"
 
@@ -138,7 +151,7 @@ def test_release_checklist_covers_required_gates() -> None:
         "gh workflow run release.yml -f publish_target=pypi",
         "gh attestation verify",
         "repository-url: https://test.pypi.org/legacy/",
-        "GHCR publishes preview container images",
+        "GHCR preview container images remain version-tagged",
         "packages: write",
         "deploy/docker/Dockerfile",
         "See `docs/PACKAGE_MANAGERS.md`.",

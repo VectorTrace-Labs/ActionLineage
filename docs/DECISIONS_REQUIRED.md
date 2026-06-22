@@ -17,6 +17,8 @@ implementation change.
 | Python support | Support Python 3.12+ after CI and local validation; keep Python 3.11 deferred until tested and justified | Widening support below 3.12 |
 | Service/deployment support | Keep Docker/Kubernetes/Helm preview | Production deployment claims |
 | External release targets | Use GitHub Releases and PyPI/TestPyPI for the public alpha; publish preview GHCR images from version tags; keep Homebrew planned | Publishing new package-manager channels or Homebrew formulae |
+| `v0.1.0a3` GitHub Release object | Create or repair the GitHub Release only after owner review of artifacts, notes, and attestation links | Claiming GitHub release artifacts for `v0.1.0a3` |
+| Package metadata refresh | Include project URLs and sdist cache exclusions in the next owner-approved package release | Expecting PyPI/TestPyPI to show corrected project links |
 | Signing/provenance | Use GitHub artifact attestations for release artifacts; keep local provenance as a supplemental manifest | Claiming attested package artifacts |
 | Public security contact | Confirm GitHub private vulnerability reporting and contact path | Public announcement |
 | External review | Select reviewer or review venue | Any claim of independent validation |
@@ -32,6 +34,7 @@ implementation change.
 | Secret scanning and push protection | Repository settings confirmation |
 | Private vulnerability reporting | GitHub security settings confirmation |
 | Published packages | PyPI package page, TestPyPI package page, or GHCR package page |
+| GitHub Release object | Public GitHub Release page for `v0.1.0a3` with expected artifacts or a documented decision not to create one |
 | PyPI/TestPyPI organization ownership transfer | Package-index organization approval and project ownership transfer |
 | GHCR package visibility | Public package page for `ghcr.io/vectortrace-labs/actionlineage` after the first successful publish |
 | Homebrew tap | `VectorTrace-Labs/homebrew-tap` exists with an audited formula and CI |

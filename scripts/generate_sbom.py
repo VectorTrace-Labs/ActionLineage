@@ -33,7 +33,7 @@ def build_sbom(project_path: Path) -> dict[str, Any]:
         "project": {
             "name": project["name"],
             "version": project["version"],
-            "license": project.get("license", {}).get("text", "unknown"),
+            "license": _project_license(project),
         },
         "packages": sorted(package_rows, key=lambda row: (row["scope"], row["name"])),
     }
@@ -63,6 +63,17 @@ def _requirements(project: dict[str, Any]) -> dict[str, str]:
         for requirement in extra_requirements:
             requirements[f"extra:{extra}:{requirement}"] = requirement
     return requirements
+
+
+def _project_license(project: dict[str, Any]) -> str:
+    license_value = project.get("license")
+    if isinstance(license_value, str):
+        return license_value
+    if isinstance(license_value, dict):
+        text = license_value.get("text")
+        if isinstance(text, str):
+            return text
+    return "unknown"
 
 
 def _requirement_name(requirement: str) -> str | None:
