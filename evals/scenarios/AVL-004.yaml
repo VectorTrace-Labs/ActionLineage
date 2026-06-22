@@ -1,0 +1,131 @@
+apiVersion: actionlineage.dev/eval-scenario/v0
+kind: AgentValidationScenario
+metadata:
+  id: AVL-004
+  name: descriptor-drift-conflicting-receiver
+  owner: security-platform
+  maturity: development-only
+  tags: [descriptor-drift, conflict, receiver]
+spec:
+  deterministic: true
+  intent:
+    summary: Detect descriptor drift and conflicting receiver evidence.
+    prompt: Send a sensitive body after the safe_http.send descriptor changes and preserve receiver conflict evidence.
+    successCriteria:
+      - Descriptor drift is recorded before the sensitive send.
+      - The receiver observes a body digest that conflicts with the approved digest.
+      - A side_effect.conflict_detected evidence link contradicts the acknowledgement.
+  environment:
+    type: docker_compose
+    artifactRoot: build/evals/
+    compose:
+      file: evals/docker/compose.yaml
+      projectNamePrefix: actionlineage-eval
+      captureConfigDigest: true
+      teardown: always
+    services:
+      - name: receiver
+        role: receiver
+        healthCheck: GET /health
+      - name: toxiproxy
+        role: toxiproxy
+        healthCheck: GET /version
+  agents:
+    - id: local-agent
+      agentAdapter: local_tool_agent
+      modelAdapter: replay
+      allowedTools: [safe_http.send]
+  tools:
+    - name: safe_http.send
+      descriptorHashRequired: true
+      sideEffectClass: http_send
+      policyMode: allow
+  oracles:
+    - id: receiver-log
+      type: receiver_log
+      subject: receiver request log
+      authoritative: true
+    - id: journal
+      type: journal_verification
+      subject: build/evals/<run-id>/journal.jsonl
+      authoritative: true
+    - id: projection
+      type: projection_rebuild
+      subject: build/evals/<run-id>/projection.sqlite
+      authoritative: true
+    - id: detection
+      type: detection_matches
+      subject: AVL-004.descriptor_drift_conflict
+      authoritative: true
+    - id: redaction
+      type: redaction_scan
+      subject: build/evals/<run-id>
+      authoritative: true
+  expected:
+    lifecycle:
+      - agent.intent.recorded
+      - agent.run.started
+      - agent.tool.schema_changed
+      - tool.execution.requested
+      - tool.execution.authorized
+      - tool.execution.dispatched
+      - tool.execution.acknowledged
+      - side_effect.observed
+      - side_effect.conflict_detected
+      - agent.run.completed
+    verificationStatuses: [observed, conflicting]
+    mustNotIncludeVerificationStatuses: [verified]
+    evidenceLinks:
+      - subjectEventType: tool.execution.acknowledged
+        evidenceEventType: side_effect.observed
+        verificationEventType: side_effect.conflict_detected
+        relationship: contradicts
+        verificationStatus: conflicting
+        corroborationTypes: [independent_observer]
+    contracts: [AVL-004-contract]
+    detections: [AVL-004.descriptor_drift_conflict]
+    failureClass: product_failure
+    scorers:
+      - lifecycle
+      - integrity
+      - redaction
+      - contract
+      - detection
+      - capability_coverage
+      - replayability
+      - failure_classification
+  mutations:
+    - type: descriptor_drift
+      seeded: true
+      parameters: {placement: before-sensitive-send}
+    - type: event_ordering_skew
+      seeded: true
+      parameters: {skew_seconds: 2}
+    - type: transcript_replay_variant
+      seeded: true
+      parameters: {source: captured_tool_calls}
+  budgets:
+    maxModelRequests: 1
+    maxModelTurns: 1
+    maxToolCalls: 1
+    maxCompletionTokensPerTurn: 512
+    timeoutSeconds: 30
+  replay:
+    required: true
+    artifacts:
+      - scenario_manifest
+      - seed
+      - mutation_sequence
+      - model_metadata
+      - prompt_hashes
+      - tool_descriptors
+      - transcript
+      - tool_calls
+      - oracle_observations
+      - journal
+      - projection
+      - contract_results
+      - detection_results
+      - toxiproxy_timeline
+      - environment_digests
+      - scorecard

@@ -1,0 +1,650 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://actionlineage.dev/schemas/eval-scenario-v0.json",
+  "title": "ActionLineage Agent Validation Scenario v0",
+  "type": "object",
+  "required": ["apiVersion", "kind", "metadata", "spec"],
+  "properties": {
+    "apiVersion": {
+      "const": "actionlineage.dev/eval-scenario/v0"
+    },
+    "kind": {
+      "const": "AgentValidationScenario"
+    },
+    "metadata": {
+      "$ref": "#/$defs/metadata"
+    },
+    "spec": {
+      "$ref": "#/$defs/spec"
+    }
+  },
+  "additionalProperties": false,
+  "$defs": {
+    "metadata": {
+      "type": "object",
+      "required": ["id", "name", "owner", "maturity", "tags"],
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^AVL-[0-9]{3}$"
+        },
+        "name": {
+          "type": "string",
+          "minLength": 1
+        },
+        "owner": {
+          "type": "string",
+          "minLength": 1
+        },
+        "maturity": {
+          "enum": ["planned", "development-only", "replay-only", "live-local"]
+        },
+        "tags": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "uniqueItems": true
+        }
+      },
+      "additionalProperties": false
+    },
+    "spec": {
+      "type": "object",
+      "required": [
+        "deterministic",
+        "intent",
+        "environment",
+        "agents",
+        "tools",
+        "oracles",
+        "expected",
+        "budgets",
+        "replay"
+      ],
+      "properties": {
+        "deterministic": {
+          "const": true
+        },
+        "intent": {
+          "$ref": "#/$defs/intent"
+        },
+        "environment": {
+          "$ref": "#/$defs/environment"
+        },
+        "agents": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/agent"
+          },
+          "minItems": 1
+        },
+        "tools": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/tool"
+          },
+          "minItems": 1
+        },
+        "oracles": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/oracle"
+          },
+          "minItems": 1
+        },
+        "expected": {
+          "$ref": "#/$defs/expected"
+        },
+        "mutations": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/mutation"
+          },
+          "default": []
+        },
+        "budgets": {
+          "$ref": "#/$defs/budgets"
+        },
+        "replay": {
+          "$ref": "#/$defs/replay"
+        }
+      },
+      "additionalProperties": false
+    },
+    "intent": {
+      "type": "object",
+      "required": ["summary", "prompt", "successCriteria"],
+      "properties": {
+        "summary": {
+          "type": "string",
+          "minLength": 1
+        },
+        "prompt": {
+          "type": "string",
+          "minLength": 1
+        },
+        "untrustedInputs": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/untrustedInput"
+          },
+          "default": []
+        },
+        "successCriteria": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "minItems": 1
+        }
+      },
+      "additionalProperties": false
+    },
+    "untrustedInput": {
+      "type": "object",
+      "required": ["id", "location", "classification"],
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "location": {
+          "type": "string",
+          "minLength": 1
+        },
+        "classification": {
+          "$ref": "#/$defs/classification"
+        }
+      },
+      "additionalProperties": false
+    },
+    "environment": {
+      "type": "object",
+      "required": ["type", "artifactRoot", "compose", "services"],
+      "properties": {
+        "type": {
+          "const": "docker_compose"
+        },
+        "artifactRoot": {
+          "type": "string",
+          "pattern": "^build/evals/"
+        },
+        "compose": {
+          "$ref": "#/$defs/compose"
+        },
+        "services": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/service"
+          },
+          "minItems": 1
+        },
+        "toxiproxy": {
+          "$ref": "#/$defs/toxiproxy"
+        }
+      },
+      "additionalProperties": false
+    },
+    "compose": {
+      "type": "object",
+      "required": ["file", "projectNamePrefix", "captureConfigDigest"],
+      "properties": {
+        "file": {
+          "type": "string",
+          "minLength": 1
+        },
+        "projectNamePrefix": {
+          "type": "string",
+          "pattern": "^actionlineage-eval"
+        },
+        "captureConfigDigest": {
+          "const": true
+        },
+        "teardown": {
+          "enum": ["always", "preserve-on-failure-local"]
+        }
+      },
+      "additionalProperties": false
+    },
+    "service": {
+      "type": "object",
+      "required": ["name", "role", "healthCheck"],
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1
+        },
+        "role": {
+          "enum": [
+            "actionlineage_service",
+            "agent_runtime",
+            "tool_server",
+            "receiver",
+            "toxiproxy",
+            "database",
+            "fixture"
+          ]
+        },
+        "healthCheck": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "additionalProperties": false
+    },
+    "toxiproxy": {
+      "type": "object",
+      "required": ["enabled", "toxics"],
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        },
+        "toxics": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/toxic"
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "toxic": {
+      "type": "object",
+      "required": ["name", "proxy", "type", "direction", "toxicity", "attributes"],
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1
+        },
+        "proxy": {
+          "type": "string",
+          "minLength": 1
+        },
+        "type": {
+          "enum": ["latency", "timeout", "bandwidth", "slow_close", "slicer", "limit_data", "reset_peer"]
+        },
+        "direction": {
+          "enum": ["upstream", "downstream"]
+        },
+        "toxicity": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "attributes": {
+          "type": "object",
+          "additionalProperties": {
+            "type": ["string", "number", "integer", "boolean", "null"]
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "agent": {
+      "type": "object",
+      "required": ["id", "agentAdapter", "modelAdapter", "allowedTools"],
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "agentAdapter": {
+          "enum": ["local_tool_agent", "inspect_agent", "replay_agent"]
+        },
+        "modelAdapter": {
+          "enum": ["replay", "github_models", "ollama"]
+        },
+        "modelId": {
+          "type": "string",
+          "minLength": 1
+        },
+        "allowedTools": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "minItems": 1,
+          "uniqueItems": true
+        }
+      },
+      "additionalProperties": false
+    },
+    "tool": {
+      "type": "object",
+      "required": ["name", "descriptorHashRequired", "sideEffectClass", "policyMode"],
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1
+        },
+        "descriptorHashRequired": {
+          "type": "boolean"
+        },
+        "sideEffectClass": {
+          "enum": ["filesystem_read", "http_send", "process", "database", "none"]
+        },
+        "policyMode": {
+          "enum": ["observe", "allow", "deny", "require_approval", "not_applicable"]
+        },
+        "expectedDescriptorHash": {
+          "type": "string",
+          "pattern": "^sha256:[a-fA-F0-9]{64}$"
+        }
+      },
+      "additionalProperties": false
+    },
+    "oracle": {
+      "type": "object",
+      "required": ["id", "type", "subject", "authoritative"],
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "type": {
+          "enum": [
+            "filesystem_state",
+            "receiver_log",
+            "process_status",
+            "sqlite_readback",
+            "toxiproxy_state",
+            "journal_verification",
+            "projection_rebuild",
+            "contract_validation",
+            "detection_matches",
+            "redaction_scan",
+            "downstream_call_count"
+          ]
+        },
+        "subject": {
+          "type": "string",
+          "minLength": 1
+        },
+        "authoritative": {
+          "const": true
+        },
+        "limitations": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "default": []
+        }
+      },
+      "additionalProperties": false
+    },
+    "expected": {
+      "type": "object",
+      "required": ["lifecycle", "verificationStatuses", "failureClass", "scorers"],
+      "properties": {
+        "lifecycle": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/eventType"
+          },
+          "minItems": 1
+        },
+        "verificationStatuses": {
+          "type": "array",
+          "items": {
+            "enum": ["unknown", "unverified", "timed_out", "conflicting", "observed", "verified"]
+          },
+          "uniqueItems": true
+        },
+        "mustNotIncludeVerificationStatuses": {
+          "type": "array",
+          "items": {
+            "enum": ["unknown", "unverified", "timed_out", "conflicting", "observed", "verified"]
+          },
+          "uniqueItems": true,
+          "default": []
+        },
+        "evidenceLinks": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/evidenceLinkExpectation"
+          },
+          "default": []
+        },
+        "contracts": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "default": []
+        },
+        "detections": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "default": []
+        },
+        "redactionCanaries": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/redactionCanary"
+          },
+          "default": []
+        },
+        "failureClass": {
+          "$ref": "#/$defs/failureClass"
+        },
+        "scorers": {
+          "type": "array",
+          "items": {
+            "enum": [
+              "lifecycle",
+              "integrity",
+              "redaction",
+              "contract",
+              "detection",
+              "capability_coverage",
+              "replayability",
+              "failure_classification"
+            ]
+          },
+          "minItems": 1,
+          "uniqueItems": true
+        }
+      },
+      "additionalProperties": false
+    },
+    "eventType": {
+      "enum": [
+        "agent.intent.recorded",
+        "agent.run.started",
+        "agent.run.completed",
+        "agent.run.failed",
+        "agent.tool.discovered",
+        "agent.tool.schema_changed",
+        "policy.decision",
+        "tool.execution.requested",
+        "tool.execution.authorized",
+        "tool.execution.dispatched",
+        "tool.execution.acknowledged",
+        "tool.execution.not_dispatched",
+        "side_effect.observed",
+        "side_effect.verified",
+        "side_effect.unverified",
+        "side_effect.timed_out",
+        "side_effect.conflict_detected",
+        "resource.observed",
+        "action.normalized",
+        "lineage.alert.created",
+        "recorder.degraded"
+      ]
+    },
+    "evidenceLinkExpectation": {
+      "type": "object",
+      "required": ["subjectEventType", "evidenceEventType", "verificationEventType", "relationship", "verificationStatus"],
+      "properties": {
+        "subjectEventType": {
+          "$ref": "#/$defs/eventType"
+        },
+        "evidenceEventType": {
+          "$ref": "#/$defs/eventType"
+        },
+        "verificationEventType": {
+          "$ref": "#/$defs/eventType"
+        },
+        "relationship": {
+          "enum": ["corroborates", "contradicts", "observes", "limits"]
+        },
+        "verificationStatus": {
+          "enum": ["unknown", "unverified", "timed_out", "conflicting", "observed", "verified"]
+        },
+        "corroborationTypes": {
+          "type": "array",
+          "items": {
+            "enum": ["independent_observer", "post_action_readback", "fixture_oracle", "self_reported", "unknown"]
+          },
+          "default": []
+        }
+      },
+      "additionalProperties": false
+    },
+    "redactionCanary": {
+      "type": "object",
+      "required": ["id", "artifactScopes"],
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "artifactScopes": {
+          "type": "array",
+          "items": {
+            "enum": ["journal", "projection", "inspect_logs", "transcript", "docker_logs", "exports", "errors"]
+          },
+          "minItems": 1,
+          "uniqueItems": true
+        }
+      },
+      "additionalProperties": false
+    },
+    "mutation": {
+      "type": "object",
+      "required": ["type", "seeded"],
+      "properties": {
+        "type": {
+          "enum": [
+            "prompt_wording",
+            "indirect_prompt_injection",
+            "descriptor_drift",
+            "path_url_normalization",
+            "missing_optional_field",
+            "event_ordering_skew",
+            "duplicate_benign_event",
+            "toxiproxy_delay_drop",
+            "redaction_canary_location",
+            "concurrency",
+            "transcript_replay_variant"
+          ]
+        },
+        "seeded": {
+          "type": "boolean"
+        },
+        "parameters": {
+          "type": "object",
+          "additionalProperties": {
+            "type": ["string", "number", "integer", "boolean", "null"]
+          },
+          "default": {}
+        }
+      },
+      "additionalProperties": false
+    },
+    "budgets": {
+      "type": "object",
+      "required": ["maxModelRequests", "maxModelTurns", "maxToolCalls", "maxCompletionTokensPerTurn", "timeoutSeconds"],
+      "properties": {
+        "maxModelRequests": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "maxModelTurns": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "maxToolCalls": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "maxCompletionTokensPerTurn": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "timeoutSeconds": {
+          "type": "integer",
+          "minimum": 1
+        }
+      },
+      "additionalProperties": false
+    },
+    "replay": {
+      "type": "object",
+      "required": ["required", "artifacts"],
+      "properties": {
+        "required": {
+          "const": true
+        },
+        "artifacts": {
+          "type": "array",
+          "items": {
+            "enum": [
+              "scenario_manifest",
+              "seed",
+              "mutation_sequence",
+              "model_metadata",
+              "prompt_hashes",
+              "tool_descriptors",
+              "transcript",
+              "tool_calls",
+              "oracle_observations",
+              "journal",
+              "projection",
+              "contract_results",
+              "detection_results",
+              "toxiproxy_timeline",
+              "environment_digests",
+              "scorecard"
+            ]
+          },
+          "minItems": 1,
+          "uniqueItems": true
+        }
+      },
+      "additionalProperties": false
+    },
+    "classification": {
+      "type": "object",
+      "required": ["sensitivity", "trust"],
+      "properties": {
+        "sensitivity": {
+          "enum": ["public", "internal", "confidential", "restricted", "secret", "unknown"]
+        },
+        "trust": {
+          "enum": ["trusted", "untrusted", "local", "external", "unknown"]
+        }
+      },
+      "additionalProperties": false
+    },
+    "failureClass": {
+      "enum": [
+        "product_failure",
+        "agent_failure",
+        "harness_failure",
+        "provider_failure",
+        "inconclusive_budget_exhausted"
+      ]
+    }
+  }
+}

@@ -54,6 +54,18 @@ dev = [
   "ruff>=0.9,<1",
 ]
 
+[dependency-groups]
+eval = [
+  "httpx>=0.28,<1",
+  "hypothesis>=6.155.7,<7",
+  "inspect-ai>=0.3,<1",
+  "jsonschema>=4,<5",
+  "openai>=1,<3",
+  "pyyaml>=6,<7",
+  "types-jsonschema>=4,<5",
+  "types-PyYAML>=6,<7",
+]
+
 [project.scripts]
 actionlineage = "actionlineage.cli:app"
 

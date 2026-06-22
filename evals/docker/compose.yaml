@@ -1,0 +1,37 @@
+services:
+  receiver:
+    image: python:3.13-alpine
+    command:
+      - python
+      - /app/receiver.py
+      - --host
+      - 0.0.0.0
+      - --port
+      - "8080"
+      - --log
+      - /artifacts/receiver/requests.jsonl
+    ports:
+      - "18080:8080"
+    volumes:
+      - ./receiver.py:/app/receiver.py:ro
+      - receiver-artifacts:/artifacts
+    healthcheck:
+      test:
+        - CMD
+        - python
+        - -c
+        - "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8080/health', timeout=2)"
+      interval: 2s
+      timeout: 3s
+      retries: 20
+
+  toxiproxy:
+    image: ghcr.io/shopify/toxiproxy:latest
+    command:
+      - -host=0.0.0.0
+    ports:
+      - "18474:8474"
+      - "18880:8880"
+
+volumes:
+  receiver-artifacts:
