@@ -229,10 +229,11 @@ Scheduled lane:
 - Trigger: `schedule` and manual dispatch on the default branch.
 - Permissions: `contents: read`, `models: read`.
 - Uses GitHub Models through a common `ModelAdapter`.
-- The job may provide an optional `GITHUB_MODELS_TOKEN` or `GH_MODELS_TOKEN`
-  repository/organization secret when the repository-scoped `GITHUB_TOKEN` is
-  not authorized for GitHub Models. The adapter falls back to `GITHUB_TOKEN`
-  when org-level Models access is enabled.
+- The job may provide an optional `GH_MODELS_TOKEN` repository/organization
+  secret when the repository-scoped `GITHUB_TOKEN` is not authorized for GitHub
+  Models. GitHub Actions rejects secret names beginning with `GITHUB_`, so
+  `GH_MODELS_TOKEN` is the repository secret name. The adapter falls back to
+  `GITHUB_TOKEN` when org-level Models access is enabled.
 - Enforces strict request, token, tool-call, and wall-clock budgets.
 - Uploads redacted artifacts for maintainer review.
 

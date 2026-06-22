@@ -99,8 +99,8 @@ Controls:
 - PR lane uses `pull_request`, `contents: read`, and zero model requests.
 - Scheduled model lane runs only on default-branch trusted code with
   `models: read`.
-- Optional `GITHUB_MODELS_TOKEN` or `GH_MODELS_TOKEN` secrets are only passed to
-  scheduled or manually dispatched default-branch jobs.
+- Optional `GH_MODELS_TOKEN` secrets are only passed to scheduled or manually
+  dispatched default-branch jobs.
 - Do not use `pull_request_target` for eval execution.
 - Do not check out untrusted PR code in a privileged workflow.
 - Artifacts from untrusted jobs are treated as untrusted input.

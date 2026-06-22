@@ -86,7 +86,7 @@ def test_github_models_adapter_prefers_model_specific_token(monkeypatch) -> None
         }
 
     monkeypatch.setenv("GITHUB_TOKEN", "actions-token")
-    monkeypatch.setenv("GITHUB_MODELS_TOKEN", "models-token")
+    monkeypatch.setenv("GH_MODELS_TOKEN", "models-token")
     monkeypatch.setattr(adapters_module, "_post_openai_compatible", fake_post_openai_compatible)
 
     turn = GitHubModelsAdapter(model_id="openai/gpt-4.1-mini").generate(

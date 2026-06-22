@@ -156,7 +156,7 @@ class GitHubModelsAdapter:
     ) -> ModelTurn:
         token = self.token or _github_models_token()
         if not token:
-            raise ProviderError("GITHUB_MODELS_TOKEN or GITHUB_TOKEN is required for GitHub Models")
+            raise ProviderError("GH_MODELS_TOKEN, GITHUB_MODELS_TOKEN, or GITHUB_TOKEN is required")
         response = _post_openai_compatible(
             endpoint=self.endpoint,
             token=token,
@@ -240,8 +240,8 @@ def _github_models_token() -> str | None:
     """Return the least-confusing token source for GitHub Models inference."""
 
     return (
-        os.environ.get("GITHUB_MODELS_TOKEN")
-        or os.environ.get("GH_MODELS_TOKEN")
+        os.environ.get("GH_MODELS_TOKEN")
+        or os.environ.get("GITHUB_MODELS_TOKEN")
         or os.environ.get("GITHUB_TOKEN")
     )
 
