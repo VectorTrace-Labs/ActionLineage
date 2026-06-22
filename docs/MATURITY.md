@@ -44,6 +44,7 @@ evidence and limitations.
 - OpenTelemetry, SIEM/export, STIX/TAXII, and webhook/file sink integrations.
 - Optional FastAPI service mode, JWT/OIDC helpers, tenant checks, Docker,
   Kubernetes, and Helm deployment examples.
+- GHCR container-image publication from version-tagged release workflow runs.
 - Optional Postgres projection schema.
 - Cloud, Kubernetes, and external sensor observers backed by local fixtures.
 - Desktop bundle export for future native shells.
@@ -51,7 +52,8 @@ evidence and limitations.
 ## Planned Or External Validation
 
 - Successful TestPyPI and PyPI package publication.
-- Published release artifacts with completed GitHub artifact attestations.
+- Homebrew tap and formula publication.
+- conda-forge recipe publication.
 - Branch protection and GitHub security-control status.
 - Independent security review, outside user evaluation, production operating
   history, and public feedback.

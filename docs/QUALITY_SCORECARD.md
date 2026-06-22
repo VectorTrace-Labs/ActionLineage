@@ -10,7 +10,7 @@ and checklist wording.
 
 | Area | Current evidence |
 | --- | --- |
-| Branch | `main` at `37144a1`, release candidate work on `codex/v0.1.0a2-release-candidate` |
+| Branch | `main` at `ac97c90`, package distribution work on `codex/package-distribution-channels` |
 | Local ignored files | `AGENTS.md`, `Uplift.md` |
 | Required checks before uplift | Ruff, format, mypy, pip-audit, build, demo, and clean tracked snapshot passed; local pytest and claim scan failed only because ignored `Uplift.md` was included |
 | Current alpha version | `0.1.0a2` |
@@ -51,10 +51,12 @@ and checklist wording.
 | Public release metadata is alpha | `pyproject.toml`, `src/actionlineage/__init__.py` | `tests/release/test_release_readiness.py` | CLI `version` output | Alpha-supported |
 | Release hardening scripts exist | `scripts/` | `tests/security/test_release_hardening.py` | SBOM and provenance generated locally | Local-proof |
 | CI runs local release proof gates | `.github/workflows/ci.yml` | `tests/release/test_release_readiness.py` | Wheel, sdist, SBOM, audit, and unsigned provenance are generated in CI | Local-proof |
-| Release workflow builds and attests artifacts | `.github/workflows/release.yml`, `docs/PUBLISHING.md` | `tests/release/test_release_readiness.py` | GitHub Actions run required to generate attestations | Local-proof |
+| Release workflow builds and attests artifacts | `.github/workflows/release.yml`, `docs/PUBLISHING.md` | `tests/release/test_release_readiness.py` | GitHub Actions run `27920690328` for `v0.1.0a2` | Local-proof |
+| GHCR container publishing path exists | `.github/workflows/release.yml`, `docs/PACKAGE_MANAGERS.md` | `tests/release/test_release_readiness.py` | First GHCR package publication still requires a tag workflow run after this change lands | Preview |
 | TestPyPI/PyPI Trusted Publishing path exists | `.github/workflows/release.yml`, `docs/PUBLISHING.md` | `tests/release/test_release_readiness.py` | Trusted Publisher records required before publishing | Preview |
 | GitHub security controls are enabled | `.github/workflows` plus repository settings | Workflow files and API validation | GitHub UI/API required | External-validation-required |
-| PyPI/GHCR packages exist | Release checklist and publishing guide | Not executable locally | Package-index publication required | Planned |
+| Homebrew tap exists | `docs/PACKAGE_MANAGERS.md` | Documentation tests | Tap repository and validated formula required | Planned |
+| PyPI/GHCR packages exist | Release checklist and publishing guide | Not executable locally | Package-index or registry publication required | External-validation-required |
 
 ## Known Highest Risks
 

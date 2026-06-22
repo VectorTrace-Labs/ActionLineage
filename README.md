@@ -16,9 +16,9 @@ conflicting, and not-dispatched outcomes as separate facts.
 
 This repository is a public alpha. Core evidence recording is usable for local
 evaluation and fixture-backed integration work, but service deployments,
-external adapters, cloud observers, containers, package-index publication, and
-attested release artifacts are preview or external-validation surfaces until
-they are externally validated.
+external adapters, cloud observers, GHCR containers, package-index publication,
+and additional package-manager channels are preview, planned, or
+external-validation surfaces until they are externally validated.
 
 | Surface | Maturity | Evidence |
 | --- | --- | --- |
@@ -27,7 +27,9 @@ they are externally validated.
 | Case export, graph export, grounded summary, static console | Alpha-supported | Projection and console tests |
 | Lineage Contracts, sequence detections, Lineage Lab | Local-proof | Contract, detection, and replay tests |
 | MCP, policy, OpenTelemetry, service, Postgres, cloud/Kubernetes fixtures | Preview | Optional extras and local fixture tests |
-| Package-index publication, attested artifacts, external audits, production history | Planned or external-validation-required | See `docs/DECISIONS_REQUIRED.md` |
+| GitHub release artifacts and attestations | Local-proof | Release workflow and `v0.1.0a2` pre-release |
+| GHCR container publication | Preview | Tag-gated release workflow path |
+| Package-index publication, Homebrew tap, external audits, production history | Planned or external-validation-required | See `docs/DECISIONS_REQUIRED.md` |
 
 Full claim mapping lives in
 [docs/QUALITY_SCORECARD.md](docs/QUALITY_SCORECARD.md).
@@ -278,6 +280,10 @@ reference.
 - [Release checklist](docs/RELEASE_CHECKLIST.md): public release gates.
 - [Publishing](docs/PUBLISHING.md): GitHub release workflow, artifact
   attestations, and Trusted Publishing setup.
+- [Package managers](docs/PACKAGE_MANAGERS.md): GHCR, PyPI, Homebrew,
+  conda-forge, and deferred channel plan.
+- [Review process](docs/REVIEW_PROCESS.md): required checks, advisory AI
+  review, and solo-maintainer merge policy.
 - [Decisions required](docs/DECISIONS_REQUIRED.md): owner and external gates.
 
 ## Packages and Extras
@@ -294,6 +300,11 @@ uv sync --locked --all-extras
 Core dependencies are intentionally small: Pydantic and Typer. Optional extras
 hold MCP, OpenTelemetry, SQLAlchemy, FastAPI, JWT, and related integration
 dependencies.
+
+Public alpha artifacts are currently attached to GitHub Releases. The release
+workflow is prepared to publish preview GHCR images for version tags, while
+PyPI/TestPyPI and Homebrew remain gated on external package-manager setup and
+validation. See [docs/PACKAGE_MANAGERS.md](docs/PACKAGE_MANAGERS.md).
 
 ## Security Model In One Paragraph
 

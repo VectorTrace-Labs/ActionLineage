@@ -16,7 +16,7 @@ implementation change.
 | `AGENTS.md` visibility | Keep ignored/local; publish contributor guidance through normal docs | Making local assistant instructions public |
 | Python support | Keep Python 3.13+ until 3.11/3.12 are tested and justified | Widening package metadata |
 | Service/deployment support | Keep Docker/Kubernetes/Helm preview | Production deployment claims |
-| External release targets | Use GitHub Releases first; prepare TestPyPI then PyPI through Trusted Publishing; keep GHCR deferred | Publishing package-index artifacts |
+| External release targets | Use GitHub Releases first; publish preview GHCR images from version tags; prepare TestPyPI then PyPI through Trusted Publishing; keep Homebrew planned | Publishing package-index artifacts or Homebrew formulae |
 | Signing/provenance | Use GitHub artifact attestations for release artifacts; keep local provenance as a supplemental manifest | Claiming attested package artifacts |
 | Public security contact | Confirm GitHub private vulnerability reporting and contact path | Public announcement |
 | External review | Select reviewer or review venue | Any claim of independent validation |
@@ -32,6 +32,8 @@ implementation change.
 | Private vulnerability reporting | GitHub security settings confirmation |
 | Published packages | PyPI package page or GHCR package page |
 | TestPyPI/PyPI trusted publishers | Trusted Publisher records for `release.yml` environments `testpypi` and `pypi` |
+| GHCR package visibility | Public package page for `ghcr.io/vectortrace-labs/actionlineage` after the first successful publish |
+| Homebrew tap | `VectorTrace-Labs/homebrew-tap` exists with an audited formula and CI |
 | Attested artifacts | Successful `release.yml` run with GitHub artifact attestations and verification instructions |
 | Hosted provenance | Release artifact or attestation record linked from release notes |
 | External security review | Written review output with scope and date |

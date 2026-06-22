@@ -1,9 +1,10 @@
 # Publishing
 
 ActionLineage uses a GitHub-first alpha release path. The repository builds
-release artifacts in GitHub Actions, generates GitHub artifact attestations, and
-is prepared for PyPI/TestPyPI Trusted Publishing. Package-index publication
-still requires the trusted publisher records described below.
+release artifacts in GitHub Actions, generates GitHub artifact attestations,
+publishes preview GHCR container images for version tags, and is prepared for
+PyPI/TestPyPI Trusted Publishing. Package-index publication still requires the
+trusted publisher records described below.
 
 ## Release Workflow
 
@@ -22,6 +23,7 @@ Every run performs these stages:
 3. Generate SBOM, local release provenance, and checksums.
 4. Upload the release artifact bundle.
 5. Generate GitHub artifact attestations for the uploaded artifacts.
+6. Build, smoke-test, and publish a version-tagged GHCR container image.
 
 Manual runs can additionally choose `publish_target`:
 
@@ -32,6 +34,31 @@ Manual runs can additionally choose `publish_target`:
 The publishing jobs use job-level `id-token: write` and do not use package
 registry API tokens. The TestPyPI and PyPI jobs run only when the manual
 workflow is dispatched against a tag whose ref starts with `refs/tags/v`.
+
+## GHCR Container Images
+
+The release workflow publishes preview container images to GHCR on version tags
+created after this workflow path is present on `main`. It runs after the
+release-candidate verification job succeeds and uses the workflow `GITHUB_TOKEN`
+with job-level `packages: write`; no Docker Hub account or registry token is
+required.
+
+Image tags use both the Git tag and the normalized version:
+
+```text
+ghcr.io/vectortrace-labs/actionlineage:vX.Y.Z
+ghcr.io/vectortrace-labs/actionlineage:X.Y.Z
+```
+
+The workflow smoke-tests the image with:
+
+```bash
+docker run --rm ghcr.io/vectortrace-labs/actionlineage:vX.Y.Z version
+docker run --rm ghcr.io/vectortrace-labs/actionlineage:vX.Y.Z doctor
+```
+
+Do not publish a `latest` tag while ActionLineage remains alpha. Versioned tags
+avoid implying production stability and make release evidence easier to audit.
 
 ## Trusted Publisher Setup
 
@@ -102,3 +129,6 @@ but public package publication is not claimed until:
 
 Until then, package-index publication remains
 `External-validation-required` in the maturity docs.
+
+See `docs/PACKAGE_MANAGERS.md` for GHCR, Homebrew, conda-forge, and deferred
+channel planning.
