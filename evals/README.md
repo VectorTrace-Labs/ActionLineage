@@ -38,7 +38,7 @@ Use the eval dependency group and keep `evals/` on `PYTHONPATH`:
 
 ```bash
 PYTHONPATH=evals uv run --group eval python -m actionlineage_evals validate-scenarios
-PYTHONPATH=evals uv run --group eval python -m actionlineage_evals coverage
+PYTHONPATH=evals uv run --group eval python -m actionlineage_evals coverage --strict
 PYTHONPATH=evals uv run --group eval python -m actionlineage_evals run \
   --scenario-path evals/scenarios \
   --artifact-root build/evals/local \
@@ -50,6 +50,9 @@ PYTHONPATH=evals uv run --group eval python -m actionlineage_evals replay-regres
   --regression-dir evals/regressions \
   --artifact-root build/evals/regression-replay \
   --allow-empty
+PYTHONPATH=evals uv run --group eval python -m actionlineage_evals replay-artifacts \
+  build/evals/local \
+  --replay-artifact-root build/evals/local-replay
 PYTHONPATH=evals uv run --group eval python -m actionlineage_evals summarize \
   build/evals/local \
   --format text
@@ -76,13 +79,26 @@ Every scenario run writes:
 - `replay-bundle/`: transcript and journal material for no-model replay.
 
 The scheduled GitHub Models lane runs the first six scenarios. `AVL-007` is a
-deterministic no-model provider-failure control, so it runs in the scripted and
-replay lanes rather than calling a live provider.
+deterministic no-model provider-failure control, `AVL-008` is a budget
+exhaustion control, and `AVL-009` is a harness-failure control, so they run in
+the scripted and replay lanes rather than calling a live provider.
 
 ## Artifact Policy
 
 Generated eval outputs should go under `build/evals/<run-id>/` or `/tmp`.
 Committed fixtures under `evals/replay/` or `evals/regressions/` must be small,
 synthetic, reviewed, redacted, and reproducible. Reviewed regression bundles
-must include `"reviewed": true` in `manifest.json`; unreviewed promoted
-failures are candidates and are not replayed by CI.
+must include `"reviewed": true` in `manifest.json` plus reviewer, review
+reason, source run, review time, and failure-class metadata; unreviewed
+promoted failures are candidates and are not replayed by CI.
+
+Reviewed promotion uses:
+
+```bash
+PYTHONPATH=evals uv run --group eval python -m actionlineage_evals promote-regression \
+  build/evals/local/avl-007-scripted-seed-0/replay-bundle \
+  --reviewed \
+  --reviewed-by security-platform \
+  --reason "synthetic provider-failure regression control" \
+  --source-run local-development
+```

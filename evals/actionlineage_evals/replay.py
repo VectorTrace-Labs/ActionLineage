@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 import re
 import shutil
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -130,6 +131,9 @@ def promote_regression_bundle(
     regression_dir: Path,
     *,
     reviewed: bool = False,
+    reviewed_by: str | None = None,
+    reason: str | None = None,
+    source_run: str | None = None,
 ) -> Path:
     """Promote a minimized/dynamic failure bundle into a reviewed corpus path."""
 
@@ -140,6 +144,11 @@ def promote_regression_bundle(
     scenario = raw.get("scenario", {})
     scenario_id = scenario.get("id", "unknown") if isinstance(scenario, dict) else "unknown"
     if reviewed:
+        _validate_review_metadata(
+            reviewed_by=reviewed_by,
+            reason=reason,
+            source_run=source_run,
+        )
         _validate_reviewed_bundle(bundle_dir, raw)
     parent = regression_dir if reviewed else regression_dir / "_candidates"
     destination = parent / f"{scenario_id}-{_sha256_file(manifest_path)[:16]}"
@@ -152,7 +161,12 @@ def promote_regression_bundle(
     promoted_manifest["reviewed"] = reviewed
     if reviewed:
         promoted_manifest["review"] = {
+            "failure_class": _manifest_failure_class(promoted_manifest),
             "policy": "synthetic redacted reviewed regression corpus",
+            "reason": reason,
+            "reviewed_at": _utc_now(),
+            "reviewed_by": reviewed_by,
+            "source_run": source_run,
             "status": "reviewed",
         }
     _write_json(destination / "manifest.json", promoted_manifest)
@@ -178,6 +192,7 @@ def discover_regression_bundles(regression_dir: Path) -> tuple[Path, ...]:
 
 def _validate_reviewed_bundle(bundle_dir: Path, manifest: JsonMap) -> None:
     _reject_live_provider_metadata(manifest)
+    _manifest_failure_class(manifest)
     forbidden = (
         re.compile(r"AVL_CANARY_[A-Za-z0-9_-]+"),
         re.compile(r"Bearer\s+[A-Za-z0-9._~+/=-]+"),
@@ -195,6 +210,35 @@ def _validate_reviewed_bundle(bundle_dir: Path, manifest: JsonMap) -> None:
         for pattern in forbidden:
             if pattern.search(text):
                 raise ValueError(f"reviewed regression bundle contains forbidden text: {path}")
+
+
+def _validate_review_metadata(
+    *,
+    reviewed_by: str | None,
+    reason: str | None,
+    source_run: str | None,
+) -> None:
+    missing = [
+        name
+        for name, value in (
+            ("reviewed_by", reviewed_by),
+            ("reason", reason),
+            ("source_run", source_run),
+        )
+        if value is None or not value.strip()
+    ]
+    if missing:
+        raise ValueError(f"reviewed regression promotion requires: {', '.join(missing)}")
+
+
+def _manifest_failure_class(manifest: JsonMap) -> str:
+    scorecard = manifest.get("scorecard")
+    if not isinstance(scorecard, dict):
+        raise ValueError("reviewed regression bundle scorecard must be an object")
+    failure_class = scorecard.get("failure_class")
+    if not isinstance(failure_class, str) or not failure_class:
+        raise ValueError("reviewed regression bundle must include scorecard.failure_class")
+    return failure_class
 
 
 def _reject_live_provider_metadata(manifest: JsonMap) -> None:
@@ -225,3 +269,7 @@ def _sha256_file(path: Path) -> str:
     import hashlib
 
     return hashlib.sha256(path.read_bytes()).hexdigest()
+
+
+def _utc_now() -> str:
+    return datetime.now(UTC).isoformat().replace("+00:00", "Z")

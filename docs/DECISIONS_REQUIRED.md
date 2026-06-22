@@ -20,6 +20,7 @@ implementation change.
 | Signing/provenance | Use GitHub artifact attestations for release artifacts; keep local provenance as a supplemental manifest | Claiming attested package artifacts |
 | Public security contact | Confirm GitHub private vulnerability reporting and contact path | Public announcement |
 | External review | Select reviewer or review venue | Any claim of independent validation |
+| Agent Validation artifact action runtime | Keep the accepted pinned `upload-artifact` SHA and tolerate the non-blocking Node runtime annotation until a tested pinned Node 24-compatible action works in this repository | Removing the documented CI warning or changing artifact upload trust posture |
 
 ## External Validation Required
 

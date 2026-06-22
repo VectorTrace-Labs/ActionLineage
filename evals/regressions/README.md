@@ -12,6 +12,8 @@ Rules:
   harness, provider, or budget failure classification.
 - Require `manifest.json` to contain `"reviewed": true` before a bundle is
   replayed by CI.
+- Require reviewed bundles to include reviewer, review reason, source run,
+  review timestamp, and failure-class metadata.
 - Treat `evals/regressions/_candidates/` as local review staging only; do not
   rely on candidates in CI.
 - Replay the corpus without model calls:

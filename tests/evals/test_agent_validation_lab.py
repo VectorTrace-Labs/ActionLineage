@@ -33,7 +33,12 @@ from actionlineage_evals.models import (  # noqa: E402
     ToolCall,
 )
 from actionlineage_evals.replay import promote_regression_bundle  # noqa: E402
-from actionlineage_evals.runner import replay_bundle, run_regression_corpus, run_suite  # noqa: E402
+from actionlineage_evals.runner import (  # noqa: E402
+    replay_artifacts,
+    replay_bundle,
+    run_regression_corpus,
+    run_suite,
+)
 from actionlineage_evals.scenarios import (  # noqa: E402
     load_scenarios,
     validate_capability_coverage,
@@ -48,7 +53,10 @@ from actionlineage_evals.summary import (  # noqa: E402
 
 def test_scenarios_and_capability_coverage_validate() -> None:
     scenarios = load_scenarios(PROJECT_ROOT / "evals" / "scenarios")
-    coverage = validate_capability_coverage(PROJECT_ROOT / "evals" / "CAPABILITY_COVERAGE.yaml")
+    coverage = validate_capability_coverage(
+        PROJECT_ROOT / "evals" / "CAPABILITY_COVERAGE.yaml",
+        strict=True,
+    )
 
     assert [scenario.scenario_id for scenario in scenarios] == [
         "AVL-001",
@@ -58,6 +66,8 @@ def test_scenarios_and_capability_coverage_validate() -> None:
         "AVL-005",
         "AVL-006",
         "AVL-007",
+        "AVL-008",
+        "AVL-009",
     ]
     assert coverage["ok"] is True
     assert coverage["scenario_ids"] == [
@@ -68,6 +78,8 @@ def test_scenarios_and_capability_coverage_validate() -> None:
         "AVL-005",
         "AVL-006",
         "AVL-007",
+        "AVL-008",
+        "AVL-009",
     ]
     assert coverage["uncovered_capabilities"] == []
 
@@ -254,12 +266,16 @@ def test_scripted_suite_runs_all_scenarios_and_replay(tmp_path: Path) -> None:
         "AVL-005",
         "AVL-006",
         "AVL-007",
+        "AVL-008",
+        "AVL-009",
     ]
     for scenario_result in result.results:
-        if scenario_result.scenario_id == "AVL-007":
-            assert scenario_result.failure_class == FailureClass.PROVIDER
-        else:
-            assert scenario_result.failure_class is None
+        expected_failure = {
+            "AVL-007": FailureClass.PROVIDER,
+            "AVL-008": FailureClass.BUDGET,
+            "AVL-009": FailureClass.HARNESS,
+        }.get(scenario_result.scenario_id)
+        assert scenario_result.failure_class == expected_failure
         assert scenario_result.artifacts.replay_bundle_path.exists()
         assert scenario_result.artifacts.mutation_sequence_path.exists()
         assert scenario_result.artifacts.triage_path.exists()
@@ -309,6 +325,32 @@ def test_scripted_suite_runs_all_scenarios_and_replay(tmp_path: Path) -> None:
     assert avl007_scorecard["failure_class"] == "provider_failure"
     assert avl007_scorecard["provider_error"]["type"] == "ProviderError"
 
+    avl008_scorecard = json.loads(
+        (tmp_path / "evals" / "avl-008-scripted-seed-0" / "scorecard.json").read_text(
+            encoding="utf-8"
+        )
+    )
+    assert avl008_scorecard["passed"] is True
+    assert avl008_scorecard["failure_class"] == "inconclusive_budget_exhausted"
+    assert avl008_scorecard["agent_error"]["type"] == "AgentBudgetError"
+
+    avl009_scorecard = json.loads(
+        (tmp_path / "evals" / "avl-009-scripted-seed-0" / "scorecard.json").read_text(
+            encoding="utf-8"
+        )
+    )
+    assert avl009_scorecard["passed"] is True
+    assert avl009_scorecard["failure_class"] == "harness_failure"
+    assert avl009_scorecard["harness_error"]["type"] == "HarnessControlError"
+
+    avl001_oracles = [
+        json.loads(line)
+        for line in (tmp_path / "evals" / "avl-001-scripted-seed-0" / "oracle-observations.jsonl")
+        .read_text(encoding="utf-8")
+        .splitlines()
+    ]
+    assert any(item["status"] == "process_running" for item in avl001_oracles)
+
     replayed = replay_bundle(
         tmp_path / "evals" / "avl-001-scripted-seed-0" / "replay-bundle",
         artifact_root=tmp_path / "replay",
@@ -322,6 +364,13 @@ def test_scripted_suite_runs_all_scenarios_and_replay(tmp_path: Path) -> None:
     assert replayed_provider_failure.passed is True
     assert replayed_provider_failure.failure_class == FailureClass.PROVIDER
 
+    replayed_artifacts = replay_artifacts(
+        artifact_root=tmp_path / "evals",
+        replay_artifact_root=tmp_path / "artifact-replay",
+    )
+    assert replayed_artifacts.passed is True
+    assert len(replayed_artifacts.results) == 9
+
 
 def test_regression_corpus_replay_supports_empty_and_promoted_bundles(tmp_path: Path) -> None:
     empty = run_regression_corpus(
@@ -333,23 +382,29 @@ def test_regression_corpus_replay_supports_empty_and_promoted_bundles(tmp_path: 
     assert empty.results == ()
 
     result = run_suite(
-        scenario_path=PROJECT_ROOT / "evals" / "scenarios" / "AVL-001.yaml",
+        scenario_path=PROJECT_ROOT / "evals" / "scenarios" / "AVL-007.yaml",
         artifact_root=tmp_path / "evals",
         mode=RunMode.SCRIPTED,
         model_adapter_name="scripted",
     )
     assert result.passed is True
     candidate = promote_regression_bundle(
-        tmp_path / "evals" / "avl-001-scripted-seed-0" / "replay-bundle",
+        tmp_path / "evals" / "avl-007-scripted-seed-0" / "replay-bundle",
         tmp_path / "regressions",
     )
     assert "_candidates" in candidate.parts
 
     reviewed = promote_regression_bundle(
-        tmp_path / "evals" / "avl-001-scripted-seed-0" / "replay-bundle",
+        tmp_path / "evals" / "avl-007-scripted-seed-0" / "replay-bundle",
         tmp_path / "regressions",
         reviewed=True,
+        reviewed_by="security-platform",
+        reason="synthetic provider-failure regression control",
+        source_run="local-test",
     )
+    reviewed_manifest = json.loads((reviewed / "manifest.json").read_text(encoding="utf-8"))
+    assert reviewed_manifest["review"]["failure_class"] == "provider_failure"
+    assert reviewed_manifest["review"]["reviewed_by"] == "security-platform"
 
     replayed = run_regression_corpus(
         regression_dir=reviewed.parent,
@@ -357,7 +412,26 @@ def test_regression_corpus_replay_supports_empty_and_promoted_bundles(tmp_path: 
     )
 
     assert replayed.passed is True
-    assert [item.scenario_id for item in replayed.results] == ["AVL-001"]
+    assert [item.scenario_id for item in replayed.results] == ["AVL-007"]
+
+
+def test_reviewed_regression_promotion_requires_review_metadata(tmp_path: Path) -> None:
+    result = run_suite(
+        scenario_path=PROJECT_ROOT / "evals" / "scenarios" / "AVL-007.yaml",
+        artifact_root=tmp_path / "evals",
+        mode=RunMode.SCRIPTED,
+        model_adapter_name="scripted",
+    )
+    assert result.passed is True
+
+    with pytest.raises(ValueError, match="reviewed_by"):
+        promote_regression_bundle(
+            tmp_path / "evals" / "avl-007-scripted-seed-0" / "replay-bundle",
+            tmp_path / "regressions",
+            reviewed=True,
+            reason="missing reviewer",
+            source_run="local-test",
+        )
 
 
 def test_unreviewed_regression_bundle_is_rejected(tmp_path: Path) -> None:

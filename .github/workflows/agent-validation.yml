@@ -34,7 +34,7 @@ jobs:
           PYTHONPATH: evals
         run: |
           uv run --group eval python -m actionlineage_evals validate-scenarios
-          uv run --group eval python -m actionlineage_evals coverage
+          uv run --group eval python -m actionlineage_evals coverage --strict
       - name: Run no-model scripted eval suite
         env:
           PYTHONPATH: evals
@@ -60,6 +60,18 @@ jobs:
             --regression-dir evals/regressions \
             --artifact-root build/evals/regression-replay \
             --allow-empty
+      - name: Summarize no-model eval artifacts
+        if: always()
+        env:
+          PYTHONPATH: evals
+        run: |
+          {
+            echo "### No-model Agent Validation Lab scorecards"
+            echo
+            echo '```text'
+            uv run --group eval python -m actionlineage_evals summarize build/evals --format text || true
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
       - name: Upload no-model eval artifacts
         if: always()
         uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4
@@ -87,6 +99,17 @@ jobs:
         env:
           PYTHONPATH: evals
         run: uv run --group eval python -m actionlineage_evals docker-smoke
+      - name: Run AVL-001 through Docker with process oracle
+        env:
+          PYTHONPATH: evals
+        run: |
+          uv run --group eval python -m actionlineage_evals run \
+            --scenario-path evals/scenarios/AVL-001.yaml \
+            --artifact-root build/evals/docker-avl-001 \
+            --mode scripted \
+            --model-adapter scripted \
+            --seeds 1 \
+            --use-docker
       - name: Run AVL-002 through Docker and Toxiproxy
         env:
           PYTHONPATH: evals
@@ -98,6 +121,18 @@ jobs:
             --model-adapter scripted \
             --seeds 1 \
             --use-docker
+      - name: Summarize Docker eval artifacts
+        if: always()
+        env:
+          PYTHONPATH: evals
+        run: |
+          {
+            echo "### Docker Agent Validation Lab scorecards"
+            echo
+            echo '```text'
+            uv run --group eval python -m actionlineage_evals summarize build/evals --format text || true
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
       - name: Upload Docker eval artifacts
         if: always()
         uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4
@@ -139,6 +174,25 @@ jobs:
             --model-id openai/gpt-4.1-mini \
             --seeds 1 \
             --max-scenarios 6
+      - name: Replay scheduled live bundles
+        env:
+          PYTHONPATH: evals
+        run: |
+          uv run --group eval python -m actionlineage_evals replay-artifacts \
+            build/evals/scheduled \
+            --replay-artifact-root build/evals/scheduled-replay
+      - name: Summarize scheduled eval artifacts
+        if: always()
+        env:
+          PYTHONPATH: evals
+        run: |
+          {
+            echo "### Scheduled Agent Validation Lab scorecards"
+            echo
+            echo '```text'
+            uv run --group eval python -m actionlineage_evals summarize build/evals --format text || true
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
       - name: Upload scheduled eval artifacts
         if: always()
         uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4

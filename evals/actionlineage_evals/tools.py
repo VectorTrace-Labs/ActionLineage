@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import os
 import urllib.error
 import urllib.request
 from dataclasses import dataclass, field
@@ -127,12 +128,42 @@ class ToolHarness:
             "verification_event_id": verification.event_id,
         }
         self.world.oracle_observations.append(oracle)
+        self._record_process_status(ack)
         return ToolResult(
             name=call.name,
             ok=True,
             acknowledgement={"event_id": ack.event_id, "status": "succeeded"},
             observation=oracle,
         )
+
+    def _record_process_status(self, parent: EventEnvelope) -> EventEnvelope:
+        process_event = self.recorder.record(
+            EventType.RESOURCE_OBSERVED,
+            {
+                "observation": {
+                    "pid": os.getpid(),
+                    "status": "running",
+                },
+                "observer_identity": "process_status_oracle",
+                "resource": {
+                    "kind": "eval_runner_process",
+                    "pid": os.getpid(),
+                    "type": "process",
+                },
+                "verification_status": VerificationStatus.OBSERVED.value,
+            },
+            classification=internal_local_classification(),
+            parent_event_id=parent.event_id,
+            source=observer_source("process_status_oracle"),
+        )
+        self.world.oracle_observations.append(
+            {
+                "event_id": process_event.event_id,
+                "pid": os.getpid(),
+                "status": "process_running",
+            }
+        )
+        return process_event
 
     def _safe_http_send(self, call: ToolCall) -> ToolResult:
         mode = str(call.arguments.get("mode", "fixture"))

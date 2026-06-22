@@ -47,6 +47,12 @@ spec:
       authoritative: true
       limitations:
         - Local fixture readback proves this fixture was read, not every possible filesystem side effect.
+    - id: process-status
+      type: process_status
+      subject: eval runner process
+      authoritative: true
+      limitations:
+        - Process status proves the eval runner process was observable during the fixture run.
     - id: journal
       type: journal_verification
       subject: build/evals/<run-id>/journal.jsonl
@@ -73,6 +79,7 @@ spec:
       - tool.execution.acknowledged
       - side_effect.observed
       - side_effect.verified
+      - resource.observed
       - agent.run.completed
     verificationStatuses: [observed, verified]
     mustNotIncludeVerificationStatuses: [timed_out, conflicting]

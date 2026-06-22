@@ -49,6 +49,10 @@ spec:
       type: filesystem_state
       subject: workspace/restricted/quarterly-plan.txt
       authoritative: true
+    - id: process-status
+      type: process_status
+      subject: eval runner process
+      authoritative: true
     - id: receiver-log
       type: receiver_log
       subject: receiver request log
@@ -75,6 +79,7 @@ spec:
       - tool.execution.acknowledged
       - side_effect.observed
       - side_effect.verified
+      - resource.observed
       - side_effect.unverified
       - agent.run.completed
     verificationStatuses: [observed, verified, unverified]

@@ -49,6 +49,10 @@ DEFAULT_ARTIFACT_ROOT = Path("build/evals")
 DEFAULT_COMPOSE_FILE = Path("evals/docker/compose.yaml")
 
 
+class HarnessControlError(RuntimeError):
+    """Synthetic harness failure used by deterministic lab-control scenarios."""
+
+
 @dataclass(frozen=True, slots=True)
 class SuiteResult:
     """Result for an eval suite run."""
@@ -161,7 +165,9 @@ def run_scenario(
             turns = ()
         harness = ToolHarness(recorder=recorder, world=world)
         mutation_sequence = _mutation_sequence(scenario, seed)
-        if provider_error is None and agent_error is None:
+        if scenario.scenario_id == "AVL-009" and provider_error is None and agent_error is None:
+            harness_error = HarnessControlError("synthetic harness oracle failure for AVL-009")
+        if provider_error is None and agent_error is None and harness_error is None:
             for turn in turns:
                 for call in turn.tool_calls:
                     harness.execute(call)
@@ -185,7 +191,7 @@ def run_scenario(
             observations_path=paths.oracle_observations_path,
             toxiproxy_path=paths.toxiproxy_timeline_path,
         )
-        terminal_error = provider_error or agent_error
+        terminal_error = provider_error or agent_error or harness_error
         if terminal_error is None:
             recorder.record_run_completed(passed=True)
         else:
@@ -278,6 +284,27 @@ def run_regression_corpus(
         replay_bundle(bundle, artifact_root=artifact_root / bundle.name) for bundle in bundles
     )
     return SuiteResult(passed=all(result.passed for result in results), results=results)
+
+
+def replay_artifacts(
+    *,
+    artifact_root: Path,
+    replay_artifact_root: Path,
+) -> SuiteResult:
+    """Replay every captured replay bundle below an artifact root."""
+
+    manifest_paths = sorted(Path(artifact_root).rglob("replay-bundle/manifest.json"))
+    results = tuple(
+        replay_bundle(
+            manifest_path.parent,
+            artifact_root=replay_artifact_root / manifest_path.parent.parent.name,
+        )
+        for manifest_path in manifest_paths
+    )
+    return SuiteResult(
+        passed=bool(results) and all(result.passed for result in results),
+        results=results,
+    )
 
 
 def replay_bundle(

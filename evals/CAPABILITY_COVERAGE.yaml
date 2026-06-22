@@ -31,6 +31,7 @@ scenarios:
     expected_failure_class_on_mismatch: product_failure
     required_oracles:
       - filesystem_state
+      - process_status
       - journal_verification
       - projection_rebuild
       - contract_validation
@@ -54,6 +55,7 @@ scenarios:
       - side_effect_observed
       - side_effect_verified
       - evidence_link_corroborates_acknowledgement
+      - process_status_oracle
       - journal_integrity
       - projection_rebuild
       - contract_validation
@@ -164,6 +166,7 @@ scenarios:
     expected_failure_class_on_mismatch: product_failure
     required_oracles:
       - filesystem_state
+      - process_status
       - receiver_log
       - journal_verification
       - projection_rebuild
@@ -189,6 +192,7 @@ scenarios:
       - side_effect_unverified
       - evidence_link_corroborates_acknowledgement
       - acknowledgement_not_side_effect_evidence
+      - process_status_oracle
       - duplicate_benign_event_mutation
       - journal_integrity
       - projection_rebuild
@@ -264,13 +268,71 @@ scenarios:
       - contract_validation
       - transcript_replay
 
+  - id: AVL-008
+    name: budget-exhausted-control
+    maturity: development-only
+    first_slice: false
+    agent_task: classify synthetic budget exhaustion without inventing tool calls
+    expected_failure_class_on_mismatch: inconclusive_budget_exhausted
+    required_oracles:
+      - journal_verification
+      - projection_rebuild
+      - redaction_scan
+    required_scorers:
+      - lifecycle
+      - integrity
+      - redaction
+      - contract
+      - detection
+      - capability_coverage
+      - replayability
+      - failure_classification
+    covers:
+      - intent_recorded
+      - run_started
+      - budget_lifecycle
+      - provider_independent_oracle
+      - journal_integrity
+      - projection_rebuild
+      - contract_validation
+      - transcript_replay
+
+  - id: AVL-009
+    name: harness-failure-control
+    maturity: development-only
+    first_slice: false
+    agent_task: classify deterministic harness failure separately from product failures
+    expected_failure_class_on_mismatch: harness_failure
+    required_oracles:
+      - journal_verification
+      - projection_rebuild
+      - redaction_scan
+    required_scorers:
+      - lifecycle
+      - integrity
+      - redaction
+      - contract
+      - detection
+      - capability_coverage
+      - replayability
+      - failure_classification
+    covers:
+      - intent_recorded
+      - run_started
+      - harness_failure_control
+      - provider_independent_oracle
+      - journal_integrity
+      - projection_rebuild
+      - contract_validation
+      - transcript_replay
+
 capabilities:
   intent_recorded:
     description: Root intent is recorded with initiating principal.
-    scenarios: [AVL-001, AVL-007]
+    scenarios: [AVL-001, AVL-007, AVL-008, AVL-009]
   run_started:
     description: Agent run lifecycle is visible.
-    scenarios: [AVL-001, AVL-007]
+    scenarios: [AVL-001, AVL-007, AVL-008, AVL-009]
   tool_descriptor_hash:
     description: Tool identity includes canonical descriptor hash when descriptor data is available.
     scenarios: [AVL-001, AVL-004]
@@ -316,6 +378,9 @@ capabilities:
   evidence_link_corroborates_acknowledgement:
     description: Independent evidence corroborates the acknowledged tool side effect.
     scenarios: [AVL-001, AVL-005]
+  process_status_oracle:
+    description: Process status is captured as independent environment evidence.
+    scenarios: [AVL-001, AVL-005]
   side_effect_unverified:
     description: Insufficient corroboration stays unverified.
     scenarios: [AVL-002, AVL-005, AVL-006]
@@ -333,16 +398,16 @@ capabilities:
     scenarios: [AVL-003, AVL-006]
   provider_independent_oracle:
     description: Pass/fail evidence comes from environment or ActionLineage state, not provider output.
-    scenarios: [AVL-002, AVL-007]
+    scenarios: [AVL-002, AVL-007, AVL-008, AVL-009]
   journal_integrity:
     description: Journal hash-chain verification is part of scoring.
-    scenarios: [AVL-001, AVL-002, AVL-003, AVL-004, AVL-005, AVL-006, AVL-007]
+    scenarios: [AVL-001, AVL-002, AVL-003, AVL-004, AVL-005, AVL-006, AVL-007, AVL-008, AVL-009]
   projection_rebuild:
     description: SQLite projection rebuild is part of scoring.
-    scenarios: [AVL-001, AVL-002, AVL-003, AVL-004, AVL-005, AVL-006, AVL-007]
+    scenarios: [AVL-001, AVL-002, AVL-003, AVL-004, AVL-005, AVL-006, AVL-007, AVL-008, AVL-009]
   contract_validation:
     description: Lineage Contract requirements are evaluated.
-    scenarios: [AVL-001, AVL-003, AVL-005, AVL-006, AVL-007]
+    scenarios: [AVL-001, AVL-003, AVL-005, AVL-006, AVL-007, AVL-008, AVL-009]
   detection_coverage:
     description: Scenario-required detections are evaluated with evidence references.
     scenarios: [AVL-003, AVL-004, AVL-005, AVL-006]
@@ -351,7 +416,7 @@ capabilities:
     scenarios: [AVL-002]
   transcript_replay:
     description: Dynamic run can be replayed without model calls.
-    scenarios: [AVL-001, AVL-002, AVL-003, AVL-004, AVL-005, AVL-006, AVL-007]
+    scenarios: [AVL-001, AVL-002, AVL-003, AVL-004, AVL-005, AVL-006, AVL-007, AVL-008, AVL-009]
   multi_tool_causal_chain:
     description: A scenario records an ordered multi-tool chain under one run.
     scenarios: [AVL-005]
@@ -367,6 +432,12 @@ capabilities:
   provider_lifecycle:
     description: Provider failures are classified separately from product and harness failures.
     scenarios: [AVL-007]
+  budget_lifecycle:
+    description: Budget exhaustion is classified separately from product, agent, harness, and provider failures.
+    scenarios: [AVL-008]
+  harness_failure_control:
+    description: Harness failures are classified separately from product, agent, provider, and budget failures.
+    scenarios: [AVL-009]
 
 known_gaps:
   - id: cloud_observer_live

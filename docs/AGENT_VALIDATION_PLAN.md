@@ -39,24 +39,31 @@ Planned improvements:
 
 Current hardening slice:
 
-1. Keep the `upload-artifact` warning non-blocking and bounded. The workflow
-   opts into Node 24 while retaining the accepted pinned action SHA; an explicit
-   Node 24 `upload-artifact` release pin was not kept because it caused a
-   workflow startup failure in GitHub Actions.
-2. Add `AVL-007 provider-lifecycle-failure` as a deterministic no-model
-   scenario that validates `provider_failure` classification without depending
-   on a real provider outage.
-3. Add a scorecard summary command for CI logs and local triage.
-4. Require explicit reviewed manifests before replay bundles enter the
-   regression corpus; unreviewed promotions remain candidates.
-5. Run `AVL-002` once through Docker/Toxiproxy in the Docker eval lane so the
-   declared timeout scenario has live disposable-environment coverage.
+1. Gate CI coverage with `coverage --strict` so stale capability references and
+   uncovered declared capabilities fail fast.
+2. Publish scorecard summaries into GitHub Actions job summaries for no-model,
+   Docker, and scheduled/default-branch live lanes.
+3. Replay every scheduled live-run replay bundle in the same workflow so live
+   runs prove deterministic replayability immediately.
+4. Add `AVL-008 budget-exhausted-control` to preserve
+   `inconclusive_budget_exhausted` separately from product, agent, harness, and
+   provider failures.
+5. Add `AVL-009 harness-failure-control` to preserve `harness_failure`
+   separately from product, agent, provider, and budget failures.
+6. Add reviewed regression promotion metadata: reviewer, reason, source run,
+   review time, and failure class.
+7. Add process-status oracle evidence to filesystem-read scenarios and run
+   `AVL-001` through Docker in CI alongside the existing Docker/Toxiproxy
+   `AVL-002` lane.
+8. Track the residual `upload-artifact` Node runtime annotation in
+   `docs/DECISIONS_REQUIRED.md`; the workflow keeps the accepted pinned SHA
+   because an explicit Node 24 artifact action pin caused startup failure.
 
 Acceptance commands for this phase:
 
 ```bash
 PYTHONPATH=evals uv run --group eval python -m actionlineage_evals validate-scenarios
-PYTHONPATH=evals uv run --group eval python -m actionlineage_evals coverage
+PYTHONPATH=evals uv run --group eval python -m actionlineage_evals coverage --strict
 PYTHONPATH=evals uv run --group eval python -m actionlineage_evals run \
   --scenario-path evals/scenarios \
   --artifact-root build/evals/local \
@@ -67,9 +74,19 @@ PYTHONPATH=evals uv run --group eval python -m actionlineage_evals replay-regres
   --regression-dir evals/regressions \
   --artifact-root build/evals/regression-replay \
   --allow-empty
+PYTHONPATH=evals uv run --group eval python -m actionlineage_evals replay-artifacts \
+  build/evals/local \
+  --replay-artifact-root build/evals/local-replay
 PYTHONPATH=evals uv run --group eval python -m actionlineage_evals summarize \
   build/evals/local
 PYTHONPATH=evals uv run --group eval python -m actionlineage_evals docker-smoke
+PYTHONPATH=evals uv run --group eval python -m actionlineage_evals run \
+  --scenario-path evals/scenarios/AVL-001.yaml \
+  --artifact-root build/evals/docker-avl-001 \
+  --mode scripted \
+  --model-adapter scripted \
+  --seeds 1 \
+  --use-docker
 PYTHONPATH=evals uv run --group eval python -m actionlineage_evals run \
   --scenario-path evals/scenarios/AVL-002.yaml \
   --artifact-root build/evals/docker-avl-002 \
@@ -116,6 +133,8 @@ Implemented artifacts:
 - `evals/scenarios/AVL-005.yaml`
 - `evals/scenarios/AVL-006.yaml`
 - `evals/scenarios/AVL-007.yaml`
+- `evals/scenarios/AVL-008.yaml`
+- `evals/scenarios/AVL-009.yaml`
 - `evals/regressions/README.md`
 - `evals/actionlineage_evals/`
 - `evals/docker/`

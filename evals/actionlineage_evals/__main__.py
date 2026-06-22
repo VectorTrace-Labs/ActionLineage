@@ -9,8 +9,10 @@ from pathlib import Path
 
 from actionlineage_evals.environment import DockerComposeEnvironmentController
 from actionlineage_evals.models import RunMode
+from actionlineage_evals.replay import promote_regression_bundle
 from actionlineage_evals.runner import (
     DEFAULT_ARTIFACT_ROOT,
+    replay_artifacts,
     replay_bundle,
     run_regression_corpus,
     run_suite,
@@ -61,6 +63,15 @@ def main(argv: list[str] | None = None) -> int:
     replay.add_argument("bundle_dir", type=Path)
     replay.add_argument("--artifact-root", type=Path, default=DEFAULT_ARTIFACT_ROOT / "replay")
 
+    replay_artifact_root = subcommands.add_parser("replay-artifacts")
+    replay_artifact_root.add_argument("artifact_root", type=Path)
+    replay_artifact_root.add_argument(
+        "--replay-artifact-root",
+        dest="replay_artifact_root",
+        type=Path,
+        default=DEFAULT_ARTIFACT_ROOT / "artifact-replay",
+    )
+
     replay_regressions = subcommands.add_parser("replay-regressions")
     replay_regressions.add_argument(
         "--regression-dir",
@@ -73,6 +84,18 @@ def main(argv: list[str] | None = None) -> int:
         default=DEFAULT_ARTIFACT_ROOT / "regression-replay",
     )
     replay_regressions.add_argument("--allow-empty", action="store_true")
+
+    promote_regression = subcommands.add_parser("promote-regression")
+    promote_regression.add_argument("bundle_dir", type=Path)
+    promote_regression.add_argument(
+        "--regression-dir",
+        type=Path,
+        default=Path("evals/regressions"),
+    )
+    promote_regression.add_argument("--reviewed", action="store_true")
+    promote_regression.add_argument("--reviewed-by")
+    promote_regression.add_argument("--reason")
+    promote_regression.add_argument("--source-run")
 
     docker_smoke = subcommands.add_parser("docker-smoke")
     docker_smoke.add_argument(
@@ -123,6 +146,13 @@ def main(argv: list[str] | None = None) -> int:
         replay_result = replay_bundle(args.bundle_dir, artifact_root=args.artifact_root)
         _print(replay_result.as_dict())
         return 0 if replay_result.passed else 1
+    if args.command == "replay-artifacts":
+        replay_artifact_result = replay_artifacts(
+            artifact_root=args.artifact_root,
+            replay_artifact_root=args.replay_artifact_root,
+        )
+        _print(replay_artifact_result.as_dict())
+        return 0 if replay_artifact_result.passed else 1
     if args.command == "replay-regressions":
         regression_result = run_regression_corpus(
             regression_dir=args.regression_dir,
@@ -131,6 +161,17 @@ def main(argv: list[str] | None = None) -> int:
         )
         _print(regression_result.as_dict())
         return 0 if regression_result.passed else 1
+    if args.command == "promote-regression":
+        destination = promote_regression_bundle(
+            args.bundle_dir,
+            args.regression_dir,
+            reviewed=args.reviewed,
+            reviewed_by=args.reviewed_by,
+            reason=args.reason,
+            source_run=args.source_run,
+        )
+        _print({"destination": str(destination), "reviewed": args.reviewed})
+        return 0
     if args.command == "docker-smoke":
         controller = DockerComposeEnvironmentController(
             run_id="smoke",

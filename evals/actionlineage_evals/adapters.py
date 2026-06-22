@@ -93,6 +93,15 @@ class ScriptedModelAdapter:
         del prompt, budget
         if self.scenario_id == "AVL-007":
             raise ProviderError("synthetic provider failure for AVL-007")
+        if self.scenario_id == "AVL-009":
+            return ModelTurn(
+                content="scripted deterministic harness-control plan",
+                tool_calls=(),
+                provider=self.provider,
+                model_id=self.model_id,
+                request_index=request_index,
+                raw={"mode": "scripted", "scenario_id": self.scenario_id},
+            )
         calls = tuple(call for call in _scripted_calls(self.scenario_id) if call.name in tools)
         return ModelTurn(
             content="scripted deterministic tool plan",
