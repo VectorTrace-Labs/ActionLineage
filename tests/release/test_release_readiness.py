@@ -160,7 +160,7 @@ def test_release_workflow_builds_attests_and_uses_trusted_publishing() -> None:
     assert "dist/*" in workflow
     assert "build/release/*" in workflow
     assert "pypa/gh-action-pypi-publish@" in workflow
-    assert 'gh run download "${GITHUB_RUN_ID}"' in workflow
+    assert 'gh run download "${GITHUB_RUN_ID}" --repo "${GITHUB_REPOSITORY}"' in workflow
     assert "actions: read" in workflow
     assert "sha256sum -c build/release/SHA256SUMS.txt" in workflow
     assert """name '*.whl'""" in workflow
