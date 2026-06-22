@@ -45,6 +45,7 @@ def test_release_docs_are_present() -> None:
         "docs/MIGRATION.md",
         "docs/FAQ.md",
         "docs/RELEASE_CHECKLIST.md",
+        "docs/PACKAGE_MANAGERS.md",
         "docs/QUALITY_SCORECARD.md",
         "docs/PERFECTION_PLAN.md",
         "docs/MATURITY.md",
@@ -117,6 +118,10 @@ def test_release_checklist_covers_required_gates() -> None:
         "gh workflow run release.yml -f publish_target=pypi",
         "gh attestation verify",
         "repository-url: https://test.pypi.org/legacy/",
+        "GHCR publishes preview container images",
+        "packages: write",
+        "deploy/docker/Dockerfile",
+        "See `docs/PACKAGE_MANAGERS.md`.",
     ):
         assert command in checklist
 
@@ -159,13 +164,40 @@ def test_release_workflow_builds_attests_and_uses_trusted_publishing() -> None:
     assert "PYPI_TOKEN" not in workflow
 
 
+def test_release_workflow_publishes_versioned_ghcr_image_without_registry_secret() -> None:
+    workflow = (PROJECT_ROOT / ".github/workflows/release.yml").read_text(encoding="utf-8")
+
+    assert "name: Publish GHCR image" in workflow
+    assert "needs: verify" in workflow
+    assert "if: startsWith(github.ref, 'refs/tags/v')" in workflow
+    assert "packages: write" in workflow
+    assert "ghcr.io/${owner}/actionlineage" in workflow
+    assert "docker login ghcr.io" in workflow
+    assert "secrets.GITHUB_TOKEN" in workflow
+    assert "deploy/docker/Dockerfile" in workflow
+    assert "${GITHUB_REF_NAME#v}" in workflow
+    assert "docker run --rm" in workflow
+    assert "docker push" in workflow
+    assert ":latest" not in workflow
+    assert "DOCKERHUB" not in workflow
+
+
 def test_publishing_docs_keep_package_publication_externally_gated() -> None:
     publishing = (PROJECT_ROOT / "docs/PUBLISHING.md").read_text(encoding="utf-8")
+    package_managers = (PROJECT_ROOT / "docs/PACKAGE_MANAGERS.md").read_text(encoding="utf-8")
     maturity = (PROJECT_ROOT / "docs/MATURITY.md").read_text(encoding="utf-8")
     decisions = (PROJECT_ROOT / "docs/DECISIONS_REQUIRED.md").read_text(encoding="utf-8")
 
     assert "Trusted Publisher records" in publishing
     assert "Do not add PyPI API tokens" in publishing
+    assert "GHCR Container Images" in publishing
     assert "External-validation-required" in publishing
+    assert "ghcr.io/vectortrace-labs/actionlineage" in package_managers
+    assert "do not publish or document a `latest` tag" in package_managers
+    assert "Homebrew tap" in package_managers
+    assert "Do not commit an unvalidated formula" in package_managers
     assert "Successful TestPyPI and PyPI package publication" in maturity
+    assert "GHCR container-image publication" in maturity
     assert "TestPyPI/PyPI trusted publishers" in decisions
+    assert "GHCR package visibility" in decisions
+    assert "Homebrew tap" in decisions
