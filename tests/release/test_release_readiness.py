@@ -297,6 +297,7 @@ def test_release_checklist_covers_required_gates() -> None:
         "scripts/generate_demo_evidence_map.py",
         "--demo-dir /tmp/actionlineage-demo",
         "scripts/check_claims_language.py",
+        "scripts/check_markdown_links.py",
         "scripts/secret_scan.py",
         "scripts/generate_sbom.py",
         "uv run pip-audit",
@@ -338,6 +339,7 @@ def test_ci_runs_local_release_proof_gates() -> None:
     assert "scripts/generate_demo_evidence_map.py" in workflow
     assert "--demo-dir /tmp/actionlineage-demo" in workflow
     assert "--check" in workflow
+    assert "uv run python scripts/check_markdown_links.py ." in workflow
     assert "scripts/generate_release_provenance.py" in workflow
     assert "--dist-dir /tmp/actionlineage-dist" in workflow
     assert "--output /tmp/actionlineage-release-provenance.json" in workflow

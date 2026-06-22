@@ -41,7 +41,8 @@ evidence and limitations.
 - Deterministic demo evidence map generated from local demo artifacts for
   onboarding and visual review; canonical evidence remains the local journal.
 - Release hardening scripts for claim language, secret scanning, SBOM, local
-  provenance, dependency audit, and release consistency.
+  provenance, dependency audit, repository-local Markdown link checking, and
+  release consistency.
 - CI release-proof gates for wheel/sdist build, SBOM, dependency audit, and
   unsigned local provenance generation.
 - Release workflow for CI-built artifacts, GitHub artifact attestations, and

@@ -47,6 +47,8 @@ jobs:
             --check
       - name: Claim-language guard
         run: uv run python scripts/check_claims_language.py .
+      - name: Markdown link check
+        run: uv run python scripts/check_markdown_links.py .
       - name: Secret scan
         run: uv run python scripts/secret_scan.py .
       - name: Generate SBOM

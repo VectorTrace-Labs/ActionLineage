@@ -56,7 +56,8 @@ and checklist wording.
 | Cloud/Kubernetes observers exist as fixture-backed observers | `src/actionlineage/observers/cloud.py` | `tests/observers/test_cloud_observers.py` | No live cloud required | Preview |
 | Public release metadata is alpha and supports Python 3.12+ | `pyproject.toml`, `src/actionlineage/__init__.py` | `tests/release/test_release_readiness.py`, CI/release workflow matrices | CLI `version` output | Alpha-supported |
 | Release hardening scripts exist | `scripts/` | `tests/security/test_release_hardening.py` | SBOM and provenance generated locally | Local-proof |
-| CI runs local release proof gates | `.github/workflows/ci.yml` | `tests/release/test_release_readiness.py` | Wheel, sdist, SBOM, audit, and unsigned provenance are generated in CI | Local-proof |
+| CI runs local release proof gates | `.github/workflows/ci.yml` | `tests/release/test_release_readiness.py` | Wheel, sdist, SBOM, audit, Markdown link check, and unsigned provenance are generated in CI | Local-proof |
+| Repository-local Markdown links are checked without network credentials | `scripts/check_markdown_links.py`, `.github/workflows/ci.yml`, `docs/RELEASE_CHECKLIST.md` | `tests/security/test_release_hardening.py`, `tests/release/test_release_readiness.py` | CI and release checklist run `uv run python scripts/check_markdown_links.py .` | Local-proof |
 | Release workflow builds, verifies on Python 3.12/3.13, and attests artifacts | `.github/workflows/release.yml`, `docs/PUBLISHING.md` | `tests/release/test_release_readiness.py`, `scripts/check_release_consistency.py` | Local workflow definition and package-index proof exist; GitHub Release object for `v0.1.0a3` remains owner-gated | Local-proof / External-validation-required |
 | Release-candidate audit prepares owner review without publishing | `docs/RELEASE_CANDIDATE_AUDIT.md`, `docs/DRAFT_RELEASE_NOTES_0.1.0a3.md`, `docs/OWNER_PUBLICATION_CHECKLIST.md` | `tests/release/test_release_readiness.py`, release-candidate command suite | Local manifest, wheel/sdist hashes, demo proof, Agent Validation summary, and owner/external gates are documented | Local-proof / External-validation-required |
 | GHCR container publishing path exists | `.github/workflows/release.yml`, `docs/PACKAGE_MANAGERS.md` | `tests/release/test_release_readiness.py` | Workflow path can build, smoke-test, and push tagged preview images; public GHCR visibility requires external validation | Preview |
@@ -77,6 +78,7 @@ and checklist wording.
 | External security controls cannot be verified locally | False confidence before announcement | `docs/DECISIONS_REQUIRED.md` | Owner validates GitHub settings and release controls |
 | Service/deployment examples are not production hardened | Operational misuse | Preview labels and security docs | External deployment review before broader claims |
 | Demo and contract examples can drift | Broken onboarding | Demo tests and contract validation | Keep README quickstart tied to passing contract |
+| Documentation links can drift during review preparation | Broken onboarding and reproduction paths | Repository-local Markdown link checker in CI and release checklist | Keep the checker local by default and treat external URL reachability as separate release/publication evidence |
 | Local hash chains can be overinterpreted | Integrity overclaim | Threat model and journal integrity docs | Continue using precise trust-limit wording |
 | GitHub Release object can drift from tags/package indexes | Broken release audit trail | Release-consistency checker and owner gate | Create/repair `v0.1.0a3` GitHub Release only with owner approval |
 | Projection SQLite handle closure can regress | Reliability signal can be missed in noisy verification output | Projection API closes connection handles and has warning-as-error regression coverage | Keep warning-as-error projection test in release verification |
@@ -99,6 +101,7 @@ uv run actionlineage demo run --output-dir /tmp/actionlineage-demo
 uv run python scripts/generate_demo_evidence_map.py --demo-dir /tmp/actionlineage-demo
 uv run python scripts/generate_demo_evidence_map.py --demo-dir /tmp/actionlineage-demo --check
 uv run python scripts/check_claims_language.py .
+uv run python scripts/check_markdown_links.py .
 uv run python scripts/secret_scan.py .
 uv run python scripts/generate_sbom.py --output /tmp/actionlineage-sbom.json
 uv run pip-audit

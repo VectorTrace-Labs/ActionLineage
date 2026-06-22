@@ -14,6 +14,7 @@ uv run actionlineage demo run --output-dir /tmp/actionlineage-demo
 uv run python scripts/generate_demo_evidence_map.py --demo-dir /tmp/actionlineage-demo
 uv run python scripts/generate_demo_evidence_map.py --demo-dir /tmp/actionlineage-demo --check
 uv run python scripts/check_claims_language.py .
+uv run python scripts/check_markdown_links.py .
 uv run python scripts/secret_scan.py .
 uv run python scripts/generate_sbom.py --output build/actionlineage-sbom.json
 uv run pip-audit
@@ -184,6 +185,8 @@ See `docs/PACKAGE_MANAGERS.md`.
 - README quickstart works from a fresh clone.
 - API, CLI, schema, tutorial, migration, FAQ, security, privacy, and operations
   docs are present.
+- Repository-relative Markdown links resolve with
+  `uv run python scripts/check_markdown_links.py .`.
 - Public claims avoid unsupported wording.
 - Preview, planned, and external-validation-required features are not
   represented as alpha-supported.

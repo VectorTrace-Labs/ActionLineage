@@ -77,6 +77,59 @@ def test_secret_scan_skips_local_assistant_docs_by_default(tmp_path: Path) -> No
     assert len(scanner.scan_paths([tmp_path], include_local_only=True)) == 1
 
 
+def test_markdown_link_check_passes_current_repository() -> None:
+    checker = _load_script("check_markdown_links")
+
+    result = checker.scan_paths([PROJECT_ROOT], repository_root=PROJECT_ROOT)
+
+    assert result.ok
+    assert result.issues == ()
+    assert result.checked_links >= 40
+
+
+def test_markdown_link_check_flags_missing_and_escaping_targets(tmp_path: Path) -> None:
+    checker = _load_script("check_markdown_links")
+    readme = tmp_path / "README.md"
+    readme.write_text(
+        "[missing](docs/missing.md)\n"
+        "[escape](../outside.md)\n"
+        "[external](https://example.com/actionlineage)\n"
+        "```md\n"
+        "[ignored](missing-in-code-fence.md)\n"
+        "```\n",
+        encoding="utf-8",
+    )
+
+    result = checker.scan_paths([tmp_path], repository_root=tmp_path)
+
+    assert not result.ok
+    assert result.checked_links == 2
+    assert [issue.code for issue in result.issues] == [
+        "missing_target",
+        "target_escapes_repository",
+    ]
+
+
+def test_markdown_link_check_handles_reference_links_and_file_uris(tmp_path: Path) -> None:
+    checker = _load_script("check_markdown_links")
+    docs_dir = tmp_path / "docs"
+    docs_dir.mkdir()
+    (docs_dir / "guide.md").write_text("# Guide\n", encoding="utf-8")
+    readme = tmp_path / "README.md"
+    readme.write_text(
+        "[guide]: docs/guide.md\n"
+        "[Guide][guide]\n"
+        "[local-file](file:///tmp/actionlineage-secret.md)\n",
+        encoding="utf-8",
+    )
+
+    result = checker.scan_paths([tmp_path], repository_root=tmp_path)
+
+    assert not result.ok
+    assert result.checked_links == 2
+    assert [issue.code for issue in result.issues] == ["file_uri"]
+
+
 def test_lightweight_sbom_includes_runtime_dependency() -> None:
     generator = _load_script("generate_sbom")
 
