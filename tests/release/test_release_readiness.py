@@ -64,6 +64,9 @@ def test_release_docs_are_present() -> None:
         "docs/MIGRATION.md",
         "docs/FAQ.md",
         "docs/RELEASE_CHECKLIST.md",
+        "docs/RELEASE_CANDIDATE_AUDIT.md",
+        "docs/DRAFT_RELEASE_NOTES_0.1.0a3.md",
+        "docs/OWNER_PUBLICATION_CHECKLIST.md",
         "docs/PACKAGE_MANAGERS.md",
         "docs/REVIEW_PROCESS.md",
         "docs/EXTERNAL_REVIEW_GUIDE.md",
@@ -138,6 +141,8 @@ def test_readme_quickstart_uses_demo_aligned_contract() -> None:
     assert "External review guide" in readme
     assert "Evaluation reproduction" in readme
     assert "Known limitations" in readme
+    assert "Release-candidate audit" in readme
+    assert "Owner publication checklist" in readme
 
 
 def test_external_review_docs_prepare_review_without_claiming_validation() -> None:
@@ -232,6 +237,53 @@ def test_external_review_issue_templates_collect_safe_repro_context() -> None:
         "authorization headers",
     ):
         assert required in combined
+
+
+def test_release_candidate_audit_prepares_without_publishing() -> None:
+    audit = (PROJECT_ROOT / "docs/RELEASE_CANDIDATE_AUDIT.md").read_text(encoding="utf-8")
+    draft_notes = (PROJECT_ROOT / "docs/DRAFT_RELEASE_NOTES_0.1.0a3.md").read_text(encoding="utf-8")
+    owner_checklist = (PROJECT_ROOT / "docs/OWNER_PUBLICATION_CHECKLIST.md").read_text(
+        encoding="utf-8"
+    )
+    combined = "\n".join((audit, draft_notes, owner_checklist))
+    normalized = combined.lower()
+
+    assert "build/release-candidate/manifest.json" in audit
+    assert "17be9bbedd4cc1d0cfea231803cc3415a811f800" in audit
+    assert "Do not republish immutable PyPI/TestPyPI files" in audit
+    assert "271 passed" in audit
+    assert "86 percent total coverage" in audit
+    assert "269 passed, 1 skipped" in audit
+    assert "47/47 declared capabilities covered" in audit
+    assert "236 files scanned, 0 leaks" in audit
+    assert "GitHub Release object for `v0.1.0a3`: absent" in audit
+    assert "8052a2e11f6e7da4b77d50d1c8308f3e849b1070798598eb6dc7b0115f232f06" in audit
+    assert "ca48c27a683c8bc8fffa94885a1c6a4ccc310169886ee33dea39e9feaa81c9ff" in audit
+
+    for status in (
+        "PASS",
+        "BLOCKED_ON_OWNER",
+        "BLOCKED_ON_EXTERNAL_VALIDATION",
+        "NOT_IN_RELEASE_SCOPE",
+    ):
+        assert status in audit
+
+    assert "not a request to republish immutable package-index artifacts" in draft_notes
+    assert "No external audit, external adoption, production use, independent review" in draft_notes
+    assert "Codex must not perform these actions without explicit approval" in owner_checklist
+    assert (
+        "Do not republish or attempt to overwrite existing PyPI/TestPyPI files" in owner_checklist
+    )
+
+    unsupported_claims = (
+        "release has been published by this audit",
+        "production ready",
+        "externally audited",
+        "independent review completed",
+        "community validated",
+    )
+    for claim in unsupported_claims:
+        assert claim not in normalized
 
 
 def test_release_checklist_covers_required_gates() -> None:

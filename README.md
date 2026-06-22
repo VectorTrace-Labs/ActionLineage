@@ -349,8 +349,12 @@ reference.
 - [Operations](docs/OPERATIONS.md): service mode, health, storage, and deployment
   notes.
 - [Release checklist](docs/RELEASE_CHECKLIST.md): public release gates.
+- [Release-candidate audit](docs/RELEASE_CANDIDATE_AUDIT.md): latest local
+  candidate proof, blockers, and generated manifest path.
 - [Publishing](docs/PUBLISHING.md): GitHub release workflow, artifact
   attestations, and Trusted Publishing setup.
+- [Owner publication checklist](docs/OWNER_PUBLICATION_CHECKLIST.md): actions
+  that require owner approval.
 - [Package managers](docs/PACKAGE_MANAGERS.md): GHCR, PyPI, Homebrew,
   conda-forge, and deferred channel plan.
 - [Review process](docs/REVIEW_PROCESS.md): required checks, advisory AI

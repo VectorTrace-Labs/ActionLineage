@@ -85,7 +85,7 @@ data, not universal performance guarantees.
 | 6 | Agent Validation Lab public evidence | In progress: deterministic no-model baseline report added; external/live lanes remain separate |
 | 7 | Reliability and adversarial hardening | In progress: SQLite projection handles now close under warning-as-error regression coverage |
 | 8 | External review and community readiness | In progress: review guides, reproduction docs, and structured feedback templates added; real review remains external-validation |
-| 9 | Release-candidate audit | Not started |
+| 9 | Release-candidate audit | In progress: local candidate audit, draft notes, owner checklist, and generated manifest prepared; publication remains owner-gated |
 
 ## Owner Gates
 

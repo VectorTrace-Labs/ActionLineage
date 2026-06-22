@@ -47,6 +47,8 @@ evidence and limitations.
   manual Trusted Publishing jobs.
 - External review guides, reproduction commands, and feedback templates that
   make review easier without claiming review has happened.
+- Release-candidate audit artifacts and owner publication checklist that prepare
+  publication decisions without performing owner-gated actions.
 
 ## Preview Surface
 

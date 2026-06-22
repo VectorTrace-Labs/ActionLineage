@@ -20,6 +20,7 @@ implementation change.
 | `v0.1.0a3` GitHub Release object | Create or repair the GitHub Release only after owner review of artifacts, notes, and attestation links | Claiming GitHub release artifacts for `v0.1.0a3` |
 | Package metadata refresh | Include project URLs and sdist cache exclusions in the next owner-approved package release | Expecting PyPI/TestPyPI to show corrected project links |
 | Signing/provenance | Use GitHub artifact attestations for release artifacts; keep local provenance as a supplemental manifest | Claiming attested package artifacts |
+| Owner publication checklist | Review `docs/OWNER_PUBLICATION_CHECKLIST.md` before any release object, package, container, or public announcement action | Any publication or announcement |
 | Public security contact | Confirm GitHub private vulnerability reporting and contact path | Public announcement |
 | External review | Select reviewer or review venue | Any claim of independent validation |
 | Agent Validation artifact action runtime | Keep pinned Node 24-compatible upload action SHA and avoid the download action in release workflows | Changing artifact handling actions or relaxing artifact audit posture |
