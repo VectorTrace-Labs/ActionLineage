@@ -60,6 +60,10 @@ jobs:
             --regression-dir evals/regressions \
             --artifact-root build/evals/regression-replay \
             --allow-empty
+      - name: Audit no-model eval artifacts for redaction leaks
+        env:
+          PYTHONPATH: evals
+        run: uv run --group eval python -m actionlineage_evals audit-artifacts build/evals
       - name: Summarize no-model eval artifacts
         if: always()
         env:
@@ -121,6 +125,10 @@ jobs:
             --model-adapter scripted \
             --seeds 1 \
             --use-docker
+      - name: Audit Docker eval artifacts for redaction leaks
+        env:
+          PYTHONPATH: evals
+        run: uv run --group eval python -m actionlineage_evals audit-artifacts build/evals
       - name: Summarize Docker eval artifacts
         if: always()
         env:
@@ -181,6 +189,10 @@ jobs:
           uv run --group eval python -m actionlineage_evals replay-artifacts \
             build/evals/scheduled \
             --replay-artifact-root build/evals/scheduled-replay
+      - name: Audit scheduled eval artifacts for redaction leaks
+        env:
+          PYTHONPATH: evals
+        run: uv run --group eval python -m actionlineage_evals audit-artifacts build/evals
       - name: Summarize scheduled eval artifacts
         if: always()
         env:

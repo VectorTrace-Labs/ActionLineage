@@ -86,6 +86,7 @@ class DockerComposeEnvironmentController:
             cwd=compose_file.parent,
         )
         provenance["images"] = self.image_digests()
+        provenance["published_ports"] = self.published_ports()
         return provenance
 
     def stop(self) -> JsonMap:
@@ -223,6 +224,37 @@ class DockerComposeEnvironmentController:
                 }
             )
         return images
+
+    def published_ports(self) -> JsonMap:
+        """Return host ports published by Docker Compose for parallel-safe runs."""
+
+        return {
+            "receiver_8080": self._published_port("receiver", "8080"),
+            "toxiproxy_8474": self._published_port("toxiproxy", "8474"),
+            "toxiproxy_8880": self._published_port("toxiproxy", "8880"),
+        }
+
+    def _published_port(self, service: str, port: str) -> str | None:
+        compose_file = self.compose_file.resolve()
+        result = _run(
+            (
+                "docker",
+                "compose",
+                "-f",
+                str(compose_file),
+                "-p",
+                self.project_name,
+                "port",
+                service,
+                port,
+            ),
+            cwd=compose_file.parent,
+            check=False,
+        )
+        if result.returncode != 0:
+            return None
+        value = result.stdout.strip()
+        return value or None
 
 
 def build_environment_controller(

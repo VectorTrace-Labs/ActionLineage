@@ -18,6 +18,7 @@ from actionlineage_evals.adapters import (  # noqa: E402
     LocalToolAgent,
     OpenAICompatibleAdapter,
 )
+from actionlineage_evals.artifact_audit import audit_artifacts  # noqa: E402
 from actionlineage_evals.minimization import (  # noqa: E402
     minimize_tool_calls,
     tool_call_count,
@@ -49,6 +50,7 @@ from actionlineage_evals.summary import (  # noqa: E402
     summarize_scorecards,
     summarize_scorecards_text,
 )
+from actionlineage_evals.tools import WorldState  # noqa: E402
 
 
 def test_scenarios_and_capability_coverage_validate() -> None:
@@ -68,6 +70,7 @@ def test_scenarios_and_capability_coverage_validate() -> None:
         "AVL-007",
         "AVL-008",
         "AVL-009",
+        "AVL-010",
     ]
     assert coverage["ok"] is True
     assert coverage["scenario_ids"] == [
@@ -80,6 +83,7 @@ def test_scenarios_and_capability_coverage_validate() -> None:
         "AVL-007",
         "AVL-008",
         "AVL-009",
+        "AVL-010",
     ]
     assert coverage["uncovered_capabilities"] == []
 
@@ -268,16 +272,19 @@ def test_scripted_suite_runs_all_scenarios_and_replay(tmp_path: Path) -> None:
         "AVL-007",
         "AVL-008",
         "AVL-009",
+        "AVL-010",
     ]
     for scenario_result in result.results:
         expected_failure = {
             "AVL-007": FailureClass.PROVIDER,
             "AVL-008": FailureClass.BUDGET,
             "AVL-009": FailureClass.HARNESS,
+            "AVL-010": FailureClass.AGENT,
         }.get(scenario_result.scenario_id)
         assert scenario_result.failure_class == expected_failure
         assert scenario_result.artifacts.replay_bundle_path.exists()
         assert scenario_result.artifacts.mutation_sequence_path.exists()
+        assert scenario_result.artifacts.provenance_path.exists()
         assert scenario_result.artifacts.triage_path.exists()
         score_names = {score.name for score in scenario_result.scores}
         assert {
@@ -343,6 +350,24 @@ def test_scripted_suite_runs_all_scenarios_and_replay(tmp_path: Path) -> None:
     assert avl009_scorecard["failure_class"] == "harness_failure"
     assert avl009_scorecard["harness_error"]["type"] == "HarnessControlError"
 
+    avl010_scorecard = json.loads(
+        (tmp_path / "evals" / "avl-010-scripted-seed-0" / "scorecard.json").read_text(
+            encoding="utf-8"
+        )
+    )
+    assert avl010_scorecard["passed"] is True
+    assert avl010_scorecard["failure_class"] == "agent_failure"
+    assert avl010_scorecard["agent_error"]["type"] == "AgentExecutionError"
+
+    avl010_minimization = json.loads(
+        (tmp_path / "evals" / "avl-010-scripted-seed-0" / "minimization-report.json").read_text(
+            encoding="utf-8"
+        )
+    )
+    assert avl010_minimization["failure_class"] == "agent_failure"
+    assert avl010_minimization["original_tool_calls"] == 1
+    assert avl010_minimization["minimized_tool_calls"] == 1
+
     avl001_oracles = [
         json.loads(line)
         for line in (tmp_path / "evals" / "avl-001-scripted-seed-0" / "oracle-observations.jsonl")
@@ -369,7 +394,27 @@ def test_scripted_suite_runs_all_scenarios_and_replay(tmp_path: Path) -> None:
         replay_artifact_root=tmp_path / "artifact-replay",
     )
     assert replayed_artifacts.passed is True
-    assert len(replayed_artifacts.results) == 9
+    assert len(replayed_artifacts.results) == 10
+    avl010_replay_scorecard = json.loads(
+        (
+            tmp_path
+            / "artifact-replay"
+            / "avl-010-scripted-seed-0"
+            / "avl-010-replay-seed-0"
+            / "scorecard.json"
+        ).read_text(encoding="utf-8")
+    )
+    assert avl010_replay_scorecard["failure_class"] == "agent_failure"
+    replay_equivalence = next(
+        score
+        for score in avl010_replay_scorecard["scores"]
+        if score["name"] == "replay_equivalence"
+    )
+    assert replay_equivalence["ok"] is True
+
+    audit = audit_artifacts(tmp_path / "evals")
+    assert audit["ok"] is True
+    assert audit["leak_count"] == 0
 
 
 def test_regression_corpus_replay_supports_empty_and_promoted_bundles(tmp_path: Path) -> None:
@@ -432,6 +477,36 @@ def test_reviewed_regression_promotion_requires_review_metadata(tmp_path: Path) 
             reason="missing reviewer",
             source_run="local-test",
         )
+
+
+def test_artifact_audit_reports_redacted_pattern_without_value(tmp_path: Path) -> None:
+    artifact = tmp_path / "artifact.txt"
+    token = "Bearer " + "abcdefghijklmnop" + "qrstuvwxyz123456"
+    artifact.write_text(f"token={token}\n", encoding="utf-8")
+
+    audit = audit_artifacts(tmp_path)
+
+    assert audit["ok"] is False
+    assert audit["leaks"] == [{"path": str(artifact), "pattern": "bearer_token"}]
+    assert token not in json.dumps(audit)
+
+
+def test_world_state_uses_dynamic_docker_ports(tmp_path: Path) -> None:
+    world = WorldState(run_dir=tmp_path, use_docker=True)
+
+    world.configure_from_environment(
+        {
+            "published_ports": {
+                "receiver_8080": "0.0.0.0:49152",
+                "toxiproxy_8474": "0.0.0.0:49153",
+                "toxiproxy_8880": "0.0.0.0:49154",
+            },
+        }
+    )
+
+    assert world.receiver_url == "http://127.0.0.1:49152/collect"
+    assert world.toxiproxy_api_url == "http://127.0.0.1:49153"
+    assert world.toxiproxy_url == "http://127.0.0.1:49154/collect"
 
 
 def test_unreviewed_regression_bundle_is_rejected(tmp_path: Path) -> None:

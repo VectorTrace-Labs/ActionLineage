@@ -7,6 +7,7 @@ import json
 import sys
 from pathlib import Path
 
+from actionlineage_evals.artifact_audit import audit_artifacts
 from actionlineage_evals.environment import DockerComposeEnvironmentController
 from actionlineage_evals.models import RunMode
 from actionlineage_evals.replay import promote_regression_bundle
@@ -113,6 +114,10 @@ def main(argv: list[str] | None = None) -> int:
     summarize.add_argument("artifact_root", type=Path)
     summarize.add_argument("--format", choices=["json", "text"], default="json")
 
+    audit = subcommands.add_parser("audit-artifacts")
+    audit.add_argument("artifact_root", type=Path)
+    audit.add_argument("--canary", action="append", default=[])
+
     args = parser.parse_args(argv)
     if args.command == "validate-scenarios":
         scenarios = load_scenarios(args.scenario_path)
@@ -189,6 +194,13 @@ def main(argv: list[str] | None = None) -> int:
         summary = summarize_scorecards(args.artifact_root)
         _print(summary)
         return 0 if summary["ok"] else 1
+    if args.command == "audit-artifacts":
+        audit_result = audit_artifacts(
+            args.artifact_root,
+            extra_canaries=tuple(str(value) for value in args.canary),
+        )
+        _print(audit_result)
+        return 0 if audit_result["ok"] else 1
     raise AssertionError(f"unhandled command: {args.command}")
 
 

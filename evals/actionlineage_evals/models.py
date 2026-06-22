@@ -211,6 +211,10 @@ class RunPaths:
     replay_bundle_path: Path
     coverage_path: Path
     environment_path: Path
+    provenance_path: Path
+    replay_equivalence_path: Path
+    minimization_report_path: Path
+    minimized_transcript_path: Path
     toxiproxy_timeline_path: Path
     mutation_sequence_path: Path
     triage_path: Path
@@ -253,6 +257,10 @@ class ScenarioResult:
                 "mutation_sequence_path": str(self.artifacts.mutation_sequence_path),
                 "oracle_observations_path": str(self.artifacts.oracle_observations_path),
                 "projection_path": str(self.artifacts.projection_path),
+                "provenance_path": str(self.artifacts.provenance_path),
+                "replay_equivalence_path": str(self.artifacts.replay_equivalence_path),
+                "minimization_report_path": str(self.artifacts.minimization_report_path),
+                "minimized_transcript_path": str(self.artifacts.minimized_transcript_path),
                 "replay_bundle_path": str(self.artifacts.replay_bundle_path),
                 "run_dir": str(self.artifacts.run_dir),
                 "scorecard_path": str(self.artifacts.scorecard_path),

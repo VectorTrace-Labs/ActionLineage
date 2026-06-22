@@ -57,6 +57,22 @@ class WorldState:
             encoding="utf-8",
         )
 
+    def configure_from_environment(self, environment_start: JsonMap) -> None:
+        """Configure host URLs from Docker Compose published-port provenance."""
+
+        published_ports = environment_start.get("published_ports")
+        if not isinstance(published_ports, dict):
+            return
+        receiver = _endpoint_url(published_ports.get("receiver_8080"), path="/collect")
+        toxiproxy_api = _endpoint_url(published_ports.get("toxiproxy_8474"))
+        toxiproxy = _endpoint_url(published_ports.get("toxiproxy_8880"), path="/collect")
+        if receiver:
+            self.receiver_url = receiver
+        if toxiproxy_api:
+            self.toxiproxy_api_url = toxiproxy_api
+        if toxiproxy:
+            self.toxiproxy_url = toxiproxy
+
     def write_oracle_artifacts(self, *, observations_path: Path, toxiproxy_path: Path) -> None:
         write_jsonl(observations_path, tuple(self.oracle_observations))
         write_jsonl(toxiproxy_path, tuple(self.toxiproxy_timeline))
@@ -539,3 +555,15 @@ def _redacted_argument_metadata(arguments: JsonMap) -> JsonMap:
         else:
             metadata[key] = value
     return metadata
+
+
+def _endpoint_url(value: object, *, path: str = "") -> str | None:
+    if not isinstance(value, str) or ":" not in value:
+        return None
+    host, port = value.rsplit(":", 1)
+    host = host.strip("[]")
+    if host in {"", "0.0.0.0", "::"}:
+        host = "127.0.0.1"
+    if not port.isdigit():
+        return None
+    return f"http://{host}:{port}{path}"

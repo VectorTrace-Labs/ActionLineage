@@ -29,6 +29,14 @@ class AgentBudgetError(RuntimeError):
     """Raised when an agent exceeds scenario execution limits."""
 
 
+class AgentExecutionError(RuntimeError):
+    """Raised when an agent produces an invalid local execution plan."""
+
+    def __init__(self, message: str, *, turns: tuple[ModelTurn, ...] = ()) -> None:
+        super().__init__(message)
+        self.turns = turns
+
+
 @dataclass(frozen=True, slots=True)
 class LocalToolAgent:
     """Small JSON-tool-call agent used by Inspect or the standalone runner."""
@@ -49,6 +57,7 @@ class LocalToolAgent:
                 request_index=request_index,
             )
             turns.append(turn)
+            _validate_agent_tool_calls(turn, allowed_tools=tools, turns=tuple(turns))
             tool_calls += len(turn.tool_calls)
             if tool_calls > budget.max_tool_calls:
                 raise AgentBudgetError("tool call budget exhausted")
@@ -97,6 +106,20 @@ class ScriptedModelAdapter:
             return ModelTurn(
                 content="scripted deterministic harness-control plan",
                 tool_calls=(),
+                provider=self.provider,
+                model_id=self.model_id,
+                request_index=request_index,
+                raw={"mode": "scripted", "scenario_id": self.scenario_id},
+            )
+        if self.scenario_id == "AVL-010":
+            return ModelTurn(
+                content="scripted malformed agent plan",
+                tool_calls=(
+                    ToolCall(
+                        name="safe_files.read",
+                        arguments={"purpose": "missing required path"},
+                    ),
+                ),
                 provider=self.provider,
                 model_id=self.model_id,
                 request_index=request_index,
@@ -386,6 +409,31 @@ def _scripted_calls(scenario_id: str) -> tuple[ToolCall, ...]:
             ),
         )
     raise ValueError(f"no scripted tool plan for scenario: {scenario_id}")
+
+
+def _validate_agent_tool_calls(
+    turn: ModelTurn,
+    *,
+    allowed_tools: tuple[str, ...],
+    turns: tuple[ModelTurn, ...],
+) -> None:
+    allowed = set(allowed_tools)
+    for call in turn.tool_calls:
+        if call.name not in allowed:
+            raise AgentExecutionError(
+                f"agent requested unsupported tool: {call.name}",
+                turns=turns,
+            )
+        if call.name == "safe_files.read" and not isinstance(call.arguments.get("path"), str):
+            raise AgentExecutionError(
+                "agent requested safe_files.read without required path",
+                turns=turns,
+            )
+        if call.name == "safe_http.send" and not isinstance(call.arguments.get("url"), str):
+            raise AgentExecutionError(
+                "agent requested safe_http.send without required url",
+                turns=turns,
+            )
 
 
 def _post_openai_compatible(

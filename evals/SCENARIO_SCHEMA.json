@@ -615,7 +615,10 @@
               "detection_results",
               "toxiproxy_timeline",
               "environment_digests",
-              "scorecard"
+              "scorecard",
+              "provenance",
+              "replay_equivalence",
+              "minimization_report"
             ]
           },
           "minItems": 1,

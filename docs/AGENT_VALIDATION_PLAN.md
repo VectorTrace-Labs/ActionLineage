@@ -59,6 +59,28 @@ Current hardening slice:
    `docs/DECISIONS_REQUIRED.md`; the workflow keeps the accepted pinned SHA
    because an explicit Node 24 artifact action pin caused startup failure.
 
+Current trust-hardening slice:
+
+1. Add `AVL-010 malformed-tool-plan-agent-failure` to preserve
+   `agent_failure` separately from product, harness, provider, and budget
+   failures.
+2. Publish random Docker host ports and discover them per run so Docker evals
+   can run safely in parallel without fixed-port collisions.
+3. Write `provenance.json` for every run with scenario, schema, coverage,
+   commit, workflow, adapter, environment, and artifact hashes.
+4. Copy provenance, tool calls, oracle observations, and minimization artifacts
+   into replay bundles so promoted bundles are more self-contained.
+5. Add replay-equivalence scoring for replay runs. Replay now compares
+   scorecard essentials from the source run against the replayed result and
+   fails as a harness issue if they diverge.
+6. Add `audit-artifacts` to scan generated artifacts for synthetic canaries,
+   bearer tokens, GitHub tokens, OpenAI-style keys, and authorization headers
+   without echoing matched secret material.
+7. Emit minimized transcript and minimization reports for agent-failure
+   controls that have replayable tool-call transcripts.
+8. Align the first executable scenarios' maturity labels with their current
+   development-only implementation status.
+
 Acceptance commands for this phase:
 
 ```bash
@@ -77,6 +99,8 @@ PYTHONPATH=evals uv run --group eval python -m actionlineage_evals replay-regres
 PYTHONPATH=evals uv run --group eval python -m actionlineage_evals replay-artifacts \
   build/evals/local \
   --replay-artifact-root build/evals/local-replay
+PYTHONPATH=evals uv run --group eval python -m actionlineage_evals audit-artifacts \
+  build/evals/local
 PYTHONPATH=evals uv run --group eval python -m actionlineage_evals summarize \
   build/evals/local
 PYTHONPATH=evals uv run --group eval python -m actionlineage_evals docker-smoke
@@ -135,6 +159,7 @@ Implemented artifacts:
 - `evals/scenarios/AVL-007.yaml`
 - `evals/scenarios/AVL-008.yaml`
 - `evals/scenarios/AVL-009.yaml`
+- `evals/scenarios/AVL-010.yaml`
 - `evals/regressions/README.md`
 - `evals/actionlineage_evals/`
 - `evals/docker/`
@@ -389,7 +414,12 @@ Implemented eval runner:
 - `AVL-005` and `AVL-006` pass no-model scripted runs as next-phase coverage
   extensions.
 - `AVL-007` passes as a deterministic expected provider-failure scenario.
+- `AVL-008` passes as a deterministic expected budget-exhaustion scenario.
+- `AVL-009` passes as a deterministic expected harness-failure scenario.
+- `AVL-010` passes as a deterministic expected agent-failure scenario.
 - `AVL-001` replay passes from a captured replay bundle.
+- Replay-artifact runs include replay-equivalence scorecards.
+- Run artifacts include provenance hashes and pass `audit-artifacts`.
 - Journal verification, projection rebuild, contract validation, detection
   matching, redaction scan, and capability coverage pass for all scripted
   scenarios.

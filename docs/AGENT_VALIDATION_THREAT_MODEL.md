@@ -152,6 +152,12 @@ Controls:
   inconclusive outcomes.
 - Negative control scenarios intentionally induce oracle mismatches.
 - Replays must run without model calls and produce deterministic scorer output.
+- Replay-equivalence checks compare source and replay scorecard essentials so a
+  replay cannot silently drift while still reporting a local pass.
+- Run provenance records scenario, schema, coverage, workflow, adapter, and
+  artifact hashes for later attribution.
+- Artifact audits scan generated outputs for canaries and provider credential
+  patterns without echoing the matched value.
 
 ### T9: Fault Injection Causes Ambiguous Results
 

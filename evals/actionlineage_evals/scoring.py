@@ -30,6 +30,7 @@ from actionlineage_evals.models import (
     ScenarioDefinition,
     ScoreResult,
 )
+from actionlineage_evals.provenance import replay_equivalence_report
 from actionlineage_evals.scenarios import load_capability_coverage
 
 
@@ -203,6 +204,7 @@ def score_replayability(paths: RunPaths) -> ScoreResult:
     """Score whether required replay artifacts exist."""
 
     required = (
+        paths.provenance_path,
         paths.transcript_path,
         paths.tool_calls_path,
         paths.oracle_observations_path,
@@ -214,6 +216,32 @@ def score_replayability(paths: RunPaths) -> ScoreResult:
         name="replayability",
         ok=ok,
         details={"missing": missing, "required": [str(path) for path in required]},
+        failure_class=None if ok else FailureClass.HARNESS,
+    )
+
+
+def score_replay_equivalence(
+    *,
+    expected_scorecard: JsonMap,
+    actual_scorecard: JsonMap,
+    report_path: Path,
+) -> ScoreResult:
+    """Score whether a replay run matches the original run's semantic essentials."""
+
+    report = replay_equivalence_report(
+        expected_scorecard=expected_scorecard,
+        actual_scorecard=actual_scorecard,
+    )
+    report_path.parent.mkdir(parents=True, exist_ok=True)
+    report_path.write_text(json.dumps(report, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    ok = report["ok"] is True
+    return ScoreResult(
+        name="replay_equivalence",
+        ok=ok,
+        details={
+            "mismatches": report["mismatches"],
+            "report": str(report_path),
+        },
         failure_class=None if ok else FailureClass.HARNESS,
     )
 

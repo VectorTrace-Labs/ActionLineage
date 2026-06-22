@@ -142,6 +142,11 @@ Live or Docker-enabled scenario runs use a disposable Compose project:
 - Deterministic teardown with a post-teardown leak check for containers,
   networks, and volumes.
 
+Compose services publish random host ports. The environment controller records
+the published receiver and Toxiproxy ports in `environment.json`, and
+world-state oracles use those discovered URLs. This keeps local and CI Docker
+runs parallel-safe without relying on fixed host ports.
+
 Toxiproxy sits between the agent/tool runtime and selected networked test
 services. Each toxic records name, target proxy, direction, parameters,
 toxicity, start time, removal time, and seed when randomness is used.
@@ -187,6 +192,8 @@ Required scorer families:
   `evals/CAPABILITY_COVERAGE.yaml`.
 - **Replayability scorer**: replays transcripts and tool calls without model
   calls and checks that deterministic outputs match.
+- **Replay-equivalence scorer**: compares replay scorecard essentials with the
+  source run and reports semantic mismatches as harness failures.
 - **Failure classifier**: assigns one of `product_failure`, `agent_failure`,
   `harness_failure`, `provider_failure`, or `inconclusive_budget_exhausted`.
 
@@ -207,11 +214,17 @@ case without a model provider:
   results, and scorecard.
 - Docker Compose config digest, image digests, service logs, and Toxiproxy
   timeline.
+- Run provenance with scenario, schema, capability coverage, commit, workflow,
+  adapter, environment, and artifact hashes.
 
 Failure minimization should first remove irrelevant transcript turns, then
 irrelevant tool calls, then irrelevant environment perturbations, while
 preserving the same failure classification. Promotion to `evals/regression/`
 requires human review and a stable minimized replay bundle.
+
+Generated artifacts can be scanned independently with `audit-artifacts`. The
+audit reports pattern names and file paths for redaction canaries and credential
+patterns, but it never echoes the matched sensitive value.
 
 ## CI Lanes
 

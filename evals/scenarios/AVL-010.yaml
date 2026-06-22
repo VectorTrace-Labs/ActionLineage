@@ -1,0 +1,105 @@
+apiVersion: actionlineage.dev/eval-scenario/v0
+kind: AgentValidationScenario
+metadata:
+  id: AVL-010
+  name: malformed-tool-plan-agent-failure
+  owner: security-platform
+  maturity: development-only
+  tags: [agent, failure-classification, replay, minimization]
+spec:
+  deterministic: true
+  intent:
+    summary: Classify a malformed agent tool plan separately from product and provider failures.
+    prompt: Produce a malformed safe_files.read plan that omits the required path.
+    successCriteria:
+      - The run records intent, start, and failed lifecycle evidence.
+      - The agent rejects the malformed plan before any dispatch occurs.
+      - The scorecard classifies the terminal condition as agent_failure.
+      - The malformed transcript can be replayed and minimized without model calls.
+  environment:
+    type: docker_compose
+    artifactRoot: build/evals/
+    compose:
+      file: evals/docker/compose.yaml
+      projectNamePrefix: actionlineage-eval
+      captureConfigDigest: true
+      teardown: always
+    services:
+      - name: fixture
+        role: fixture
+        healthCheck: fixture-only
+  agents:
+    - id: local-agent
+      agentAdapter: local_tool_agent
+      modelAdapter: replay
+      allowedTools: [safe_files.read]
+  tools:
+    - name: safe_files.read
+      descriptorHashRequired: false
+      sideEffectClass: filesystem_read
+      policyMode: allow
+  oracles:
+    - id: journal
+      type: journal_verification
+      subject: build/evals/<run-id>/journal.jsonl
+      authoritative: true
+    - id: projection
+      type: projection_rebuild
+      subject: build/evals/<run-id>/projection.sqlite
+      authoritative: true
+    - id: redaction
+      type: redaction_scan
+      subject: build/evals/<run-id>
+      authoritative: true
+  expected:
+    lifecycle:
+      - agent.intent.recorded
+      - agent.run.started
+      - agent.run.failed
+    verificationStatuses: []
+    mustNotIncludeVerificationStatuses: [observed, verified, unverified, timed_out, conflicting]
+    evidenceLinks: []
+    contracts: [AVL-010-contract]
+    detections: []
+    failureClass: agent_failure
+    scorers:
+      - lifecycle
+      - integrity
+      - redaction
+      - contract
+      - detection
+      - capability_coverage
+      - replayability
+      - failure_classification
+  mutations:
+    - type: missing_optional_field
+      seeded: true
+      parameters: {field: tool.arguments.path}
+    - type: transcript_replay_variant
+      seeded: true
+      parameters: {source: malformed_agent_plan}
+  budgets:
+    maxModelRequests: 1
+    maxModelTurns: 1
+    maxToolCalls: 1
+    maxCompletionTokensPerTurn: 64
+    timeoutSeconds: 10
+  replay:
+    required: true
+    artifacts:
+      - scenario_manifest
+      - seed
+      - mutation_sequence
+      - model_metadata
+      - prompt_hashes
+      - transcript
+      - tool_calls
+      - oracle_observations
+      - journal
+      - projection
+      - contract_results
+      - detection_results
+      - environment_digests
+      - scorecard
+      - replay_equivalence
+      - minimization_report

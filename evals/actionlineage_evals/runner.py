@@ -9,6 +9,7 @@ from pathlib import Path
 from actionlineage.domain import EventType
 from actionlineage_evals.adapters import (
     AgentBudgetError,
+    AgentExecutionError,
     LocalToolAgent,
     ProviderError,
     model_adapter_for,
@@ -23,8 +24,10 @@ from actionlineage_evals.eventing import (
     observer_source,
     write_json,
 )
+from actionlineage_evals.minimization import minimize_tool_calls, tool_call_count
 from actionlineage_evals.models import (
     FailureClass,
+    JsonMap,
     ModelTurn,
     RunMode,
     RunPaths,
@@ -32,6 +35,7 @@ from actionlineage_evals.models import (
     ScenarioResult,
     ScoreResult,
 )
+from actionlineage_evals.provenance import write_run_provenance
 from actionlineage_evals.replay import (
     discover_regression_bundles,
     load_transcript,
@@ -41,7 +45,12 @@ from actionlineage_evals.replay import (
     write_transcript,
 )
 from actionlineage_evals.scenarios import load_scenarios
-from actionlineage_evals.scoring import classify_failure, score_run, write_scorecard
+from actionlineage_evals.scoring import (
+    classify_failure,
+    score_replay_equivalence,
+    score_run,
+    write_scorecard,
+)
 from actionlineage_evals.tools import ToolHarness, WorldState
 from actionlineage_evals.triage import write_triage_report
 
@@ -114,6 +123,7 @@ def run_scenario(
     use_docker: bool = False,
     promote_regressions: bool = False,
     replay_transcript: Path | None = None,
+    expected_replay_scorecard: JsonMap | None = None,
 ) -> ScenarioResult:
     """Run one scenario and produce a replayable scorecard."""
 
@@ -139,6 +149,7 @@ def run_scenario(
     budget_exhausted = False
     try:
         environment_start = environment.start()
+        world.configure_from_environment(environment_start)
         recorder = EventRecorder(scenario.scenario_id, seed, paths.journal_path)
         recorder.record_intent(prompt=scenario.prompt, scenario_id=scenario.scenario_id)
         replay_turns = load_transcript(replay_transcript) if replay_transcript is not None else ()
@@ -159,6 +170,9 @@ def run_scenario(
         except ProviderError as exc:
             provider_error = exc
             turns = ()
+        except AgentExecutionError as exc:
+            agent_error = exc
+            turns = exc.turns
         except AgentBudgetError as exc:
             agent_error = exc
             budget_exhausted = True
@@ -190,6 +204,17 @@ def run_scenario(
         world.write_oracle_artifacts(
             observations_path=paths.oracle_observations_path,
             toxiproxy_path=paths.toxiproxy_timeline_path,
+        )
+        write_run_provenance(
+            paths.provenance_path,
+            scenario=scenario,
+            run_id=run_id,
+            seed=seed,
+            mode=mode,
+            model_adapter_name=model_adapter_name,
+            model_id=model_id,
+            paths=paths,
+            environment_start=environment_start,
         )
         terminal_error = provider_error or agent_error or harness_error
         if terminal_error is None:
@@ -235,7 +260,36 @@ def run_scenario(
         "scenario_id": scenario.scenario_id,
         "scores": [score.as_dict() for score in scores],
     }
+    if expected_replay_scorecard is not None:
+        equivalence_score = score_replay_equivalence(
+            expected_scorecard=expected_replay_scorecard,
+            actual_scorecard=scorecard,
+            report_path=paths.replay_equivalence_path,
+        )
+        scores = (*scores, equivalence_score)
+        failure_class = classify_failure(
+            scores=scores,
+            agent_error=agent_error,
+            provider_error=provider_error,
+            harness_error=harness_error,
+            budget_exhausted=budget_exhausted,
+        )
+        scores_ok = bool(scores) and all(score.ok for score in scores)
+        expected_terminal_failure = (
+            expected_failure_class != FailureClass.PRODUCT
+            and failure_class == expected_failure_class
+        )
+        passed = (failure_class is None and scores_ok) or (expected_terminal_failure and scores_ok)
+        scorecard.update(
+            {
+                "failure_class": failure_class.value if failure_class else None,
+                "passed": passed,
+                "scores": [score.as_dict() for score in scores],
+            }
+        )
     write_scorecard(paths.scorecard_path, scorecard)
+    if failure_class is not None:
+        _write_minimization_artifacts(paths=paths, failure_class=failure_class, turns=turns)
     write_json(paths.coverage_path, _coverage_report(scenario))
     write_triage_report(
         paths.triage_path,
@@ -325,6 +379,9 @@ def replay_bundle(
         model_adapter_name="replay",
         seed=int(manifest["seed"]),
         replay_transcript=transcript_path,
+        expected_replay_scorecard=manifest.get("scorecard")
+        if isinstance(manifest.get("scorecard"), dict)
+        else None,
     )
 
 
@@ -341,6 +398,10 @@ def _run_paths(run_dir: Path) -> RunPaths:
         coverage_path=run_dir / "capability-coverage.json",
         environment_path=run_dir / "environment.json",
         toxiproxy_timeline_path=run_dir / "toxiproxy-timeline.jsonl",
+        provenance_path=run_dir / "provenance.json",
+        replay_equivalence_path=run_dir / "replay-equivalence.json",
+        minimization_report_path=run_dir / "minimization-report.json",
+        minimized_transcript_path=run_dir / "minimized-transcript.json",
         mutation_sequence_path=run_dir / "mutation-sequence.json",
         triage_path=run_dir / "triage.md",
     )
@@ -430,4 +491,50 @@ def _apply_runtime_mutations(
 def _mutation_semantic_property(mutation_type: str) -> str:
     if mutation_type == "duplicate_benign_event":
         return "duplicate benign evidence must not change expected scenario outcome"
+    if mutation_type == "missing_optional_field":
+        return "optional-field omission must not alter authoritative lifecycle outcome"
+    if mutation_type == "event_ordering_skew":
+        return "timestamp/order variation must preserve causal parent requirements"
     return "declared mutation is tracked for replay provenance"
+
+
+def _write_minimization_artifacts(
+    *,
+    paths: RunPaths,
+    failure_class: FailureClass,
+    turns: tuple[ModelTurn, ...],
+) -> None:
+    if failure_class != FailureClass.AGENT or not turns:
+        return
+    minimized = minimize_tool_calls(
+        turns,
+        still_fails=lambda candidate: _preserves_failure_signature(
+            candidate,
+            failure_class=failure_class,
+        ),
+    )
+    write_transcript(paths.minimized_transcript_path, minimized)
+    write_json(
+        paths.minimization_report_path,
+        {
+            "failure_class": failure_class.value,
+            "minimized_tool_calls": tool_call_count(minimized),
+            "original_tool_calls": tool_call_count(turns),
+            "reduced": tool_call_count(minimized) < tool_call_count(turns),
+            "schema_version": "actionlineage.dev/eval-minimization-report/v0",
+        },
+    )
+
+
+def _preserves_failure_signature(
+    turns: tuple[ModelTurn, ...],
+    *,
+    failure_class: FailureClass,
+) -> bool:
+    if failure_class != FailureClass.AGENT:
+        return bool(turns)
+    return any(
+        call.name == "safe_files.read" and not isinstance(call.arguments.get("path"), str)
+        for turn in turns
+        for call in turn.tool_calls
+    )

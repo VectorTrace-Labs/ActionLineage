@@ -53,6 +53,8 @@ PYTHONPATH=evals uv run --group eval python -m actionlineage_evals replay-regres
 PYTHONPATH=evals uv run --group eval python -m actionlineage_evals replay-artifacts \
   build/evals/local \
   --replay-artifact-root build/evals/local-replay
+PYTHONPATH=evals uv run --group eval python -m actionlineage_evals audit-artifacts \
+  build/evals/local
 PYTHONPATH=evals uv run --group eval python -m actionlineage_evals summarize \
   build/evals/local \
   --format text
@@ -74,14 +76,28 @@ scenario budgets.
 Every scenario run writes:
 
 - `scorecard.json`: machine-readable scorer results.
+- `provenance.json`: scenario, schema, coverage, commit, workflow, adapter,
+  environment, and artifact hashes.
 - `triage.md`: human-readable failure summary and replay command.
 - `mutation-sequence.json`: deterministic mutation provenance.
 - `replay-bundle/`: transcript and journal material for no-model replay.
 
 The scheduled GitHub Models lane runs the first six scenarios. `AVL-007` is a
 deterministic no-model provider-failure control, `AVL-008` is a budget
-exhaustion control, and `AVL-009` is a harness-failure control, so they run in
-the scripted and replay lanes rather than calling a live provider.
+exhaustion control, `AVL-009` is a harness-failure control, and `AVL-010` is an
+agent-failure control, so they run in the scripted and replay lanes rather than
+calling a live provider.
+
+Replay runs include a `replay_equivalence` scorer. It compares semantic
+scorecard essentials from the source run with the replayed run, while ignoring
+path-specific details such as rebuilt projection filenames and hash-chain tails
+that legitimately differ by run mode.
+
+Docker runs use per-run Compose project names and randomly published host
+ports. The environment controller records the published ports in
+`environment.json`, and the tool oracles use those discovered URLs for receiver
+and Toxiproxy calls. This avoids local fixed-port collisions when multiple
+Docker evals run at the same time.
 
 ## Artifact Policy
 
@@ -91,6 +107,16 @@ synthetic, reviewed, redacted, and reproducible. Reviewed regression bundles
 must include `"reviewed": true` in `manifest.json` plus reviewer, review
 reason, source run, review time, and failure-class metadata; unreviewed
 promoted failures are candidates and are not replayed by CI.
+
+Artifact audits use:
+
+```bash
+PYTHONPATH=evals uv run --group eval python -m actionlineage_evals audit-artifacts \
+  build/evals/local
+```
+
+The audit reports pattern names and paths only; it does not echo matched secret
+or canary material.
 
 Reviewed promotion uses:
 

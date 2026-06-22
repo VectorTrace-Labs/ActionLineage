@@ -83,17 +83,57 @@ def write_replay_bundle(
     bundle_dir = paths.replay_bundle_path
     bundle_dir.mkdir(parents=True, exist_ok=True)
     copied_journal = bundle_dir / "journal.jsonl"
+    copied_minimized_transcript = bundle_dir / "minimized-transcript.json"
+    copied_minimization_report = bundle_dir / "minimization-report.json"
     copied_mutation_sequence = bundle_dir / "mutation-sequence.json"
+    copied_oracles = bundle_dir / "oracle-observations.jsonl"
+    copied_provenance = bundle_dir / "provenance.json"
     copied_triage = bundle_dir / "triage.md"
+    copied_tool_calls = bundle_dir / "tool-calls.json"
+    copied_toxiproxy = bundle_dir / "toxiproxy-timeline.jsonl"
     copied_transcript = bundle_dir / "transcript.json"
     shutil.copy2(paths.journal_path, copied_journal)
+    if paths.minimized_transcript_path.exists():
+        shutil.copy2(paths.minimized_transcript_path, copied_minimized_transcript)
+    if paths.minimization_report_path.exists():
+        shutil.copy2(paths.minimization_report_path, copied_minimization_report)
     if paths.mutation_sequence_path.exists():
         shutil.copy2(paths.mutation_sequence_path, copied_mutation_sequence)
+    if paths.oracle_observations_path.exists():
+        shutil.copy2(paths.oracle_observations_path, copied_oracles)
+    if paths.provenance_path.exists():
+        shutil.copy2(paths.provenance_path, copied_provenance)
     if paths.triage_path.exists():
         shutil.copy2(paths.triage_path, copied_triage)
+    if paths.tool_calls_path.exists():
+        shutil.copy2(paths.tool_calls_path, copied_tool_calls)
+    if paths.toxiproxy_timeline_path.exists():
+        shutil.copy2(paths.toxiproxy_timeline_path, copied_toxiproxy)
     shutil.copy2(paths.transcript_path, copied_transcript)
     manifest: JsonMap = {
         "schema_version": "actionlineage.dev/eval-replay-bundle/v0",
+        "artifact_hashes": {
+            "journal": f"sha256:{_sha256_file(copied_journal)}",
+            "minimized_transcript": f"sha256:{_sha256_file(copied_minimized_transcript)}"
+            if copied_minimized_transcript.exists()
+            else None,
+            "minimization_report": f"sha256:{_sha256_file(copied_minimization_report)}"
+            if copied_minimization_report.exists()
+            else None,
+            "mutation_sequence": f"sha256:{_sha256_file(copied_mutation_sequence)}"
+            if copied_mutation_sequence.exists()
+            else None,
+            "oracle_observations": f"sha256:{_sha256_file(copied_oracles)}"
+            if copied_oracles.exists()
+            else None,
+            "provenance": f"sha256:{_sha256_file(copied_provenance)}"
+            if copied_provenance.exists()
+            else None,
+            "tool_calls": f"sha256:{_sha256_file(copied_tool_calls)}"
+            if copied_tool_calls.exists()
+            else None,
+            "transcript": f"sha256:{_sha256_file(copied_transcript)}",
+        },
         "environment": environment_start,
         "journal": str(copied_journal.name),
         "model_metadata": [
@@ -105,8 +145,13 @@ def write_replay_bundle(
             for turn in turns
         ],
         "prompt_hashes": {
+            "capability_coverage_digest": (
+                f"sha256:{_sha256_file(Path('evals/CAPABILITY_COVERAGE.yaml'))}"
+            ),
+            "scenario_file_digest": f"sha256:{_sha256_file(scenario.path)}",
             "scenario_path": str(scenario.path),
             "scenario_prompt_digest": _sha256_text(scenario.prompt),
+            "scenario_schema_digest": f"sha256:{_sha256_file(Path('evals/SCENARIO_SCHEMA.json'))}",
         },
         "scenario": {
             "id": scenario.scenario_id,
@@ -116,10 +161,19 @@ def write_replay_bundle(
         "scorecard": scorecard,
         "seed": seed,
         "reviewed": False,
+        "minimized_transcript": str(copied_minimized_transcript.name)
+        if copied_minimized_transcript.exists()
+        else None,
+        "minimization_report": str(copied_minimization_report.name)
+        if copied_minimization_report.exists()
+        else None,
         "mutation_sequence": str(copied_mutation_sequence.name)
         if copied_mutation_sequence.exists()
         else None,
-        "tool_calls": str(paths.tool_calls_path),
+        "oracle_observations": str(copied_oracles.name) if copied_oracles.exists() else None,
+        "provenance": str(copied_provenance.name) if copied_provenance.exists() else None,
+        "tool_calls": str(copied_tool_calls.name) if copied_tool_calls.exists() else None,
+        "toxiproxy_timeline": str(copied_toxiproxy.name) if copied_toxiproxy.exists() else None,
         "triage": str(copied_triage.name) if copied_triage.exists() else None,
         "transcript": str(copied_transcript.name),
     }
