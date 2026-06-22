@@ -84,7 +84,7 @@ data, not universal performance guarantees.
 | 5 | Visible quality and security evidence | Baseline captured; workflow summary hardening remains |
 | 6 | Agent Validation Lab public evidence | In progress: deterministic no-model baseline report added; external/live lanes remain separate |
 | 7 | Reliability and adversarial hardening | In progress: SQLite projection handles now close under warning-as-error regression coverage |
-| 8 | External review and community readiness | Not started |
+| 8 | External review and community readiness | In progress: review guides, reproduction docs, and structured feedback templates added; real review remains external-validation |
 | 9 | Release-candidate audit | Not started |
 
 ## Owner Gates

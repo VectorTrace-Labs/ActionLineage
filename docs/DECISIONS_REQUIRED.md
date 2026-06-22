@@ -41,6 +41,7 @@ implementation change.
 | Attested artifacts | Successful `release.yml` run with GitHub artifact attestations and verification instructions |
 | Hosted provenance | Release artifact or attestation record linked from release notes |
 | External security review | Written review output with scope and date |
+| Public evaluation feedback | Reproducible external feedback or minimized failure bundle submitted through the public templates |
 | Production evaluation | Non-sensitive deployment notes or case study |
 
 ## Stop Conditions

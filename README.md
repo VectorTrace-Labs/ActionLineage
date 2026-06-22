@@ -313,6 +313,12 @@ reference.
 - [Quality scorecard](docs/QUALITY_SCORECARD.md): public claim-to-evidence map.
 - [Agent Validation evidence](docs/AGENT_VALIDATION_EVIDENCE.md): deterministic
   no-model eval baseline and limitations.
+- [External review guide](docs/EXTERNAL_REVIEW_GUIDE.md): five-minute review
+  path, semantics to challenge, and safe feedback routes.
+- [Evaluation reproduction](docs/EVALUATION_REPRODUCTION.md): exact commands
+  for public-package, demo, Agent Validation, and local release proof.
+- [Known limitations](docs/KNOWN_LIMITATIONS.md): public-alpha boundaries and
+  external-validation gaps.
 - [Architecture](ARCHITECTURE.md): component boundaries and runtime flow.
 - [Threat model](THREAT_MODEL.md): assets, adversaries, trust boundaries, and
   claim language.

@@ -45,6 +45,8 @@ evidence and limitations.
   unsigned local provenance generation.
 - Release workflow for CI-built artifacts, GitHub artifact attestations, and
   manual Trusted Publishing jobs.
+- External review guides, reproduction commands, and feedback templates that
+  make review easier without claiming review has happened.
 
 ## Preview Surface
 

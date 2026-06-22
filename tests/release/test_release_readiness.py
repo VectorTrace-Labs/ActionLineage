@@ -66,6 +66,12 @@ def test_release_docs_are_present() -> None:
         "docs/RELEASE_CHECKLIST.md",
         "docs/PACKAGE_MANAGERS.md",
         "docs/REVIEW_PROCESS.md",
+        "docs/EXTERNAL_REVIEW_GUIDE.md",
+        "docs/SECURITY_REVIEW_CHECKLIST.md",
+        "docs/AGENT_PLATFORM_REVIEW_CHECKLIST.md",
+        "docs/EVALUATION_REPRODUCTION.md",
+        "docs/ADOPTION_CASE_STUDY_TEMPLATE.md",
+        "docs/KNOWN_LIMITATIONS.md",
         ".github/copilot-instructions.md",
         "docs/QUALITY_SCORECARD.md",
         "docs/AGENT_VALIDATION_EVIDENCE.md",
@@ -89,7 +95,10 @@ def test_specialized_issue_templates_are_present() -> None:
         "compatibility_report.yml",
         "contract_gap.yml",
         "detection_rule.yml",
+        "evaluation-feedback.yml",
+        "integration-proposal.yml",
         "security_report.yml",
+        "security-design-review.yml",
     }
 
     assert expected <= {path.name for path in template_dir.glob("*.yml")}
@@ -126,6 +135,103 @@ def test_readme_quickstart_uses_demo_aligned_contract() -> None:
     assert "make demo-map" in readme
     assert "demo-evidence-map.svg" in readme
     assert "canonical evidence remains `evidence.jsonl`" in readme
+    assert "External review guide" in readme
+    assert "Evaluation reproduction" in readme
+    assert "Known limitations" in readme
+
+
+def test_external_review_docs_prepare_review_without_claiming_validation() -> None:
+    docs = {
+        "external": (PROJECT_ROOT / "docs/EXTERNAL_REVIEW_GUIDE.md").read_text(encoding="utf-8"),
+        "security": (PROJECT_ROOT / "docs/SECURITY_REVIEW_CHECKLIST.md").read_text(
+            encoding="utf-8"
+        ),
+        "platform": (PROJECT_ROOT / "docs/AGENT_PLATFORM_REVIEW_CHECKLIST.md").read_text(
+            encoding="utf-8"
+        ),
+        "reproduction": (PROJECT_ROOT / "docs/EVALUATION_REPRODUCTION.md").read_text(
+            encoding="utf-8"
+        ),
+        "case_study": (PROJECT_ROOT / "docs/ADOPTION_CASE_STUDY_TEMPLATE.md").read_text(
+            encoding="utf-8"
+        ),
+        "limitations": (PROJECT_ROOT / "docs/KNOWN_LIMITATIONS.md").read_text(encoding="utf-8"),
+    }
+    combined = "\n".join(docs.values())
+    normalized = combined.lower()
+
+    assert "Five-Minute Install Path" in docs["external"]
+    assert "acknowledgement is not proof" in docs["external"]
+    assert "What Data Is Safe To Share" in docs["external"]
+    assert "Security Review Checklist" in docs["security"]
+    assert "Required Invariants" in docs["security"]
+    assert "Agent Platform Review Checklist" in docs["platform"]
+    assert "Lifecycle Semantics" in docs["platform"]
+    assert "Published Package Smoke" in docs["reproduction"]
+    assert "No-Model Agent Validation Baseline" in docs["reproduction"]
+    assert "Local Release Proof" in docs["reproduction"]
+    assert "This is a template" in docs["case_study"]
+    assert "Known Limitations" in docs["limitations"]
+    assert (
+        "No external audit, external adoption, production history, or independent"
+        in docs["limitations"]
+    )
+
+    for required in (
+        "uvx --prerelease allow --from actionlineage==0.1.0a3 actionlineage version",
+        "actionlineage demo run",
+        "actionlineage journal verify",
+        "contracts/examples/outbound-http.json",
+        "PYTHONPATH=evals uv run --group eval python -m actionlineage_evals",
+        "scripts/check_claims_language.py",
+        "scripts/secret_scan.py",
+    ):
+        assert required in combined
+
+    unsupported_claims = (
+        "has been externally audited",
+        "has external adoption",
+        "is production ready",
+        "independent validation exists",
+        "community validated",
+    )
+    for claim in unsupported_claims:
+        assert claim not in normalized
+
+
+def test_external_review_issue_templates_collect_safe_repro_context() -> None:
+    template_dir = PROJECT_ROOT / ".github/ISSUE_TEMPLATE"
+    templates = {
+        path.name: path.read_text(encoding="utf-8")
+        for path in (
+            template_dir / "evaluation-feedback.yml",
+            template_dir / "integration-proposal.yml",
+            template_dir / "security-design-review.yml",
+        )
+    }
+    combined = "\n".join(templates.values())
+
+    assert "Evaluation path" in templates["evaluation-feedback.yml"]
+    assert "Commands run" in templates["evaluation-feedback.yml"]
+    assert "Evidence semantics concern" in templates["evaluation-feedback.yml"]
+    assert "Safe bundle or fixture" in templates["evaluation-feedback.yml"]
+    assert "Evidence lifecycle mapping" in templates["integration-proposal.yml"]
+    assert "Tool identity and descriptor hash" in templates["integration-proposal.yml"]
+    assert "Verification and observer model" in templates["integration-proposal.yml"]
+    assert "Boundary or invariant at risk" in templates["security-design-review.yml"]
+    assert (
+        "For sensitive vulnerabilities, follow SECURITY.md"
+        in templates["security-design-review.yml"]
+    )
+
+    for required in (
+        "synthetic",
+        "minimized",
+        "Do not",
+        "credentials",
+        "authorization headers",
+    ):
+        assert required in combined
 
 
 def test_release_checklist_covers_required_gates() -> None:

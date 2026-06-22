@@ -107,6 +107,29 @@ External validation:
 - Confirm branch protection, CodeQL, Dependabot alerts, secret scanning, push
   protection, and private vulnerability reporting in GitHub.
 
+## Phase 6: External Review Readiness
+
+Status: review preparation is implemented for public alpha; actual review and
+adoption evidence remain external validation.
+
+Acceptance tests:
+
+- External review guide gives a five-minute install path, expected outputs,
+  semantics to challenge, safe data-sharing rules, and feedback routes.
+- Security and agent-platform review checklists preserve maturity labels and
+  product invariants.
+- Evaluation reproduction commands cover public package, repository demo,
+  Agent Validation, and local release proof without requiring credentials.
+- Issue templates collect reproducible, minimized feedback without requesting
+  secrets or private data.
+
+Rollback: remove the review docs and templates. No event-schema migration is
+involved.
+
+Stop condition: any review-readiness text claims external audit, external
+adoption, production use, independent review, or community validation without
+real evidence.
+
 ## 1.0 Exit Criteria
 
 ActionLineage should not call itself 1.0 until all of the following are true:

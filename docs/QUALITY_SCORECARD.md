@@ -58,6 +58,7 @@ and checklist wording.
 | Release workflow builds, verifies on Python 3.12/3.13, and attests artifacts | `.github/workflows/release.yml`, `docs/PUBLISHING.md` | `tests/release/test_release_readiness.py`, `scripts/check_release_consistency.py` | Local workflow definition and package-index proof exist; GitHub Release object for `v0.1.0a3` remains owner-gated | Local-proof / External-validation-required |
 | GHCR container publishing path exists | `.github/workflows/release.yml`, `docs/PACKAGE_MANAGERS.md` | `tests/release/test_release_readiness.py` | Workflow path can build, smoke-test, and push tagged preview images; public GHCR visibility requires external validation | Preview |
 | TestPyPI/PyPI Trusted Publishing publishes packages | `.github/workflows/release.yml`, `docs/PUBLISHING.md` | `tests/release/test_release_readiness.py` | TestPyPI run `27973522992`; PyPI run `27973832210`; fresh Python 3.12 `uvx` install, demo, and journal verify passed | Alpha-supported |
+| External review and evaluation workflow is prepared without claiming validation | `docs/EXTERNAL_REVIEW_GUIDE.md`, `docs/SECURITY_REVIEW_CHECKLIST.md`, `docs/AGENT_PLATFORM_REVIEW_CHECKLIST.md`, `docs/EVALUATION_REPRODUCTION.md`, issue templates | `tests/release/test_release_readiness.py` | Reproduction commands, safe feedback routes, and case-study template are documented; real feedback remains external-validation | Local-proof / External-validation-required |
 | GitHub security controls are enabled | `.github/workflows` plus repository settings | Workflow files and API validation | GitHub UI/API required | External-validation-required |
 | Homebrew tap exists | `docs/PACKAGE_MANAGERS.md` | Documentation tests | Tap repository and validated formula required | Planned |
 | PyPI package exists | `docs/PUBLISHING.md`, `docs/PACKAGE_MANAGERS.md` | Fresh package install smoke and release-consistency checker | `https://pypi.org/project/actionlineage/` publishes `0.1.0a3` with `Requires-Python: >=3.12`; fresh install/demo smoke passed | Alpha-supported |
@@ -76,6 +77,7 @@ and checklist wording.
 | Local hash chains can be overinterpreted | Integrity overclaim | Threat model and journal integrity docs | Continue using precise trust-limit wording |
 | GitHub Release object can drift from tags/package indexes | Broken release audit trail | Release-consistency checker and owner gate | Create/repair `v0.1.0a3` GitHub Release only with owner approval |
 | Projection SQLite handle closure can regress | Reliability signal can be missed in noisy verification output | Projection API closes connection handles and has warning-as-error regression coverage | Keep warning-as-error projection test in release verification |
+| Review-readiness docs can be mistaken for validation | Misleading social proof | External-review docs and scorecard separate readiness from actual external evidence | Keep actual reviews, adoption, and production history external-validation until real artifacts exist |
 
 ## Release Gate Summary
 

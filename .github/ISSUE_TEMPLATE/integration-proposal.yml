@@ -1,0 +1,50 @@
+name: Integration proposal
+about: Propose an adapter, observer, exporter, policy, or platform integration
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Proposals should preserve ActionLineage maturity labels and keep optional
+        dependencies behind extras. Do not include private credentials or customer data.
+  - type: textarea
+    attributes:
+      label: Integration surface
+      description: Platform, tool runtime, observer, exporter, policy system, or adapter.
+    validations:
+      required: true
+  - type: textarea
+    attributes:
+      label: Evidence lifecycle mapping
+      description: How will requested, authorized, dispatched, acknowledged, observed, verified, unverified, timed-out, conflicting, and not-dispatched states be represented?
+    validations:
+      required: true
+  - type: textarea
+    attributes:
+      label: Tool identity and descriptor hash
+      description: How will canonical tool identity and descriptor drift be handled?
+    validations:
+      required: true
+  - type: textarea
+    attributes:
+      label: Verification and observer model
+      description: What evidence source independently corroborates side effects, and what are its limitations?
+    validations:
+      required: true
+  - type: textarea
+    attributes:
+      label: Redaction and data handling
+      description: Where does redaction happen before persistence, logs, exports, and errors?
+    validations:
+      required: true
+  - type: textarea
+    attributes:
+      label: Dependencies and maturity
+      description: List proposed dependencies, license notes, optional extra boundary, and desired maturity label.
+    validations:
+      required: true
+  - type: textarea
+    attributes:
+      label: Scope controls
+      description: Note any schema, CLI, policy semantics, or public claim changes that would need owner approval.
+    validations:
+      required: false
