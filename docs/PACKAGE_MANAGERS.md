@@ -9,7 +9,7 @@ validated yet.
 | Channel | Status | Notes |
 | --- | --- | --- |
 | GitHub Releases | Alpha-supported | Release artifacts are built by GitHub Actions, checksummed, and attested. |
-| PyPI/TestPyPI | External-validation-required | Trusted Publisher setup is tracked separately and must complete before publication. |
+| PyPI/TestPyPI | Alpha-supported | `actionlineage` `0.1.0a2` is published through Trusted Publishing and fresh install/demo smoke passed. |
 | GHCR container image | Preview | The release workflow builds, smoke-tests, and publishes tagged images with `GITHUB_TOKEN`. |
 | Homebrew tap | Planned | A tap and formula should be created after Python package publication or a validated source formula path. |
 | conda-forge | Planned | Defer until PyPI publication and at least one public alpha feedback cycle. |
@@ -41,17 +41,29 @@ are easier to audit and avoid implying production stability.
 
 ## PyPI And TestPyPI
 
-PyPI remains the primary Python package channel. The release workflow is already
-prepared for Trusted Publishing through GitHub OIDC, but package-index owner
-setup is required before the jobs can succeed.
+PyPI is the primary Python package channel for the public alpha. Version
+`0.1.0a2` is published at:
 
-Required package-index records:
+- `https://pypi.org/project/actionlineage/`
+- `https://test.pypi.org/project/actionlineage/`
 
-- TestPyPI project `actionlineage`, trusted publisher environment `testpypi`.
-- PyPI project `actionlineage`, trusted publisher environment `pypi`.
+Fresh install and demo smoke validation passed from both package indexes. Use
+PyPI for normal evaluation:
 
-Do not add long-lived PyPI API tokens unless Trusted Publishing is unavailable
-and the owner explicitly approves the fallback.
+```bash
+uvx --from actionlineage==0.1.0a2 actionlineage version
+uvx --from actionlineage==0.1.0a2 actionlineage demo run --output-dir /tmp/actionlineage-demo
+uvx --from actionlineage==0.1.0a2 actionlineage journal verify /tmp/actionlineage-demo/evidence.jsonl
+```
+
+The release workflow publishes through Trusted Publishing and GitHub OIDC with
+the `testpypi` and `pypi` environments. Do not add long-lived PyPI API tokens
+unless Trusted Publishing is unavailable and the owner explicitly approves the
+fallback.
+
+The package is published while the project waits for package-index organization
+approval. Transfer package ownership to the organization once the PyPI and
+TestPyPI organization accounts are approved.
 
 ## Homebrew Tap
 
@@ -70,8 +82,8 @@ brew install vectortrace-labs/tap/actionlineage
 
 Recommended formula strategy:
 
-1. Wait for PyPI or TestPyPI publication so dependency metadata and source
-   archives have a stable upstream package path.
+1. Use the published PyPI release so dependency metadata and source archives
+   have a package-index path.
 2. Generate a formula with Homebrew's Python formula workflow.
 3. Vendor or declare Python resources according to Homebrew's Python formula
    guidance.
@@ -101,8 +113,8 @@ same release artifact users will install.
 ## Owner Gates
 
 - Confirm public GHCR package visibility after the first successful publish.
-- Configure TestPyPI/PyPI Trusted Publisher records before package-index
-  publication.
+- Transfer PyPI/TestPyPI ownership to the organization after the package-index
+  organization accounts are approved.
 - Create or approve the Homebrew tap repository before documenting the `brew`
   command in the README quickstart.
 - Decide whether conda-forge belongs in 1.0 or post-1.0 scope after public

@@ -78,8 +78,8 @@ docker run --rm -v "$PWD/build/docker-ci:/artifacts" \
 - Migration notes.
 - Compatibility fixture status.
 - Dependency audit output or documented exception.
-- TestPyPI and PyPI publication only after Trusted Publisher records are
-  configured for `.github/workflows/release.yml`.
+- TestPyPI and PyPI publication through Trusted Publishing for package-index
+  releases.
 
 Generate local alpha artifacts without committing them:
 
@@ -134,13 +134,21 @@ shasum -a 256 -c SHA256SUMS.txt
 
 See `docs/PUBLISHING.md` for the Trusted Publisher setup values.
 
+Verify the current public package from PyPI:
+
+```bash
+uvx --from actionlineage==0.1.0a2 actionlineage version
+uvx --from actionlineage==0.1.0a2 actionlineage demo run --output-dir /tmp/actionlineage-demo
+uvx --from actionlineage==0.1.0a2 actionlineage journal verify /tmp/actionlineage-demo/evidence.jsonl
+```
+
 ## Package Manager Channels
 
 Current alpha distribution priorities:
 
 - GitHub Releases remain the canonical public alpha release channel.
 - GHCR publishes preview container images from version tags.
-- PyPI/TestPyPI require Trusted Publisher setup before publication.
+- PyPI/TestPyPI publish the public alpha through Trusted Publishing.
 - Homebrew tap work is planned after package-index publication or a validated
   source formula path.
 - conda-forge, Docker Hub, Nixpkgs, Windows package managers, and OS package

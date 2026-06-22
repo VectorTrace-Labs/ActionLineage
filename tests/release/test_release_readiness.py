@@ -184,7 +184,7 @@ def test_release_workflow_publishes_versioned_ghcr_image_without_registry_secret
     assert "DOCKERHUB" not in workflow
 
 
-def test_publishing_docs_keep_package_publication_externally_gated() -> None:
+def test_publishing_docs_record_package_publication_and_remaining_gates() -> None:
     publishing = (PROJECT_ROOT / "docs/PUBLISHING.md").read_text(encoding="utf-8")
     package_managers = (PROJECT_ROOT / "docs/PACKAGE_MANAGERS.md").read_text(encoding="utf-8")
     maturity = (PROJECT_ROOT / "docs/MATURITY.md").read_text(encoding="utf-8")
@@ -193,14 +193,21 @@ def test_publishing_docs_keep_package_publication_externally_gated() -> None:
     assert "Trusted Publisher records" in publishing
     assert "Do not add PyPI API tokens" in publishing
     assert "GHCR Container Images" in publishing
-    assert "External-validation-required" in publishing
+    assert "https://pypi.org/project/actionlineage/" in publishing
+    assert "https://test.pypi.org/project/actionlineage/" in publishing
+    assert "27957719209" in publishing
+    assert "27958024445" in publishing
+    assert "Organization ownership transfer remains an external follow-up" in publishing
     assert "ghcr.io/vectortrace-labs/actionlineage" in package_managers
+    assert "PyPI/TestPyPI | Alpha-supported" in package_managers
+    assert "uvx --from actionlineage==0.1.0a2 actionlineage version" in package_managers
     assert "do not publish or document a `latest` tag" in package_managers
     assert "Homebrew tap" in package_managers
     assert "Do not commit an unvalidated formula" in package_managers
-    assert "Successful TestPyPI and PyPI package publication" in maturity
+    assert "PyPI and TestPyPI package publication" in maturity
+    assert "package ownership transfer to the organization account" in maturity
     assert "GHCR container-image publication" in maturity
-    assert "TestPyPI/PyPI trusted publishers" in decisions
+    assert "PyPI/TestPyPI organization ownership transfer" in decisions
     assert "GHCR package visibility" in decisions
     assert "Homebrew tap" in decisions
 

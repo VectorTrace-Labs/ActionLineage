@@ -16,7 +16,7 @@ implementation change.
 | `AGENTS.md` visibility | Keep ignored/local; publish contributor guidance through normal docs | Making local assistant instructions public |
 | Python support | Keep Python 3.13+ until 3.11/3.12 are tested and justified | Widening package metadata |
 | Service/deployment support | Keep Docker/Kubernetes/Helm preview | Production deployment claims |
-| External release targets | Use GitHub Releases first; publish preview GHCR images from version tags; prepare TestPyPI then PyPI through Trusted Publishing; keep Homebrew planned | Publishing package-index artifacts or Homebrew formulae |
+| External release targets | Use GitHub Releases and PyPI/TestPyPI for the public alpha; publish preview GHCR images from version tags; keep Homebrew planned | Publishing new package-manager channels or Homebrew formulae |
 | Signing/provenance | Use GitHub artifact attestations for release artifacts; keep local provenance as a supplemental manifest | Claiming attested package artifacts |
 | Public security contact | Confirm GitHub private vulnerability reporting and contact path | Public announcement |
 | External review | Select reviewer or review venue | Any claim of independent validation |
@@ -31,8 +31,8 @@ implementation change.
 | Dependabot alerts/security updates | Repository settings and current alert status |
 | Secret scanning and push protection | Repository settings confirmation |
 | Private vulnerability reporting | GitHub security settings confirmation |
-| Published packages | PyPI package page or GHCR package page |
-| TestPyPI/PyPI trusted publishers | Trusted Publisher records for `release.yml` environments `testpypi` and `pypi` |
+| Published packages | PyPI package page, TestPyPI package page, or GHCR package page |
+| PyPI/TestPyPI organization ownership transfer | Package-index organization approval and project ownership transfer |
 | GHCR package visibility | Public package page for `ghcr.io/vectortrace-labs/actionlineage` after the first successful publish |
 | Homebrew tap | `VectorTrace-Labs/homebrew-tap` exists with an audited formula and CI |
 | Attested artifacts | Successful `release.yml` run with GitHub artifact attestations and verification instructions |
@@ -48,8 +48,8 @@ implementation change.
   maturity label.
 - A release artifact requires credentials or paid service access not supplied by
   the owner.
-- A PyPI/TestPyPI publish run is attempted before the matching Trusted
-  Publisher record and GitHub environment are configured.
+- A new PyPI/TestPyPI publish run is attempted before the matching Trusted
+  Publisher record, GitHub environment, and package ownership path are confirmed.
 - A deployment/security claim depends on GitHub or external settings that have
   not been independently checked.
 

@@ -16,8 +16,8 @@ conflicting, and not-dispatched outcomes as separate facts.
 
 This repository is a public alpha. Core evidence recording is usable for local
 evaluation and fixture-backed integration work, but service deployments,
-external adapters, cloud observers, GHCR containers, package-index publication,
-and additional package-manager channels are preview, planned, or
+external adapters, cloud observers, GHCR containers, package-index ownership
+transfer, and additional package-manager channels are preview, planned, or
 external-validation surfaces until they are externally validated.
 
 | Surface | Maturity | Evidence |
@@ -28,8 +28,9 @@ external-validation surfaces until they are externally validated.
 | Lineage Contracts, sequence detections, Lineage Lab | Local-proof | Contract, detection, and replay tests |
 | MCP, policy, OpenTelemetry, service, Postgres, cloud/Kubernetes fixtures | Preview | Optional extras and local fixture tests |
 | GitHub release artifacts and attestations | Local-proof | Release workflow and `v0.1.0a2` pre-release |
+| PyPI/TestPyPI package publication | Alpha-supported | `v0.1.0a2` published through Trusted Publishing; fresh install/demo smoke passed |
 | GHCR container publication | Preview | Tag-gated release workflow path |
-| Package-index publication, Homebrew tap, external audits, production history | Planned or external-validation-required | See `docs/DECISIONS_REQUIRED.md` |
+| Homebrew tap, external audits, production history | Planned or external-validation-required | See `docs/DECISIONS_REQUIRED.md` |
 
 Full claim mapping lives in
 [docs/QUALITY_SCORECARD.md](docs/QUALITY_SCORECARD.md).
@@ -46,6 +47,14 @@ Install all optional extras used by the test suite:
 
 ```bash
 uv sync --locked --all-extras
+```
+
+Or run the published public-alpha package directly from PyPI:
+
+```bash
+uvx --from actionlineage==0.1.0a2 actionlineage version
+uvx --from actionlineage==0.1.0a2 actionlineage demo run --output-dir /tmp/actionlineage-demo
+uvx --from actionlineage==0.1.0a2 actionlineage journal verify /tmp/actionlineage-demo/evidence.jsonl
 ```
 
 Run the deterministic local demo:
@@ -301,10 +310,11 @@ Core dependencies are intentionally small: Pydantic and Typer. Optional extras
 hold MCP, OpenTelemetry, SQLAlchemy, FastAPI, JWT, and related integration
 dependencies.
 
-Public alpha artifacts are currently attached to GitHub Releases. The release
-workflow is prepared to publish preview GHCR images for version tags, while
-PyPI/TestPyPI and Homebrew remain gated on external package-manager setup and
-validation. See [docs/PACKAGE_MANAGERS.md](docs/PACKAGE_MANAGERS.md).
+Public alpha artifacts are attached to GitHub Releases and `actionlineage`
+`0.1.0a2` is published on PyPI and TestPyPI through Trusted Publishing. The
+release workflow is prepared to publish preview GHCR images for version tags,
+while Homebrew and additional package-manager channels remain gated on external
+setup and validation. See [docs/PACKAGE_MANAGERS.md](docs/PACKAGE_MANAGERS.md).
 
 ## Security Model In One Paragraph
 
