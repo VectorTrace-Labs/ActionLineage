@@ -37,7 +37,7 @@
     "strict": true,
     "uncovered_capabilities": []
   },
-  "commit_sha": "7edc0c401100c6545e8340b9cf674c2a63d966b4",
+  "commit_sha": "c12ea20294441e13c83019ae710a10bf67909a7d",
   "coverage": {
     "contract_coverage": {
       "failed": 1,
@@ -272,6 +272,7 @@
       ],
       "expected_failure_class": "product_failure",
       "failure_class": "none",
+      "failure_fingerprint": null,
       "mode": "scripted",
       "model_adapter": "scripted",
       "passed": true,
@@ -333,6 +334,7 @@
       ],
       "expected_failure_class": "product_failure",
       "failure_class": "none",
+      "failure_fingerprint": null,
       "mode": "scripted",
       "model_adapter": "scripted",
       "passed": true,
@@ -387,6 +389,7 @@
       ],
       "expected_failure_class": "product_failure",
       "failure_class": "none",
+      "failure_fingerprint": null,
       "mode": "scripted",
       "model_adapter": "scripted",
       "passed": true,
@@ -446,6 +449,7 @@
       ],
       "expected_failure_class": "product_failure",
       "failure_class": "none",
+      "failure_fingerprint": null,
       "mode": "scripted",
       "model_adapter": "scripted",
       "passed": true,
@@ -514,6 +518,7 @@
       ],
       "expected_failure_class": "product_failure",
       "failure_class": "none",
+      "failure_fingerprint": null,
       "mode": "scripted",
       "model_adapter": "scripted",
       "passed": true,
@@ -580,6 +585,7 @@
       ],
       "expected_failure_class": "product_failure",
       "failure_class": "none",
+      "failure_fingerprint": null,
       "mode": "scripted",
       "model_adapter": "scripted",
       "passed": true,
@@ -626,6 +632,7 @@
       ],
       "expected_failure_class": "provider_failure",
       "failure_class": "provider_failure",
+      "failure_fingerprint": "sha256:2baf53740b8ab6aa80364c7def88860682153464c33609556dec19af7b600dde",
       "mode": "scripted",
       "model_adapter": "scripted",
       "passed": true,
@@ -670,6 +677,7 @@
       ],
       "expected_failure_class": "inconclusive_budget_exhausted",
       "failure_class": "inconclusive_budget_exhausted",
+      "failure_fingerprint": "sha256:e71246fa43067d8093578e354182e2b202b5c28e04d75aee69c11fa26a73a40e",
       "mode": "scripted",
       "model_adapter": "scripted",
       "passed": true,
@@ -714,6 +722,7 @@
       ],
       "expected_failure_class": "harness_failure",
       "failure_class": "harness_failure",
+      "failure_fingerprint": "sha256:207ad15e149f593e0428118f0772a840a9049040bca303b5744704eac105f0ee",
       "mode": "scripted",
       "model_adapter": "scripted",
       "passed": true,
@@ -760,6 +769,7 @@
       ],
       "expected_failure_class": "agent_failure",
       "failure_class": "agent_failure",
+      "failure_fingerprint": "sha256:49c4a8b8c58037223399e06ccdcab42ad86292b6702b74014a70c91c69ea8869",
       "mode": "scripted",
       "model_adapter": "scripted",
       "passed": true,
@@ -819,6 +829,7 @@
       ],
       "expected_failure_class": "product_failure",
       "failure_class": "product_failure",
+      "failure_fingerprint": "sha256:8891ee6f780dc5edc97d26c4b6d3c65bc7f0176f6ed2546119389a41ace2976a",
       "mode": "scripted",
       "model_adapter": "scripted",
       "passed": true,
@@ -855,7 +866,7 @@
     0
   ],
   "source_commits": [
-    "7edc0c401100c6545e8340b9cf674c2a63d966b4"
+    "c12ea20294441e13c83019ae710a10bf67909a7d"
   ],
   "suite": {
     "failed_count": 0,
