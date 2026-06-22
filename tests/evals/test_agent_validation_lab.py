@@ -4,6 +4,7 @@ import json
 import sys
 from pathlib import Path
 
+import pytest
 from hypothesis import settings
 from hypothesis import strategies as st
 from hypothesis.stateful import RuleBasedStateMachine, invariant, rule
@@ -17,7 +18,6 @@ from actionlineage_evals.adapters import (  # noqa: E402
     LocalToolAgent,
     OpenAICompatibleAdapter,
 )
-from actionlineage_evals.inspect_tasks import agent_validation_lab  # noqa: E402
 from actionlineage_evals.minimization import (  # noqa: E402
     minimize_tool_calls,
     tool_call_count,
@@ -327,6 +327,9 @@ def test_regression_corpus_replay_supports_empty_and_promoted_bundles(tmp_path: 
 
 
 def test_inspect_task_accepts_live_configuration_metadata() -> None:
+    pytest.importorskip("inspect_ai")
+    from actionlineage_evals.inspect_tasks import agent_validation_lab
+
     task = agent_validation_lab(
         scenario_path=str(PROJECT_ROOT / "evals" / "scenarios"),
         artifact_root="build/evals/inspect-test",
