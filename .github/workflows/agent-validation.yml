@@ -11,9 +11,6 @@ on:
 permissions:
   contents: read
 
-env:
-  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
-
 jobs:
   no-model-replay:
     name: No-model scenario validation and replay
@@ -78,7 +75,7 @@ jobs:
           } >> "$GITHUB_STEP_SUMMARY"
       - name: Upload no-model eval artifacts
         if: always()
-        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
         with:
           name: actionlineage-agent-validation-no-model
           path: build/evals
@@ -141,7 +138,7 @@ jobs:
           } >> "$GITHUB_STEP_SUMMARY"
       - name: Upload Docker eval artifacts
         if: always()
-        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
         with:
           name: actionlineage-agent-validation-docker
           path: build/evals
@@ -203,7 +200,7 @@ jobs:
           } >> "$GITHUB_STEP_SUMMARY"
       - name: Upload scheduled eval artifacts
         if: always()
-        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
         with:
           name: actionlineage-agent-validation-scheduled
           path: build/evals

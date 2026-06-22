@@ -55,9 +55,9 @@ Current hardening slice:
 7. Add process-status oracle evidence to filesystem-read scenarios and run
    `AVL-001` through Docker in CI alongside the existing Docker/Toxiproxy
    `AVL-002` lane.
-8. Track the residual `upload-artifact` Node runtime annotation in
-   `docs/DECISIONS_REQUIRED.md`; the workflow keeps the accepted pinned SHA
-   because an explicit Node 24 artifact action pin caused startup failure.
+8. Use pinned Node 24-compatible artifact upload/download actions after PR
+   validation proves the artifact path still works without the residual runtime
+   annotation.
 
 Current trust-hardening slice:
 
