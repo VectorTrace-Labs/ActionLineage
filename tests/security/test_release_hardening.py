@@ -10,6 +10,7 @@ from types import ModuleType
 from hypothesis import given, settings
 from hypothesis import strategies as st
 
+from actionlineage.demo import run_demo
 from actionlineage.domain import RedactionPolicy, capture_string, serialize_event_for_persistence
 from tests.domain.test_events import build_event
 
@@ -108,6 +109,33 @@ def test_release_provenance_hashes_dist_artifacts_without_signing_claims(tmp_pat
             "size_bytes": 11,
         }
     ]
+
+
+def test_demo_evidence_map_is_deterministic_and_checkable(tmp_path: Path) -> None:
+    generator = _load_script("generate_demo_evidence_map")
+    demo = run_demo(tmp_path / "demo")
+    svg_path = tmp_path / "demo-evidence-map.svg"
+    summary_path = tmp_path / "demo-evidence-map.json"
+
+    evidence_map = generator.build_evidence_map(demo.incident_path)
+    svg = generator.render_svg(evidence_map)
+    written = generator.write_evidence_map(demo.incident_path, svg_path, summary_path)
+
+    assert evidence_map["map_format"] == "actionlineage.dev/demo-evidence-map-v0"
+    assert evidence_map["ok"] is True
+    assert evidence_map["event_count"] == 18
+    assert evidence_map["verification_status_counts"]["verified"] == 1
+    assert evidence_map["verification_status_counts"]["unverified"] == 2
+    assert evidence_map["verification_status_counts"]["conflicting"] == 1
+    assert evidence_map["verification_status_counts"]["not_dispatched"] == 1
+    assert "Tool acknowledgement is not side-effect evidence" in svg
+    assert generator.render_svg(evidence_map) == svg
+    assert written == evidence_map
+    assert generator.check_evidence_map(demo.incident_path, svg_path, summary_path) == []
+
+    svg_path.write_text(svg.replace("ActionLineage", "Changed", 1), encoding="utf-8")
+
+    assert generator.check_evidence_map(demo.incident_path, svg_path, summary_path) == ["svg_stale"]
 
 
 def test_adversarial_fixture_categories_are_complete() -> None:

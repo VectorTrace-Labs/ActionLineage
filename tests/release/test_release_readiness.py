@@ -122,6 +122,9 @@ def test_readme_quickstart_uses_demo_aligned_contract() -> None:
     assert "Agent Validation Lab" in readme
     assert "development-only evaluation surface" in readme
     assert "PYTHONPATH=evals uv run --group eval python -m actionlineage_evals" in readme
+    assert "make demo-map" in readme
+    assert "demo-evidence-map.svg" in readme
+    assert "canonical evidence remains `evidence.jsonl`" in readme
 
 
 def test_release_checklist_covers_required_gates() -> None:
@@ -132,6 +135,8 @@ def test_release_checklist_covers_required_gates() -> None:
         "uv run ruff format --check .",
         "uv run mypy src",
         "uv run pytest",
+        "scripts/generate_demo_evidence_map.py",
+        "--demo-dir /tmp/actionlineage-demo",
         "scripts/check_claims_language.py",
         "scripts/secret_scan.py",
         "scripts/generate_sbom.py",
@@ -170,6 +175,10 @@ def test_ci_runs_local_release_proof_gates() -> None:
     )
     assert "uv run pip-audit" in workflow
     assert "uv build --out-dir /tmp/actionlineage-dist" in workflow
+    assert "uv run actionlineage demo run --output-dir /tmp/actionlineage-demo" in workflow
+    assert "scripts/generate_demo_evidence_map.py" in workflow
+    assert "--demo-dir /tmp/actionlineage-demo" in workflow
+    assert "--check" in workflow
     assert "scripts/generate_release_provenance.py" in workflow
     assert "--dist-dir /tmp/actionlineage-dist" in workflow
     assert "--output /tmp/actionlineage-release-provenance.json" in workflow

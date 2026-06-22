@@ -37,6 +37,14 @@ jobs:
         run: uv run mypy src
       - name: Test
         run: uv run pytest
+      - name: Demo evidence map
+        run: |
+          uv run actionlineage demo run --output-dir /tmp/actionlineage-demo
+          uv run python scripts/generate_demo_evidence_map.py \
+            --demo-dir /tmp/actionlineage-demo
+          uv run python scripts/generate_demo_evidence_map.py \
+            --demo-dir /tmp/actionlineage-demo \
+            --check
       - name: Claim-language guard
         run: uv run python scripts/check_claims_language.py .
       - name: Secret scan

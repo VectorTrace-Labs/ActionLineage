@@ -36,6 +36,8 @@ evidence and limitations.
 - Built-in sequence detections and Lineage Lab replay/mutation/minimization.
 - Agent Validation Lab scenario validation, no-model replay, provenance, and
   artifact audits as a development-only evaluation surface.
+- Deterministic demo evidence map generated from local demo artifacts for
+  onboarding and visual review; canonical evidence remains the local journal.
 - Release hardening scripts for claim language, secret scanning, SBOM, local
   provenance, dependency audit, and release consistency.
 - CI release-proof gates for wheel/sdist build, SBOM, dependency audit, and

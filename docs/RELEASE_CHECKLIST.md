@@ -10,6 +10,9 @@ uv run ruff check .
 uv run ruff format --check .
 uv run mypy src
 uv run pytest
+uv run actionlineage demo run --output-dir /tmp/actionlineage-demo
+uv run python scripts/generate_demo_evidence_map.py --demo-dir /tmp/actionlineage-demo
+uv run python scripts/generate_demo_evidence_map.py --demo-dir /tmp/actionlineage-demo --check
 uv run python scripts/check_claims_language.py .
 uv run python scripts/secret_scan.py .
 uv run python scripts/generate_sbom.py --output build/actionlineage-sbom.json

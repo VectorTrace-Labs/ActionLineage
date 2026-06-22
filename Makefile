@@ -1,6 +1,6 @@
 UV ?= uv
 
-.PHONY: setup lint format-check type test check audit demo
+.PHONY: setup lint format-check type test check audit demo demo-map
 
 setup:
 	$(UV) sync --locked --all-extras
@@ -24,3 +24,7 @@ audit:
 
 demo:
 	$(UV) run actionlineage demo run --output-dir build/actionlineage-demo
+
+demo-map: demo
+	$(UV) run python scripts/generate_demo_evidence_map.py --demo-dir build/actionlineage-demo
+	$(UV) run python scripts/generate_demo_evidence_map.py --demo-dir build/actionlineage-demo --check

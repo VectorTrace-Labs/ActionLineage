@@ -72,6 +72,15 @@ make demo
 ```
 
 Repository demo artifacts are written under `build/actionlineage-demo/`.
+To generate a deterministic SVG overview from those demo artifacts, run:
+
+```bash
+make demo-map
+```
+
+That writes `build/actionlineage-demo/demo-evidence-map.svg` and
+`build/actionlineage-demo/demo-evidence-map.json`. The SVG is an onboarding aid
+derived from `incident.json`; the canonical evidence remains `evidence.jsonl`.
 
 Inspect repository-generated evidence:
 
@@ -95,6 +104,10 @@ uv run actionlineage projection export-console \
   build/actionlineage-demo/projection.sqlite \
   build/actionlineage-demo/console.html \
   --trace-id trace_demo_evidence_plane
+
+uv run python scripts/generate_demo_evidence_map.py \
+  --demo-dir build/actionlineage-demo \
+  --check
 
 uv run actionlineage contract validate \
   contracts/examples/outbound-http.json \

@@ -62,6 +62,15 @@ Generated files are written under `build/actionlineage-demo/` by default:
 - `timeline.json`: compact event-order summary.
 - `incident.json`: investigation-ready incident export.
 
+The optional `make demo-map` helper runs the same demo, then generates:
+
+- `demo-evidence-map.svg`: deterministic visual overview derived from
+  `incident.json`.
+- `demo-evidence-map.json`: machine-readable freshness summary for the SVG.
+
+These map files are onboarding aids. They are not canonical evidence stores;
+the journal remains `evidence.jsonl`.
+
 The deterministic demo currently emits 18 events and covers:
 
 - A verified file-read side effect corroborated by `filesystem_observer`.

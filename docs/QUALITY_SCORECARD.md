@@ -40,6 +40,7 @@ and checklist wording.
 | Demo covers unverified outcome | Demo scenario | `tests/demo/test_scenario.py` | Acknowledged HTTP send without corroboration | Alpha-supported |
 | Demo covers not-dispatched outcome | Demo scenario | `tests/demo/test_scenario.py`, adapter tests | Policy-denied shell-like request | Alpha-supported |
 | Demo covers conflicting outcome | Demo scenario | `tests/demo/test_scenario.py`, observer tests | Receiver mismatch and conflict event | Alpha-supported |
+| Demo evidence map is generated from local demo artifacts | `scripts/generate_demo_evidence_map.py`, README, demo docs | `tests/security/test_release_hardening.py`, CI demo-map step | `demo-evidence-map.svg` and `demo-evidence-map.json` generated under `build/` or `/tmp` | Local-proof |
 | Five-minute demo contract validates | `contracts/examples/outbound-http.json` | Contract validation tests | Demo journal validates with outbound HTTP contract | Alpha-supported |
 | Restricted-exfiltration contract is a stricter design example | Contract examples and docs | Contract tests | Not the default demo contract | Preview |
 | Sequence detections support bounded operators, windows, grouping, suppression, deduplication, and evidence refs | `src/actionlineage/detection` | `tests/detection` | Demo aligns with built-in rules AL-DET-003, AL-DET-004, AL-DET-005 | Local-proof |
@@ -86,6 +87,9 @@ uv run ruff check .
 uv run ruff format --check .
 uv run mypy src
 uv run pytest
+uv run actionlineage demo run --output-dir /tmp/actionlineage-demo
+uv run python scripts/generate_demo_evidence_map.py --demo-dir /tmp/actionlineage-demo
+uv run python scripts/generate_demo_evidence_map.py --demo-dir /tmp/actionlineage-demo --check
 uv run python scripts/check_claims_language.py .
 uv run python scripts/secret_scan.py .
 uv run python scripts/generate_sbom.py --output /tmp/actionlineage-sbom.json

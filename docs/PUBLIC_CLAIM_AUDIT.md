@@ -31,6 +31,6 @@ label.
 | CLAIM-001 | P0 | GitHub Release claim for `v0.1.0a3` is unsafe until a release object and artifacts are externally observable. | Owner creates/repairs release, or public docs remove the claim |
 | CLAIM-002 | P0 | Changelog `1.0.0` heading conflicted with alpha package version. | Fixed locally by changing heading to `0.1.0a3 - 2026-06-22` |
 | CLAIM-003 | P1 | Package metadata did not expose project URLs on current public packages. | Fixed locally in `pyproject.toml`; public metadata changes after next release |
-| CLAIM-004 | P1 | README currently has no generated visual proof from demo artifacts. | Phase 3 generated SVG and freshness check |
+| CLAIM-004 | P1 | README previously had no generated visual map from demo artifacts. | Fixed locally with `scripts/generate_demo_evidence_map.py`; keep map described as non-canonical onboarding aid |
 | CLAIM-005 | P1 | Quality badges must not be added until backed by public passing systems. | Confirm public workflow status before badge additions |
 | CLAIM-006 | P1 | Service/deployment surfaces are easy to overread as production-ready. | Keep Preview labels and avoid operational readiness claims |

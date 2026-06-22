@@ -79,7 +79,7 @@ data, not universal performance guarantees.
 | 0 | Baseline and public-claim audit | In progress |
 | 1 | Release and version consistency | In progress: checker added; GitHub Release object remains owner-gated |
 | 2 | Package metadata and discoverability | In progress: local metadata improved; public metadata waits for next release |
-| 3 | README landing experience and visual proof | Not started |
+| 3 | README landing experience and visual proof | In progress: generated demo evidence map and freshness check added |
 | 4 | Clean installation and first-time-user testing | Baseline public smoke completed; CI hardening remains |
 | 5 | Visible quality and security evidence | Baseline captured; workflow summary hardening remains |
 | 6 | Agent Validation Lab public evidence | Baseline no-model evidence captured; committed deterministic report remains |
