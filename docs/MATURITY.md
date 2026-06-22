@@ -25,6 +25,8 @@ evidence and limitations.
 - Deterministic local demo with verified, unverified, conflicting, and
   not-dispatched outcomes.
 - JSON Lineage Contract validation for local journal evidence.
+- PyPI and TestPyPI package publication for the current public-alpha version,
+  with fresh install and demo smoke validation.
 
 ## Local-Proof Surface
 
@@ -51,7 +53,8 @@ evidence and limitations.
 
 ## Planned Or External Validation
 
-- Successful TestPyPI and PyPI package publication.
+- PyPI/TestPyPI package ownership transfer to the organization account after
+  package-index organization approval.
 - Homebrew tap and formula publication.
 - conda-forge recipe publication.
 - Branch protection and GitHub security-control status.

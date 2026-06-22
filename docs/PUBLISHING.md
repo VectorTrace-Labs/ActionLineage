@@ -2,9 +2,8 @@
 
 ActionLineage uses a GitHub-first alpha release path. The repository builds
 release artifacts in GitHub Actions, generates GitHub artifact attestations,
-publishes preview GHCR container images for version tags, and is prepared for
-PyPI/TestPyPI Trusted Publishing. Package-index publication still requires the
-trusted publisher records described below.
+publishes preview GHCR container images for version tags, and publishes
+PyPI/TestPyPI packages through Trusted Publishing.
 
 ## Release Workflow
 
@@ -62,8 +61,9 @@ avoid implying production stability and make release evidence easier to audit.
 
 ## Trusted Publisher Setup
 
-Before package publishing can succeed, configure Trusted Publisher records in
-TestPyPI and PyPI.
+Package publishing uses Trusted Publisher records in TestPyPI and PyPI. Version
+`0.1.0a2` was published from `.github/workflows/release.yml` with no registry
+API token.
 
 For TestPyPI:
 
@@ -84,9 +84,13 @@ For PyPI:
 Do not add PyPI API tokens to the repository. Trusted Publishing uses GitHub
 OIDC and short-lived credentials issued by the package index.
 
+The package is currently published while package-index organization approval is
+pending. Transfer package ownership to the organization after the PyPI and
+TestPyPI organization accounts are approved.
+
 ## GitHub Environments
 
-Create two GitHub environments before enabling package publication:
+The repository uses two GitHub environments for package publication:
 
 - `testpypi`
 - `pypi`
@@ -116,19 +120,18 @@ Also verify checksums:
 shasum -a 256 -c SHA256SUMS.txt
 ```
 
-## Current Alpha Boundary
+## Current Alpha Publication Evidence
 
-The workflow makes release signing and package publication operationally ready,
-but public package publication is not claimed until:
+Current public package publication:
 
-- the trusted publisher records exist
-- a TestPyPI publish run succeeds
-- a PyPI publish run succeeds
-- release notes link the published package pages and attestation verification
-  instructions
+- TestPyPI: `https://test.pypi.org/project/actionlineage/`
+- PyPI: `https://pypi.org/project/actionlineage/`
+- Version: `0.1.0a2`
+- TestPyPI workflow run: `27957719209`
+- PyPI workflow run: `27958024445`
 
-Until then, package-index publication remains
-`External-validation-required` in the maturity docs.
+Fresh `uvx` install, deterministic demo, and journal verification passed from
+both indexes. Organization ownership transfer remains an external follow-up.
 
 See `docs/PACKAGE_MANAGERS.md` for GHCR, Homebrew, conda-forge, and deferred
 channel planning.

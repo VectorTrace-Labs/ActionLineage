@@ -24,8 +24,8 @@ secret scanning. The SBOM generator emits a lightweight JSON inventory from
 `pyproject.toml` and installed package metadata. The release provenance
 generator emits a local manifest with artifact hashes. The `release.yml`
 workflow builds release artifacts in GitHub Actions and generates GitHub
-artifact attestations; package-index publication still requires the configured
-Trusted Publisher records described in `docs/PUBLISHING.md`.
+artifact attestations; package-index publication uses the configured Trusted
+Publisher records described in `docs/PUBLISHING.md`.
 
 ## Resource Bounds
 
