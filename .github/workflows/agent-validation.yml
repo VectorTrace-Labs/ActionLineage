@@ -11,6 +11,9 @@ on:
 permissions:
   contents: read
 
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+
 jobs:
   no-model-replay:
     name: No-model scenario validation and replay
@@ -59,7 +62,7 @@ jobs:
             --allow-empty
       - name: Upload no-model eval artifacts
         if: always()
-        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f
+        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4
         with:
           name: actionlineage-agent-validation-no-model
           path: build/evals
@@ -97,7 +100,7 @@ jobs:
             --use-docker
       - name: Upload Docker eval artifacts
         if: always()
-        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f
+        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4
         with:
           name: actionlineage-agent-validation-docker
           path: build/evals
@@ -138,7 +141,7 @@ jobs:
             --max-scenarios 6
       - name: Upload scheduled eval artifacts
         if: always()
-        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f
+        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4
         with:
           name: actionlineage-agent-validation-scheduled
           path: build/evals

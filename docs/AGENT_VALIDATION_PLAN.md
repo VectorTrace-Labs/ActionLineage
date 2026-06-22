@@ -39,8 +39,9 @@ Planned improvements:
 
 Current hardening slice:
 
-1. Close the `upload-artifact` Node 20 workflow warning by pinning the
-   agent-validation workflow to a Node 24-compatible action release.
+1. Close the `upload-artifact` Node 20 workflow warning by opting the
+   agent-validation workflow into Node 24 while retaining the accepted pinned
+   action SHA.
 2. Add `AVL-007 provider-lifecycle-failure` as a deterministic no-model
    scenario that validates `provider_failure` classification without depending
    on a real provider outage.
