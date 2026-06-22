@@ -74,7 +74,7 @@ and checklist wording.
 | Demo and contract examples can drift | Broken onboarding | Demo tests and contract validation | Keep README quickstart tied to passing contract |
 | Local hash chains can be overinterpreted | Integrity overclaim | Threat model and journal integrity docs | Continue using precise trust-limit wording |
 | GitHub Release object can drift from tags/package indexes | Broken release audit trail | Release-consistency checker and owner gate | Create/repair `v0.1.0a3` GitHub Release only with owner approval |
-| Test runs emit database `ResourceWarning`s | Reliability signal can be missed | Baseline hardening plan records warning class | Close SQLite handles in a reliability-hardening slice |
+| Projection SQLite handle closure can regress | Reliability signal can be missed in noisy verification output | Projection API closes connection handles and has warning-as-error regression coverage | Keep warning-as-error projection test in release verification |
 
 ## Release Gate Summary
 

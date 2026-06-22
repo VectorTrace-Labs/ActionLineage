@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import sqlite3
+from contextlib import closing
 
 from actionlineage.domain import (
     CorroborationType,
@@ -236,7 +237,7 @@ def test_observer_unavailable_remains_unverified(tmp_path) -> None:
 
 def test_sqlite_readback_observer_reports_matching_row(tmp_path) -> None:
     database_path = tmp_path / "readback.sqlite"
-    with sqlite3.connect(database_path) as connection:
+    with closing(sqlite3.connect(database_path)) as connection, connection:
         connection.execute("create table audit_log (event_id text primary key, status text)")
         connection.execute(
             "insert into audit_log (event_id, status) values (?, ?)",
@@ -258,7 +259,7 @@ def test_sqlite_readback_observer_reports_observed_absence_for_expected_absent_r
     tmp_path,
 ) -> None:
     database_path = tmp_path / "readback.sqlite"
-    with sqlite3.connect(database_path) as connection:
+    with closing(sqlite3.connect(database_path)) as connection, connection:
         connection.execute("create table audit_log (event_id text primary key)")
 
     observation = SqliteReadbackObserver().observe_row(
@@ -275,7 +276,7 @@ def test_sqlite_readback_observer_reports_observed_absence_for_expected_absent_r
 
 def test_sqlite_readback_observer_reports_conflict_for_unexpected_row_state(tmp_path) -> None:
     database_path = tmp_path / "readback.sqlite"
-    with sqlite3.connect(database_path) as connection:
+    with closing(sqlite3.connect(database_path)) as connection, connection:
         connection.execute("create table audit_log (event_id text primary key)")
 
     observation = SqliteReadbackObserver().observe_row(
@@ -302,7 +303,7 @@ def test_sqlite_readback_observer_unverified_when_database_missing(tmp_path) -> 
 
 def test_sqlite_readback_observer_invalid_identifier_is_unavailable(tmp_path) -> None:
     database_path = tmp_path / "readback.sqlite"
-    with sqlite3.connect(database_path) as connection:
+    with closing(sqlite3.connect(database_path)) as connection, connection:
         connection.execute("create table audit_log (event_id text primary key)")
 
     observation = SqliteReadbackObserver().observe_row(

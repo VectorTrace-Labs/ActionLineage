@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 import sqlite3
 from collections.abc import Iterable, Iterator
+from contextlib import contextmanager
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, cast
@@ -912,10 +913,15 @@ def ensure_schema(connection: sqlite3.Connection) -> None:
         )
 
 
-def _connect(database_path: Path) -> sqlite3.Connection:
+@contextmanager
+def _connect(database_path: Path) -> Iterator[sqlite3.Connection]:
     connection = sqlite3.connect(database_path)
-    connection.execute("PRAGMA foreign_keys = ON")
-    return connection
+    try:
+        connection.execute("PRAGMA foreign_keys = ON")
+        with connection:
+            yield connection
+    finally:
+        connection.close()
 
 
 def _user_version(connection: sqlite3.Connection) -> int:

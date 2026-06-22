@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import re
 import sqlite3
+from contextlib import closing
 from dataclasses import dataclass, field
 from enum import StrEnum
 from pathlib import Path
@@ -559,7 +560,7 @@ class SqliteReadbackObserver:
         clauses = [f"{_sqlite_identifier(column)} = ?" for column in where]
         values = tuple(where.values())
         sql = f"select count(*) from {table_name} where {' and '.join(clauses)}"
-        with sqlite3.connect(database_path) as connection:
+        with closing(sqlite3.connect(database_path)) as connection:
             row = connection.execute(sql, values).fetchone()
         return int(row[0]) if row is not None else 0
 

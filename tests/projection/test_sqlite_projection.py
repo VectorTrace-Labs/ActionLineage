@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import sqlite3
+from contextlib import closing
 from pathlib import Path
 
 import pytest
@@ -150,7 +151,7 @@ def test_event_indexing_is_idempotent_for_the_same_projected_event(tmp_path: Pat
         timeline_event(0, EventType.AGENT_RUN_STARTED, parent_event_id=None)
     )
 
-    with sqlite3.connect(database_path) as connection:
+    with closing(sqlite3.connect(database_path)) as connection, connection:
         ensure_schema(connection)
         first = index_event(connection, persisted_event, journal_record_number=1)
         second = index_event(connection, persisted_event, journal_record_number=1)
@@ -162,7 +163,7 @@ def test_event_indexing_is_idempotent_for_the_same_projected_event(tmp_path: Pat
 def test_projection_schema_v1_migrates_to_verification_indexes(tmp_path: Path) -> None:
     database_path = tmp_path / "projection.sqlite"
 
-    with sqlite3.connect(database_path) as connection:
+    with closing(sqlite3.connect(database_path)) as connection, connection:
         connection.executescript(
             """
             CREATE TABLE projection_metadata (
@@ -327,6 +328,43 @@ def test_filtered_timeline_supports_investigation_fields(tmp_path: Path) -> None
     assert [event.event_id for event in by_tool.events] == ["evt_1"]
     assert [event.event_id for event in by_descriptor.events] == ["evt_1"]
     assert [event.event_id for event in by_resource.events] == ["evt_1"]
+
+
+def test_projection_api_closes_sqlite_connections(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    journal_path = tmp_path / "events.jsonl"
+    database_path = tmp_path / "projection.sqlite"
+    case_dir = tmp_path / "case"
+    write_journal(journal_path, complete_timeline_events())
+    real_connect = sqlite3.connect
+    connections: list[sqlite3.Connection] = []
+    closed_connection_ids: set[int] = set()
+
+    class TrackingConnection(sqlite3.Connection):
+        def close(self) -> None:
+            closed_connection_ids.add(id(self))
+            super().close()
+
+    def tracking_connect(*args: object, **kwargs: object) -> sqlite3.Connection:
+        assert "factory" not in kwargs
+        connection = real_connect(*args, factory=TrackingConnection, **kwargs)
+        connections.append(connection)
+        return connection
+
+    monkeypatch.setattr(sqlite3, "connect", tracking_connect)
+
+    rebuild_projection(journal_path, database_path)
+    query_timeline(database_path, trace_id="trace_01")
+    query_filtered_timeline(database_path, event_type="policy.decision")
+    export_incident(database_path, run_id="run_01")
+    summarize_incident(database_path, trace_id="trace_01")
+    export_investigation_graph(database_path, trace_id="trace_01")
+    explain_event(database_path, event_id="evt_2")
+    export_case_bundle(database_path, case_dir, trace_id="trace_01")
+
+    assert connections
+    assert {id(connection) for connection in connections} == closed_connection_ids
 
 
 def test_incident_export_includes_investigation_summary(tmp_path: Path) -> None:

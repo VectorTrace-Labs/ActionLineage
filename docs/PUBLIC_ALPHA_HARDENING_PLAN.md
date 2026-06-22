@@ -68,7 +68,7 @@ data, not universal performance guarantees.
 | PALPHA-002 | P0 | `CHANGELOG.md` used a `1.0.0` heading for alpha release contents while package sources were `0.1.0a3`. | FIXED_IN_SLICE |
 | PALPHA-003 | P1 | Package metadata lacked PEP 621 project URLs, reducing PyPI discoverability until the next release. | FIXED_LOCALLY_PENDING_RELEASE |
 | PALPHA-004 | P1 | Baseline sdist included `.hypothesis/` local state, increasing artifact noise and review burden. | FIXED_IN_SLICE |
-| PALPHA-005 | P1 | Coverage run emitted many `ResourceWarning: unclosed database` warnings in console, projection, contract, and service tests. | OPEN |
+| PALPHA-005 | P1 | Coverage run emitted many `ResourceWarning: unclosed database` warnings in console, projection, contract, and service tests. | FIXED_IN_RELIABILITY_SLICE |
 | PALPHA-006 | P1 | Public package metadata on PyPI/TestPyPI has no project URLs until a later owner-approved release uploads corrected metadata. | BLOCKED_ON_RELEASE |
 | PALPHA-007 | P2 | Local Python `urllib` could not verify PyPI TLS due to local certificate-store configuration, while browser/curl checks succeeded. | ENVIRONMENT_LIMITATION |
 
@@ -83,7 +83,7 @@ data, not universal performance guarantees.
 | 4 | Clean installation and first-time-user testing | Baseline public smoke completed; CI hardening remains |
 | 5 | Visible quality and security evidence | Baseline captured; workflow summary hardening remains |
 | 6 | Agent Validation Lab public evidence | Baseline no-model evidence captured; committed deterministic report remains |
-| 7 | Reliability and adversarial hardening | Not started |
+| 7 | Reliability and adversarial hardening | In progress: SQLite projection handles now close under warning-as-error regression coverage |
 | 8 | External review and community readiness | Not started |
 | 9 | Release-candidate audit | Not started |
 
