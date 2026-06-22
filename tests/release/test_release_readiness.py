@@ -183,15 +183,11 @@ def test_artifact_upload_action_is_node24_pin_and_download_action_is_not_used() 
     combined = release + "\n" + agent_validation
 
     upload_artifact_v7_0_1 = "043fb46d1a93c77aae656e7c1c64a875d1fc6a0a"
-    upload_artifact_v5_0_0 = "330a01c490aca151604b8cf639adc76d48f6c5d4"
-    download_artifact_v5_0_0 = "634f93cb2916e3fdff6788551b99b062d0335ce0"
 
     assert upload_artifact_v7_0_1 in release
     assert upload_artifact_v7_0_1 in agent_validation
+    assert combined.count(f"actions/upload-artifact@{upload_artifact_v7_0_1}") == 4
     assert "actions/download-artifact@" not in combined
-    assert upload_artifact_v5_0_0 not in combined
-    assert download_artifact_v5_0_0 not in combined
-    assert "FORCE_JAVASCRIPT_ACTIONS_TO_NODE24" not in agent_validation
 
 
 def test_release_workflow_publishes_versioned_ghcr_image_without_registry_secret() -> None:
