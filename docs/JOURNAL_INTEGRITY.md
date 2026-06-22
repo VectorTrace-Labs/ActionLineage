@@ -16,6 +16,25 @@ This is tamper-evident relative to the journal bytes and any trusted anchor. It
 is not tamper-proof, forensically complete, or resistant to an attacker who can
 rewrite both the journal and all trusted anchors.
 
+## Append durability and incomplete records
+
+The local writer serializes append attempts with a sidecar lock file, verifies
+the existing journal before writing, requires the incoming
+`causality.sequence` to equal the next record index, writes one canonical JSON
+record plus a newline terminator, flushes, and calls `fsync()` on the journal
+file.
+
+A journal record is complete only when the newline terminator is present. If an
+append is interrupted after partial bytes are visible but before the terminator,
+verification reports `truncated_record` at that record and stops at the prior
+verified prefix. ActionLineage does not repair or truncate the source journal in
+place; use verified-prefix export to copy the records that verified before the
+first issue.
+
+The lock is a local sidecar file, not a distributed lock. Filesystems, network
+mounts, or backup tools that do not honor local exclusive creation semantics
+need deployment-specific controls before relying on concurrent writers.
+
 ## Trusted anchors
 
 Use `create_journal_anchor()` or the CLI to capture a trusted root:

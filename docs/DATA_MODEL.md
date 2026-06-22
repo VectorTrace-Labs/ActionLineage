@@ -217,7 +217,12 @@ envelope compatibility.
 
 ## Local journal integrity
 
-The local journal stores newline-delimited canonical event JSON. Each appended event records the previous persisted event hash in `integrity.previous_event_hash` and its own SHA-256 digest in `integrity.event_hash`.
+The local journal stores newline-delimited canonical event JSON. Each appended
+event records the previous persisted event hash in
+`integrity.previous_event_hash` and its own SHA-256 digest in
+`integrity.event_hash`. A record is considered complete only after its newline
+terminator has been written; verification reports `truncated_record` for a
+final record missing that terminator and stops at the prior verified prefix.
 
 The hash input is the redacted persisted event with `integrity.event_hash` set to `null`. This avoids recursive hashing while binding every other event field, including `previous_event_hash`, into the digest.
 

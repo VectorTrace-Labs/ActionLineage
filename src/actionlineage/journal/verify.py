@@ -8,6 +8,7 @@ from pydantic import BaseModel, ConfigDict, Field
 
 type VerificationCode = Literal[
     "empty_record",
+    "truncated_record",
     "parse_error",
     "sequence_mismatch",
     "previous_hash_mismatch",

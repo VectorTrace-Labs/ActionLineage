@@ -155,6 +155,16 @@ def verify_journal(
         with path.open("rb") as journal_file:
             for index, raw_line in enumerate(journal_file):
                 record_number = index + 1
+                if not raw_line.endswith(b"\n"):
+                    issues.append(
+                        VerificationIssue(
+                            record_number=record_number,
+                            code="truncated_record",
+                            message="journal record is missing its newline terminator",
+                        )
+                    )
+                    break
+
                 line = raw_line.rstrip(b"\n")
                 if not line:
                     issues.append(

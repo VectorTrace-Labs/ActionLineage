@@ -145,6 +145,20 @@ def test_tail_deletion_requires_trusted_anchor_to_detect(tmp_path: Path) -> None
     }
 
 
+def test_truncated_final_record_without_newline_fails_verification(tmp_path: Path) -> None:
+    path = tmp_path / "events.jsonl"
+    write_valid_journal(path)
+    path.write_bytes(path.read_bytes().removesuffix(b"\n"))
+
+    result = verify_journal(path)
+
+    assert not result.ok
+    assert result.records_verified == 2
+    assert result.issues[0].record_number == 3
+    assert result.issues[0].code == "truncated_record"
+    assert "child-2" not in result.issues[0].message
+
+
 def test_journal_append_redacts_before_hashing_and_persistence(tmp_path: Path) -> None:
     path = tmp_path / "events.jsonl"
     raw_secret = "journal-secret-value-123456789"
@@ -253,6 +267,20 @@ def test_cli_verify_returns_nonzero_for_invalid_journal(tmp_path: Path) -> None:
     assert result.exit_code == 1
     assert data["ok"] is False
     assert data["issues"][0]["code"] == "event_hash_mismatch"
+
+
+def test_cli_verify_reports_truncated_final_record(tmp_path: Path) -> None:
+    path = tmp_path / "events.jsonl"
+    write_valid_journal(path)
+    path.write_bytes(path.read_bytes().removesuffix(b"\n"))
+
+    result = runner.invoke(app, ["journal", "verify", str(path)])
+    data = json.loads(result.stdout)
+
+    assert result.exit_code == 1
+    assert data["ok"] is False
+    assert data["records_verified"] == 2
+    assert data["issues"][0]["code"] == "truncated_record"
 
 
 def test_journal_verify_parse_error_does_not_echo_raw_payload(tmp_path: Path) -> None:
