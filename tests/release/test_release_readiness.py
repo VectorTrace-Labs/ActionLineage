@@ -148,9 +148,11 @@ def test_release_workflow_builds_attests_and_uses_trusted_publishing() -> None:
     assert "publish_target:" in workflow
     assert "name: Verify release candidate" in workflow
     assert "name: Build release artifacts" in workflow
+    assert "name: Smoke test release artifact bundle" in workflow
     assert "name: Attest release artifacts" not in workflow
     assert "needs: verify" in workflow
-    assert workflow.count("needs: build") == 2
+    assert workflow.count("needs: build") == 1
+    assert workflow.count("needs: artifact-smoke") == 2
     assert "attestations: write" in workflow
     assert "artifact-metadata: write" in workflow
     assert "id-token: write" in workflow
@@ -160,6 +162,9 @@ def test_release_workflow_builds_attests_and_uses_trusted_publishing() -> None:
     assert "pypa/gh-action-pypi-publish@" in workflow
     assert 'gh run download "${GITHUB_RUN_ID}"' in workflow
     assert "actions: read" in workflow
+    assert "sha256sum -c build/release/SHA256SUMS.txt" in workflow
+    assert """name '*.whl'""" in workflow
+    assert """name '*.tar.gz'""" in workflow
     assert "repository-url: https://test.pypi.org/legacy/" in workflow
     assert "packages-dir: release-artifacts/dist" in workflow
     assert "startsWith(github.ref, 'refs/tags/v')" in workflow

@@ -22,7 +22,9 @@ Every run performs these stages:
 3. Generate SBOM, local release provenance, and checksums.
 4. Generate GitHub artifact attestations for the built artifacts.
 5. Upload the release artifact bundle.
-6. Build, smoke-test, and publish a version-tagged GHCR container image.
+6. Download the artifact bundle with GitHub CLI and verify checksums plus wheel
+   and source distribution presence.
+7. Build, smoke-test, and publish a version-tagged GHCR container image.
 
 Manual runs can additionally choose `publish_target`:
 
@@ -30,10 +32,11 @@ Manual runs can additionally choose `publish_target`:
 - `testpypi`: publish distributions to TestPyPI
 - `pypi`: publish distributions to PyPI
 
-The publishing jobs use job-level `actions: read` to fetch the already-built
-artifact bundle, `id-token: write` for Trusted Publishing, and no package
-registry API tokens. The TestPyPI and PyPI jobs run only when the manual
-workflow is dispatched against a tag whose ref starts with `refs/tags/v`.
+The artifact-smoke and publishing jobs use job-level `actions: read` to fetch
+the already-built artifact bundle with GitHub CLI. Publishing jobs also use
+`id-token: write` for Trusted Publishing and no package registry API tokens.
+The TestPyPI and PyPI jobs run only when the manual workflow is dispatched
+against a tag whose ref starts with `refs/tags/v`.
 
 ## GHCR Container Images
 
