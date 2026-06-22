@@ -86,6 +86,7 @@ jobs:
     needs: build
     permissions:
       attestations: write
+      artifact-metadata: write
       contents: read
       id-token: write
     steps:

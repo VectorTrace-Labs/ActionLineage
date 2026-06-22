@@ -152,6 +152,7 @@ def test_release_workflow_builds_attests_and_uses_trusted_publishing() -> None:
     assert "needs: verify" in workflow
     assert "needs: build" in workflow
     assert "attestations: write" in workflow
+    assert "artifact-metadata: write" in workflow
     assert "id-token: write" in workflow
     assert "actions/attest@" in workflow
     assert 'subject-path: "release-artifacts/**"' in workflow
