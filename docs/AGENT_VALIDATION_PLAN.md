@@ -39,9 +39,10 @@ Planned improvements:
 
 Current hardening slice:
 
-1. Close the `upload-artifact` Node 20 workflow warning by opting the
-   agent-validation workflow into Node 24 while retaining the accepted pinned
-   action SHA.
+1. Keep the `upload-artifact` warning non-blocking and bounded. The workflow
+   opts into Node 24 while retaining the accepted pinned action SHA; an explicit
+   Node 24 `upload-artifact` release pin was not kept because it caused a
+   workflow startup failure in GitHub Actions.
 2. Add `AVL-007 provider-lifecycle-failure` as a deterministic no-model
    scenario that validates `provider_failure` classification without depending
    on a real provider outage.
@@ -68,6 +69,14 @@ PYTHONPATH=evals uv run --group eval python -m actionlineage_evals replay-regres
   --allow-empty
 PYTHONPATH=evals uv run --group eval python -m actionlineage_evals summarize \
   build/evals/local
+PYTHONPATH=evals uv run --group eval python -m actionlineage_evals docker-smoke
+PYTHONPATH=evals uv run --group eval python -m actionlineage_evals run \
+  --scenario-path evals/scenarios/AVL-002.yaml \
+  --artifact-root build/evals/docker-avl-002 \
+  --mode scripted \
+  --model-adapter scripted \
+  --seeds 1 \
+  --use-docker
 PYTHONPATH=evals uv run --group eval pytest tests/evals/test_agent_validation_lab.py
 uv run ruff check .
 uv run ruff format --check .
