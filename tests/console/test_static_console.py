@@ -3,18 +3,22 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+import pytest
 from typer.testing import CliRunner
 
 from actionlineage.cli import app
 from actionlineage.console import (
+    ConsoleContextError,
     ConsoleNote,
     ConsoleSavedView,
+    console_context_from_dict,
     load_console_context,
     render_console_html,
     write_console,
     write_desktop_bundle,
 )
 from actionlineage.demo import run_demo
+from actionlineage.domain import RedactionPolicy
 from actionlineage.projection import TimelineEvent, TimelineResult
 
 runner = CliRunner()
@@ -40,6 +44,9 @@ def test_write_console_renders_demo_timeline_and_verification_matrix(tmp_path: P
     assert "verified" in html
     assert "unverified" in html
     assert "conflicting" in html
+    assert "Content-Security-Policy" in html
+    assert "default-src 'none'" in html
+    assert "<script" not in html.lower()
     assert "acknowledgement is not side-effect verification" in html
     assert "proof " + "of absence" not in html.lower()
 
@@ -209,6 +216,46 @@ def test_load_console_context_rejects_secret_values_without_leaking(tmp_path: Pa
     assert notes[0].body == "Bearer [REDACTED:bearer_token]"
 
 
+def test_load_console_context_rejects_oversized_file_without_leaking(tmp_path: Path) -> None:
+    path = tmp_path / "context.json"
+    secret = "Bearer " + "oversized-context-secret-value"
+    path.write_text(
+        json.dumps({"notes": [{"title": "Oversized", "body": "A" * 128 + secret}]}),
+        encoding="utf-8",
+    )
+
+    with pytest.raises(ConsoleContextError) as error:
+        load_console_context(path, max_context_file_bytes=32)
+
+    assert "console context file exceeds 32 byte limit" in str(error.value)
+    assert secret not in str(error.value)
+
+
+def test_console_context_rejects_excessive_annotation_counts() -> None:
+    notes = [{"title": f"Note {index}", "body": "bounded"} for index in range(3)]
+    saved_views = [
+        {"name": f"View {index}", "query": "verification_status:unknown"} for index in range(3)
+    ]
+
+    with pytest.raises(ConsoleContextError) as notes_error:
+        console_context_from_dict({"notes": notes}, max_context_items=2)
+    with pytest.raises(ConsoleContextError) as views_error:
+        console_context_from_dict({"saved_views": saved_views}, max_context_items=2)
+
+    assert str(notes_error.value) == "console context notes exceeds 2 item limit"
+    assert str(views_error.value) == "console context saved_views exceeds 2 item limit"
+
+
+def test_console_context_marks_truncated_annotation_text() -> None:
+    notes, _ = console_context_from_dict(
+        {"notes": [{"title": "Long body", "body": "abcdefghijk"}]},
+        redaction_policy=RedactionPolicy(max_string_length=4),
+    )
+
+    assert notes[0].body.startswith("abcd [TRUNCATED original_length=11 digest=sha256:")
+    assert "efghijk" not in notes[0].body
+
+
 def test_render_console_html_escapes_selector_and_payload() -> None:
     event = TimelineEvent(
         journal_record_number=1,
@@ -237,6 +284,7 @@ def test_render_console_html_escapes_selector_and_payload() -> None:
     html = render_console_html(timeline, title="<Console>")
 
     assert "<script>alert" not in html
+    assert "<script" not in html.lower()
     assert "&lt;script&gt;alert" in html
     assert "&lt;trace&gt;" in html
     assert "<title>&lt;Console&gt;</title>" in html

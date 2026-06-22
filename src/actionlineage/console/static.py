@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+from collections.abc import Mapping
 from dataclasses import dataclass
 from html import escape
 from pathlib import Path
@@ -13,6 +14,16 @@ from actionlineage.domain.events import JsonObject
 from actionlineage.projection import TimelineEvent, TimelineResult, query_timeline
 
 DESKTOP_BUNDLE_VERSION = "actionlineage.dev/desktop-bundle-v0"
+MAX_CONSOLE_CONTEXT_FILE_BYTES = 64 * 1024
+MAX_CONSOLE_CONTEXT_ITEMS = 50
+CONSOLE_CONTENT_SECURITY_POLICY = (
+    "default-src 'none'; "
+    "img-src data:; "
+    "style-src 'unsafe-inline'; "
+    "base-uri 'none'; "
+    "form-action 'none'; "
+    "frame-ancestors 'none'"
+)
 
 
 @dataclass(frozen=True, slots=True)
@@ -86,28 +97,48 @@ def load_console_context(
     path: Path,
     *,
     redaction_policy: RedactionPolicy | None = None,
+    max_context_file_bytes: int = MAX_CONSOLE_CONTEXT_FILE_BYTES,
+    max_context_items: int = MAX_CONSOLE_CONTEXT_ITEMS,
 ) -> tuple[tuple[ConsoleNote, ...], tuple[ConsoleSavedView, ...]]:
     """Load sanitized console notes and saved views from a JSON file."""
 
+    if max_context_file_bytes < 0:
+        raise ConsoleContextError("console context file byte limit must be non-negative")
+    path = Path(path)
     try:
-        data = json.loads(Path(path).read_text(encoding="utf-8"))
+        size_bytes = path.stat().st_size
+    except OSError as exc:
+        raise ConsoleContextError("console context file could not be inspected") from exc
+    if size_bytes > max_context_file_bytes:
+        raise ConsoleContextError(
+            f"console context file exceeds {max_context_file_bytes} byte limit"
+        )
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
     except json.JSONDecodeError as exc:
         raise ConsoleContextError("console context must be valid JSON") from exc
-    return console_context_from_dict(data, redaction_policy=redaction_policy)
+    return console_context_from_dict(
+        data,
+        redaction_policy=redaction_policy,
+        max_context_items=max_context_items,
+    )
 
 
 def console_context_from_dict(
     data: object,
     *,
     redaction_policy: RedactionPolicy | None = None,
+    max_context_items: int = MAX_CONSOLE_CONTEXT_ITEMS,
 ) -> tuple[tuple[ConsoleNote, ...], tuple[ConsoleSavedView, ...]]:
     """Build sanitized console notes and saved views from a mapping."""
 
     if not isinstance(data, dict):
         raise ConsoleContextError("console context must be an object")
+    if max_context_items < 0:
+        raise ConsoleContextError("console context item limit must be non-negative")
     policy = redaction_policy or RedactionPolicy()
-    notes = _notes_from_context(data.get("notes", ()), policy)
-    saved_views = _saved_views_from_context(data.get("saved_views", ()), policy)
+    notes = _notes_from_context(data.get("notes", ()), policy, max_context_items)
+    saved_views = _saved_views_from_context(data.get("saved_views", ()), policy, max_context_items)
     return notes, saved_views
 
 
@@ -215,6 +246,7 @@ def render_console_html(
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta http-equiv="Content-Security-Policy" content="{CONSOLE_CONTENT_SECURITY_POLICY}">
   <title>{escape(title)}</title>
   <style>
     :root {{
@@ -394,11 +426,16 @@ def render_console_html(
 """
 
 
-def _notes_from_context(value: object, policy: RedactionPolicy) -> tuple[ConsoleNote, ...]:
+def _notes_from_context(
+    value: object,
+    policy: RedactionPolicy,
+    max_context_items: int,
+) -> tuple[ConsoleNote, ...]:
     if value in (None, ()):
         return ()
     if not isinstance(value, list):
         raise ConsoleContextError("console context notes must be an array")
+    _check_context_item_count("notes", len(value), max_context_items)
     return tuple(_note_from_context(item, policy) for item in value)
 
 
@@ -417,12 +454,19 @@ def _note_from_context(value: object, policy: RedactionPolicy) -> ConsoleNote:
 def _saved_views_from_context(
     value: object,
     policy: RedactionPolicy,
+    max_context_items: int,
 ) -> tuple[ConsoleSavedView, ...]:
     if value in (None, ()):
         return ()
     if not isinstance(value, list):
         raise ConsoleContextError("console context saved_views must be an array")
+    _check_context_item_count("saved_views", len(value), max_context_items)
     return tuple(_saved_view_from_context(item, policy) for item in value)
+
+
+def _check_context_item_count(field: str, count: int, max_context_items: int) -> None:
+    if count > max_context_items:
+        raise ConsoleContextError(f"console context {field} exceeds {max_context_items} item limit")
 
 
 def _saved_view_from_context(value: object, policy: RedactionPolicy) -> ConsoleSavedView:
@@ -466,8 +510,16 @@ def _redacted_context_text(value: str, policy: RedactionPolicy) -> str:
         return redacted
     if isinstance(redacted, dict) and redacted.get("marker") == "actionlineage.capture.v1":
         captured = redacted.get("value")
-        return captured if isinstance(captured, str) else ""
+        prefix = captured if isinstance(captured, str) else ""
+        separator = " " if prefix else ""
+        return f"{prefix}{separator}{_capture_limit_note(redacted)}"
     return json.dumps(redacted, sort_keys=True)
+
+
+def _capture_limit_note(metadata: Mapping[str, object]) -> str:
+    original_length = metadata.get("original_length", "unknown")
+    digest = metadata.get("digest", "unknown")
+    return f"[TRUNCATED original_length={original_length} digest={digest}]"
 
 
 def _sanitize_note(note: ConsoleNote, policy: RedactionPolicy) -> ConsoleNote:

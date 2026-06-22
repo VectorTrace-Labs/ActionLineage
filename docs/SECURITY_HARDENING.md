@@ -39,6 +39,9 @@ Default local bounds:
 | Journal append | one canonical event per line | `LocalJournal.append` |
 | Projection rebuild | verified journals only | `rebuild_projection` |
 | Replay mutation | deterministic fixed seed | `Lineage Lab` replay API |
+| Static console context file | 64 KiB | `load_console_context` |
+| Static console notes | 50 items | `console_context_from_dict` |
+| Static console saved views | 50 items | `console_context_from_dict` |
 
 Large deployments should set tighter adapter-specific capture limits before
 collecting production evidence.

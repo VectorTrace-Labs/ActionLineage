@@ -92,6 +92,13 @@ reviewed input for future native shells and remains a rendered view.
 - Missing observations are displayed as missing observations only.
 - Case notes and saved views are rendered annotations, not journal evidence.
 - Console context text is passed through the redaction policy before rendering.
+- Console context files are bounded to 64 KiB by default and notes or saved
+  views are bounded to 50 items each. Oversized context fails closed before
+  rendering.
+- Annotation text that exceeds the active redaction capture limit is rendered
+  with a visible truncation marker and digest.
+- Generated HTML includes a restrictive Content Security Policy and does not
+  require scripts or remote resources.
 - Rule debugging is available through the detection API and CLI; collaborative
   workflows are deferred to a later optional console package.
 

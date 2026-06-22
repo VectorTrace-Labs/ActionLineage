@@ -33,6 +33,7 @@ and checklist wording.
 | Hash-chain verification detects mutation, deletion, insertion, duplication, and reorder when anchors make changes observable | Journal verifier and anchor helpers | `tests/journal/test_local_journal.py`, `tests/journal/test_anchors.py` | Demo verify command | Local-proof |
 | Projection is rebuildable and disposable | `src/actionlineage/projection/sqlite.py` | `tests/projection/test_sqlite_projection.py` | Demo `projection.sqlite` rebuilt from journal | Alpha-supported |
 | Incident export, case bundle, graph export, grounded summary, static console | Projection and console modules | `tests/projection`, `tests/console` | Demo console/export commands | Alpha-supported |
+| Static console annotations are bounded, redacted, escaped, and non-canonical | `src/actionlineage/console/static.py`, `docs/CONSOLE.md` | `tests/console/test_static_console.py` | Console context fails closed for oversized annotations and renders CSP-protected HTML | Alpha-supported |
 | Source-neutral ingestion exists | `src/actionlineage/evidence` | `tests/evidence` | README API example | Alpha-supported |
 | Evidence links include subject, evidence event, relationship, observer, confidence, status, and limitations | `EvidenceLink` model and schema | `tests/domain/test_evidence.py`, compatibility schema tests | Demo verified and conflicting events | Alpha-supported |
 | Tool acknowledgement is not side-effect verification | Demo scenario and detection rules | `tests/demo`, `tests/detection/test_sequence.py` | Unverified HTTP send | Alpha-supported |
@@ -78,6 +79,7 @@ and checklist wording.
 | Local hash chains can be overinterpreted | Integrity overclaim | Threat model and journal integrity docs | Continue using precise trust-limit wording |
 | GitHub Release object can drift from tags/package indexes | Broken release audit trail | Release-consistency checker and owner gate | Create/repair `v0.1.0a3` GitHub Release only with owner approval |
 | Projection SQLite handle closure can regress | Reliability signal can be missed in noisy verification output | Projection API closes connection handles and has warning-as-error regression coverage | Keep warning-as-error projection test in release verification |
+| Static console context can become an oversized or unsafe rendered artifact | Browser-side and review-bundle risk | Context file/item bounds, redaction/truncation markers, strict escaping, and CSP tests | Keep hostile context fixtures in console tests |
 | Review-readiness docs can be mistaken for validation | Misleading social proof | External-review docs and scorecard separate readiness from actual external evidence | Keep actual reviews, adoption, and production history external-validation until real artifacts exist |
 | Release-candidate preparation can be mistaken for publication | Broken release expectations | Release-candidate audit and owner checklist mark publication and release-object work as owner-gated | Do not push, tag, publish, or create release objects from local audit work |
 
