@@ -9,7 +9,7 @@ validated yet.
 | Channel | Status | Notes |
 | --- | --- | --- |
 | GitHub Releases | Alpha-supported | Release artifacts are built by GitHub Actions, checksummed, and attested. |
-| PyPI/TestPyPI | Alpha-supported | `actionlineage` `0.1.0a3` is the Python 3.12-compatible alpha release candidate; publish through Trusted Publishing and rerun fresh install/demo smoke before announcement. |
+| PyPI/TestPyPI | Alpha-supported | `actionlineage` `0.1.0a3` is published as the Python 3.12-compatible alpha release through Trusted Publishing; fresh install/demo smoke passed from both indexes. |
 | GHCR container image | Preview | The release workflow builds, smoke-tests, and publishes tagged images with `GITHUB_TOKEN`. |
 | Homebrew tap | Planned | A tap and formula should be created after Python package publication or a validated source formula path. |
 | conda-forge | Planned | Defer until PyPI publication and at least one public alpha feedback cycle. |
@@ -42,18 +42,18 @@ are easier to audit and avoid implying production stability.
 ## PyPI And TestPyPI
 
 PyPI is the primary Python package channel for the public alpha. Version
-`0.1.0a3` is the Python 3.12-compatible alpha release candidate for:
+`0.1.0a3` is the Python 3.12-compatible alpha release for:
 
 - `https://pypi.org/project/actionlineage/`
 - `https://test.pypi.org/project/actionlineage/`
 
-After the `0.1.0a3` Trusted Publishing run completes, use PyPI for normal
-evaluation on Python 3.12 or newer:
+Use PyPI for normal evaluation on Python 3.12 or newer. Because `0.1.0a3` is a
+prerelease, `uvx` needs an explicit prerelease flag:
 
 ```bash
-uvx --from actionlineage==0.1.0a3 actionlineage version
-uvx --from actionlineage==0.1.0a3 actionlineage demo run --output-dir /tmp/actionlineage-demo
-uvx --from actionlineage==0.1.0a3 actionlineage journal verify /tmp/actionlineage-demo/evidence.jsonl
+uvx --prerelease allow --from actionlineage==0.1.0a3 actionlineage version
+uvx --prerelease allow --from actionlineage==0.1.0a3 actionlineage demo run --output-dir /tmp/actionlineage-demo
+uvx --prerelease allow --from actionlineage==0.1.0a3 actionlineage journal verify /tmp/actionlineage-demo/evidence.jsonl
 ```
 
 Previous package-publication proof remains available for `0.1.0a2`; that

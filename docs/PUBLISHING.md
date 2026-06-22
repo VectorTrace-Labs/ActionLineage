@@ -66,9 +66,8 @@ avoid implying production stability and make release evidence easier to audit.
 ## Trusted Publisher Setup
 
 Package publishing uses Trusted Publisher records in TestPyPI and PyPI. Version
-`0.1.0a2` was published from `.github/workflows/release.yml` with no registry
-API token. Version `0.1.0a3` is the Python 3.12-compatible alpha release
-candidate and must use the same Trusted Publishing path.
+`0.1.0a3` was published from `.github/workflows/release.yml` with no registry
+API token and is the Python 3.12-compatible alpha release.
 
 For TestPyPI:
 
@@ -127,18 +126,17 @@ shasum -a 256 -c SHA256SUMS.txt
 
 ## Current Alpha Publication Evidence
 
-Current public package publication proof before the Python 3.12 compatibility
-release:
+Current public package publication proof:
 
 - TestPyPI: `https://test.pypi.org/project/actionlineage/`
 - PyPI: `https://pypi.org/project/actionlineage/`
-- Version: `0.1.0a2`
-- TestPyPI workflow run: `27957719209`
-- PyPI workflow run: `27958024445`
+- Version: `0.1.0a3`
+- TestPyPI workflow run: `27973522992`
+- PyPI workflow run: `27973832210`
 
 Fresh `uvx` install, deterministic demo, and journal verification passed from
-both indexes for the prior package metadata. Publish and smoke-test `0.1.0a3`
-before using PyPI as public proof of Python 3.12 compatibility.
+both indexes for `0.1.0a3` on Python 3.12. Because `0.1.0a3` is a prerelease,
+`uvx` smoke tests use `--prerelease allow`.
 Organization ownership transfer remains an external follow-up.
 
 See `docs/PACKAGE_MANAGERS.md` for GHCR, Homebrew, conda-forge, and deferred

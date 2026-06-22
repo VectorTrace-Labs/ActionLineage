@@ -143,9 +143,9 @@ See `docs/PUBLISHING.md` for the Trusted Publisher setup values.
 After package publication, verify the current public package from PyPI:
 
 ```bash
-uvx --from actionlineage==0.1.0a3 actionlineage version
-uvx --from actionlineage==0.1.0a3 actionlineage demo run --output-dir /tmp/actionlineage-demo
-uvx --from actionlineage==0.1.0a3 actionlineage journal verify /tmp/actionlineage-demo/evidence.jsonl
+uvx --prerelease allow --from actionlineage==0.1.0a3 actionlineage version
+uvx --prerelease allow --from actionlineage==0.1.0a3 actionlineage demo run --output-dir /tmp/actionlineage-demo
+uvx --prerelease allow --from actionlineage==0.1.0a3 actionlineage journal verify /tmp/actionlineage-demo/evidence.jsonl
 ```
 
 ## Package Manager Channels
