@@ -9,7 +9,7 @@ validated yet.
 | Channel | Status | Notes |
 | --- | --- | --- |
 | GitHub Releases | Alpha-supported | Release artifacts are built by GitHub Actions, checksummed, and attested. |
-| PyPI/TestPyPI | Alpha-supported | `actionlineage` `0.1.0a2` is published through Trusted Publishing and fresh install/demo smoke passed. |
+| PyPI/TestPyPI | Alpha-supported | `actionlineage` `0.1.0a3` is the Python 3.12-compatible alpha release candidate; publish through Trusted Publishing and rerun fresh install/demo smoke before announcement. |
 | GHCR container image | Preview | The release workflow builds, smoke-tests, and publishes tagged images with `GITHUB_TOKEN`. |
 | Homebrew tap | Planned | A tap and formula should be created after Python package publication or a validated source formula path. |
 | conda-forge | Planned | Defer until PyPI publication and at least one public alpha feedback cycle. |
@@ -42,19 +42,23 @@ are easier to audit and avoid implying production stability.
 ## PyPI And TestPyPI
 
 PyPI is the primary Python package channel for the public alpha. Version
-`0.1.0a2` is published at:
+`0.1.0a3` is the Python 3.12-compatible alpha release candidate for:
 
 - `https://pypi.org/project/actionlineage/`
 - `https://test.pypi.org/project/actionlineage/`
 
-Fresh install and demo smoke validation passed from both package indexes. Use
-PyPI for normal evaluation:
+After the `0.1.0a3` Trusted Publishing run completes, use PyPI for normal
+evaluation on Python 3.12 or newer:
 
 ```bash
-uvx --from actionlineage==0.1.0a2 actionlineage version
-uvx --from actionlineage==0.1.0a2 actionlineage demo run --output-dir /tmp/actionlineage-demo
-uvx --from actionlineage==0.1.0a2 actionlineage journal verify /tmp/actionlineage-demo/evidence.jsonl
+uvx --from actionlineage==0.1.0a3 actionlineage version
+uvx --from actionlineage==0.1.0a3 actionlineage demo run --output-dir /tmp/actionlineage-demo
+uvx --from actionlineage==0.1.0a3 actionlineage journal verify /tmp/actionlineage-demo/evidence.jsonl
 ```
+
+Previous package-publication proof remains available for `0.1.0a2`; that
+release used the prior package metadata and should not be used as the Python
+3.12 compatibility proof.
 
 The release workflow publishes through Trusted Publishing and GitHub OIDC with
 the `testpypi` and `pypi` environments. Do not add long-lived PyPI API tokens

@@ -55,7 +55,7 @@ Review current versions before implementation. Prefer specifications and officia
 ## Suggested local tools
 
 - Docker or Podman with Compose support.
-- `git`, `uv`, Python 3.13+, and `make`.
+- `git`, `uv`, Python 3.12+, and `make`.
 - `gitleaks` or an equivalent secret scanner.
 - `pip-audit` for Python dependency advisories.
 - MCP Inspector for protocol debugging.

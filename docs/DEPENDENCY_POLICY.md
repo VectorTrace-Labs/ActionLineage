@@ -22,7 +22,7 @@ Document:
 
 ## Current dependency baseline
 
-- Python 3.13+
+- Python 3.12+
 - `uv` for environment and lockfile management.
 - Pydantic for configuration and serialization boundaries.
 - Typer for CLI.

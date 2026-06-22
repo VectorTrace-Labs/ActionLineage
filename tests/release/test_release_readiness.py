@@ -13,13 +13,19 @@ PYPROJECT = PROJECT_ROOT / "pyproject.toml"
 
 
 def test_package_metadata_is_public_alpha_ready() -> None:
-    project = tomllib.loads(PYPROJECT.read_text(encoding="utf-8"))["project"]
+    pyproject = tomllib.loads(PYPROJECT.read_text(encoding="utf-8"))
+    project = pyproject["project"]
 
-    assert project["version"] == "0.1.0a2"
-    assert actionlineage.__version__ == "0.1.0a2"
+    assert project["version"] == "0.1.0a3"
+    assert project["requires-python"] == ">=3.12"
+    assert actionlineage.__version__ == "0.1.0a3"
     assert "Development Status :: 3 - Alpha" in project["classifiers"]
     assert "Development Status :: 5 - Production/Stable" not in project["classifiers"]
+    assert "Programming Language :: Python :: 3.12" in project["classifiers"]
+    assert "Programming Language :: Python :: 3.13" in project["classifiers"]
     assert "Typing :: Typed" in project["classifiers"]
+    assert pyproject["tool"]["ruff"]["target-version"] == "py312"
+    assert pyproject["tool"]["mypy"]["python_version"] == "3.12"
 
 
 def test_optional_extras_are_split_by_release_surface() -> None:
@@ -79,15 +85,17 @@ def test_cli_version_matches_package_metadata() -> None:
     result = CliRunner().invoke(app, ["version"])
 
     assert result.exit_code == 0
-    assert result.stdout.strip() == "0.1.0a2"
+    assert result.stdout.strip() == "0.1.0a3"
 
 
 def test_readme_quickstart_uses_demo_aligned_contract() -> None:
     readme = (PROJECT_ROOT / "README.md").read_text(encoding="utf-8")
 
     assert "Five-Minute PyPI Evaluation" in readme
-    assert "uvx --from actionlineage==0.1.0a2 actionlineage version" in readme
-    assert "uvx --from actionlineage==0.1.0a2 actionlineage demo run --output-dir" in readme
+    assert "Python 3.12 or newer" in readme
+    assert "After the `0.1.0a3` Trusted Publishing run completes" in readme
+    assert "uvx --from actionlineage==0.1.0a3 actionlineage version" in readme
+    assert "uvx --from actionlineage==0.1.0a3 actionlineage demo run --output-dir" in readme
     assert "PyPI path needs internet access to install the package" in readme
     assert "uv sync --locked --all-extras" in readme
     assert "contracts/examples/outbound-http.json" in readme
@@ -139,6 +147,9 @@ def test_release_checklist_covers_required_gates() -> None:
 def test_ci_runs_local_release_proof_gates() -> None:
     workflow = (PROJECT_ROOT / ".github/workflows/ci.yml").read_text(encoding="utf-8")
 
+    assert "python-version: ['3.12', '3.13']" in workflow
+    assert "python-version: ${{ matrix.python-version }}" in workflow
+    assert "uv sync --locked --all-extras" in workflow
     assert (
         "uv run python scripts/generate_sbom.py --output /tmp/actionlineage-sbom.json" in workflow
     )
@@ -154,6 +165,8 @@ def test_release_workflow_builds_attests_and_uses_trusted_publishing() -> None:
 
     assert "name: release" in workflow
     assert "publish_target:" in workflow
+    assert 'python-version: ["3.12", "3.13"]' in workflow
+    assert "python-version: ${{ matrix.python-version }}" in workflow
     assert "name: Verify release candidate" in workflow
     assert "name: Build release artifacts" in workflow
     assert "name: Smoke test release artifact bundle" in workflow
@@ -196,6 +209,13 @@ def test_artifact_upload_action_is_node24_pin_and_download_action_is_not_used() 
     assert upload_artifact_v7_0_1 in agent_validation
     assert combined.count(f"actions/upload-artifact@{upload_artifact_v7_0_1}") == 4
     assert "actions/download-artifact@" not in combined
+    assert 'python-version: ["3.12", "3.13"]' in agent_validation
+    assert (
+        "actionlineage-agent-validation-no-model-py${{ matrix.python-version }}" in agent_validation
+    )
+    assert (
+        "actionlineage-agent-validation-docker-py${{ matrix.python-version }}" in agent_validation
+    )
 
 
 def test_release_workflow_publishes_versioned_ghcr_image_without_registry_secret() -> None:
@@ -232,7 +252,8 @@ def test_publishing_docs_record_package_publication_and_remaining_gates() -> Non
     assert "Organization ownership transfer remains an external follow-up" in publishing
     assert "ghcr.io/vectortrace-labs/actionlineage" in package_managers
     assert "PyPI/TestPyPI | Alpha-supported" in package_managers
-    assert "uvx --from actionlineage==0.1.0a2 actionlineage version" in package_managers
+    assert "uvx --from actionlineage==0.1.0a3 actionlineage version" in package_managers
+    assert "Python 3.12-compatible alpha release candidate" in package_managers
     assert "do not publish or document a `latest` tag" in package_managers
     assert "Homebrew tap" in package_managers
     assert "Do not commit an unvalidated formula" in package_managers

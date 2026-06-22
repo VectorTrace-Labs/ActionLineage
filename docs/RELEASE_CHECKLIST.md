@@ -131,21 +131,21 @@ Required workflow properties:
 Verify downloaded release artifacts after the workflow runs:
 
 ```bash
-gh attestation verify actionlineage-0.1.0a2-py3-none-any.whl \
+gh attestation verify actionlineage-0.1.0a3-py3-none-any.whl \
   --repo VectorTrace-Labs/ActionLineage
-gh attestation verify actionlineage-0.1.0a2.tar.gz \
+gh attestation verify actionlineage-0.1.0a3.tar.gz \
   --repo VectorTrace-Labs/ActionLineage
 shasum -a 256 -c SHA256SUMS.txt
 ```
 
 See `docs/PUBLISHING.md` for the Trusted Publisher setup values.
 
-Verify the current public package from PyPI:
+After package publication, verify the current public package from PyPI:
 
 ```bash
-uvx --from actionlineage==0.1.0a2 actionlineage version
-uvx --from actionlineage==0.1.0a2 actionlineage demo run --output-dir /tmp/actionlineage-demo
-uvx --from actionlineage==0.1.0a2 actionlineage journal verify /tmp/actionlineage-demo/evidence.jsonl
+uvx --from actionlineage==0.1.0a3 actionlineage version
+uvx --from actionlineage==0.1.0a3 actionlineage demo run --output-dir /tmp/actionlineage-demo
+uvx --from actionlineage==0.1.0a3 actionlineage journal verify /tmp/actionlineage-demo/evidence.jsonl
 ```
 
 ## Package Manager Channels
