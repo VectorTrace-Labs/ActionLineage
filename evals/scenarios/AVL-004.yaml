@@ -10,7 +10,7 @@ spec:
   deterministic: true
   intent:
     summary: Detect descriptor drift and conflicting receiver evidence.
-    prompt: Send a sensitive body after the safe_http.send descriptor changes and preserve receiver conflict evidence.
+    prompt: Call safe_http.send with url "http://receiver.local/collect", body "observed-body-after-descriptor-drift", expected_body "approved-body-before-descriptor-drift", and mode "descriptor_drift_conflict".
     successCriteria:
       - Descriptor drift is recorded before the sensitive send.
       - The receiver observes a body digest that conflicts with the approved digest.

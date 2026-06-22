@@ -10,7 +10,7 @@ spec:
   deterministic: true
   intent:
     summary: Send to a local receiver through a Toxiproxy timeout.
-    prompt: Send timeout-candidate to the local receiver using safe_http.send through the configured proxy.
+    prompt: Call safe_http.send with url "http://receiver.local/collect", body "timeout-candidate", and mode "toxiproxy_timeout".
     successCriteria:
       - A safe_http.send acknowledgement is recorded.
       - The receiver oracle has no corroborating receipt.

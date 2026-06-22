@@ -12,7 +12,7 @@ PROJECT_ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(PROJECT_ROOT / "evals"))
 
 from actionlineage_evals import adapters as adapters_module  # noqa: E402
-from actionlineage_evals.adapters import GitHubModelsAdapter  # noqa: E402
+from actionlineage_evals.adapters import GitHubModelsAdapter, LocalToolAgent  # noqa: E402
 from actionlineage_evals.minimization import (  # noqa: E402
     minimize_tool_calls,
     tool_call_count,
@@ -22,6 +22,7 @@ from actionlineage_evals.models import (  # noqa: E402
     Budget,
     FailureClass,
     JsonMap,
+    ModelTurn,
     RunMode,
     ScoreResult,
     ToolCall,
@@ -79,7 +80,11 @@ def test_github_models_adapter_prefers_model_specific_token(monkeypatch) -> None
             "choices": [
                 {
                     "message": {
-                        "content": json.dumps({"final": "ok", "tool_calls": []}, sort_keys=True),
+                        "content": (
+                            "```json\n"
+                            f"{json.dumps({'final': 'ok', 'tool_calls': []}, sort_keys=True)}\n"
+                            "```"
+                        ),
                     },
                 },
             ],
@@ -104,6 +109,59 @@ def test_github_models_adapter_prefers_model_specific_token(monkeypatch) -> None
 
     assert seen["token"] == "models-token"
     assert turn.tool_calls == ()
+
+
+def test_local_tool_agent_returns_live_tool_plan_with_single_turn_budget() -> None:
+    class FakeLiveModel:
+        provider = "github_models"
+        model_id = "test/live-tool-plan"
+
+        def generate(
+            self,
+            *,
+            prompt: str,
+            tools: tuple[str, ...],
+            budget: Budget,
+            request_index: int,
+        ) -> ModelTurn:
+            del prompt, tools, budget
+            return ModelTurn(
+                content=json.dumps(
+                    {
+                        "final": "read requested",
+                        "tool_calls": [
+                            {
+                                "name": "safe_files.read",
+                                "arguments": {
+                                    "path": "workspace/restricted/quarterly-plan.txt",
+                                },
+                            },
+                        ],
+                    },
+                    sort_keys=True,
+                ),
+                tool_calls=(
+                    ToolCall(
+                        name="safe_files.read",
+                        arguments={"path": "workspace/restricted/quarterly-plan.txt"},
+                    ),
+                ),
+                provider="github_models",
+                model_id=self.model_id,
+                request_index=request_index,
+            )
+
+    scenario = load_scenarios(PROJECT_ROOT / "evals" / "scenarios")[0]
+
+    turns = LocalToolAgent().run(scenario, FakeLiveModel())
+
+    assert len(turns) == 1
+    assert turns[0].tool_calls == (
+        ToolCall(
+            name="safe_files.read",
+            arguments={"path": "workspace/restricted/quarterly-plan.txt"},
+        ),
+    )
 
 
 def test_scripted_suite_runs_all_scenarios_and_replay(tmp_path: Path) -> None:

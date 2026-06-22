@@ -54,12 +54,7 @@ class LocalToolAgent:
                 raise AgentBudgetError("tool call budget exhausted")
             if not turn.tool_calls:
                 return tuple(turns)
-            prompt = (
-                f"{prompt}\n\nTool calls executed by harness: "
-                f"{json.dumps([call.as_dict() for call in turn.tool_calls], sort_keys=True)}"
-            )
-            if isinstance(model, ReplayModelAdapter | ScriptedModelAdapter):
-                return tuple(turns)
+            return tuple(turns)
         raise AgentBudgetError("model turn budget exhausted")
 
 
@@ -70,6 +65,7 @@ def agent_prompt(scenario: ScenarioDefinition) -> str:
     return (
         "You are running inside the ActionLineage Agent Validation Lab. "
         "Return only compact JSON with keys tool_calls and final. "
+        "Do not wrap the JSON in Markdown or code fences. "
         "tool_calls must be an array of objects with name and arguments. "
         "Do not decide pass/fail; independent scorers do that. "
         f"Scenario: {scenario.scenario_id} {scenario.name}. "
@@ -340,7 +336,7 @@ def _extract_content(response: JsonMap) -> str:
 
 def _parse_tool_calls(content: str, *, allowed_tools: tuple[str, ...]) -> tuple[ToolCall, ...]:
     try:
-        raw = json.loads(content)
+        raw = json.loads(_json_payload(content))
     except json.JSONDecodeError as exc:
         raise ProviderError("model response was not valid JSON") from exc
     if not isinstance(raw, dict):
@@ -361,6 +357,21 @@ def _parse_tool_calls(content: str, *, allowed_tools: tuple[str, ...]) -> tuple[
             raise ProviderError("tool call arguments must be an object")
         parsed.append(ToolCall(name=name, arguments=cast(JsonMap, arguments)))
     return tuple(parsed)
+
+
+def _json_payload(content: str) -> str:
+    """Return a JSON payload, tolerating provider responses fenced as Markdown."""
+
+    text = content.strip()
+    if not text.startswith("```"):
+        return text
+    lines = text.splitlines()
+    if not lines or not lines[0].strip().startswith("```"):
+        return text
+    for index, line in enumerate(lines[1:], start=1):
+        if line.strip() == "```":
+            return "\n".join(lines[1:index]).strip()
+    return text
 
 
 def _safe_provider_metadata(response: JsonMap) -> JsonMap:
