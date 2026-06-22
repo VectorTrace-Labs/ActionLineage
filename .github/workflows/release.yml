@@ -101,7 +101,7 @@ jobs:
       - name: Download release artifacts
         env:
           GH_TOKEN: ${{ github.token }}
-        run: gh run download "${GITHUB_RUN_ID}" --name actionlineage-release-artifacts --dir release-artifacts
+        run: gh run download "${GITHUB_RUN_ID}" --repo "${GITHUB_REPOSITORY}" --name actionlineage-release-artifacts --dir release-artifacts
       - name: Verify release artifact bundle
         run: |
           cd release-artifacts
@@ -167,7 +167,7 @@ jobs:
       - name: Download release artifacts
         env:
           GH_TOKEN: ${{ github.token }}
-        run: gh run download "${GITHUB_RUN_ID}" --name actionlineage-release-artifacts --dir release-artifacts
+        run: gh run download "${GITHUB_RUN_ID}" --repo "${GITHUB_REPOSITORY}" --name actionlineage-release-artifacts --dir release-artifacts
       - name: Publish package distributions to TestPyPI
         uses: pypa/gh-action-pypi-publish@cef221092ed1bacb1cc03d23a2d87d1d172e277b
         with:
@@ -189,7 +189,7 @@ jobs:
       - name: Download release artifacts
         env:
           GH_TOKEN: ${{ github.token }}
-        run: gh run download "${GITHUB_RUN_ID}" --name actionlineage-release-artifacts --dir release-artifacts
+        run: gh run download "${GITHUB_RUN_ID}" --repo "${GITHUB_REPOSITORY}" --name actionlineage-release-artifacts --dir release-artifacts
       - name: Publish package distributions to PyPI
         uses: pypa/gh-action-pypi-publish@cef221092ed1bacb1cc03d23a2d87d1d172e277b
         with:
