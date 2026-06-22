@@ -294,6 +294,9 @@ def test_release_checklist_covers_required_gates() -> None:
         "uv run ruff format --check .",
         "uv run mypy src",
         "uv run pytest",
+        "--cov=actionlineage",
+        "--cov-branch",
+        "--cov-fail-under=85",
         "scripts/generate_demo_evidence_map.py",
         "--demo-dir /tmp/actionlineage-demo",
         "scripts/check_claims_language.py",
@@ -305,6 +308,8 @@ def test_release_checklist_covers_required_gates() -> None:
         "scripts/smoke_public_quickstart.py",
         "--package-spec dist/actionlineage-0.1.0a3-py3-none-any.whl",
         "--package-spec dist/actionlineage-0.1.0a3.tar.gz",
+        "scripts/write_ci_quality_summary.py",
+        "--coverage-floor 85",
         "uv build --out-dir /tmp/actionlineage-dist",
         "scripts/generate_release_provenance.py",
         "--dist-dir /tmp/actionlineage-dist",
@@ -333,6 +338,11 @@ def test_ci_runs_local_release_proof_gates() -> None:
     assert "python-version: ['3.12', '3.13']" in workflow
     assert "python-version: ${{ matrix.python-version }}" in workflow
     assert "uv sync --locked --all-extras" in workflow
+    assert "name: Test with branch coverage" in workflow
+    assert "--cov=actionlineage" in workflow
+    assert "--cov-branch" in workflow
+    assert "--cov-report=xml:/tmp/actionlineage-coverage.xml" in workflow
+    assert "--cov-fail-under=85" in workflow
     assert (
         "uv run python scripts/generate_sbom.py --output /tmp/actionlineage-sbom.json" in workflow
     )
@@ -351,6 +361,10 @@ def test_ci_runs_local_release_proof_gates() -> None:
     assert "scripts/smoke_public_quickstart.py" in workflow
     assert '--package-spec "$wheel"' in workflow
     assert '--package-spec "$sdist"' in workflow
+    assert "name: CI quality summary" in workflow
+    assert "scripts/write_ci_quality_summary.py" in workflow
+    assert "--coverage-floor 85" in workflow
+    assert 'cat /tmp/actionlineage-ci-summary.md >> "$GITHUB_STEP_SUMMARY"' in workflow
 
 
 def test_release_workflow_builds_attests_and_uses_trusted_publishing() -> None:

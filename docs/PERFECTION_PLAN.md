@@ -37,11 +37,14 @@ release decision and external validation evidence.
 
 ## Phase 2: Five-Minute Clean Installation
 
-Status: implemented for repository-based alpha evaluation.
+Status: implemented for repository-based alpha evaluation and locally built
+wheel/source-distribution first-time-user smoke validation.
 
 Acceptance tests:
 
 - Fresh clone path uses `uv sync --locked --all-extras` and `make demo`.
+- Built wheel and source distribution artifacts run the public CLI quickstart
+  path through `scripts/smoke_public_quickstart.py`.
 - README and tutorial validate `contracts/examples/outbound-http.json` against
   demo evidence.
 - Clean tracked snapshot passes with `uv run --all-extras pytest`.
@@ -77,7 +80,9 @@ Codex-executable work:
 - Keep golden journals readable and projectable.
 - Keep scanners, SBOM, dependency audit, and local provenance in CI.
 - Keep provenance subjects limited to release artifacts.
-- Add benchmarks and coverage reports when release cadence needs them.
+- Keep branch-enabled total coverage and concise GitHub job-summary evidence in
+  CI as non-regression release signals.
+- Add benchmarks when release cadence needs them.
 
 External validation:
 

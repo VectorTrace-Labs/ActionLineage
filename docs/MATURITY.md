@@ -46,8 +46,9 @@ evidence and limitations.
 - Release hardening scripts for claim language, secret scanning, SBOM, local
   provenance, dependency audit, repository-local Markdown link checking, and
   release consistency.
-- CI release-proof gates for wheel/sdist build, SBOM, dependency audit, and
-  unsigned local provenance generation.
+- CI release-proof gates for branch-enabled total coverage, wheel/sdist build,
+  first-time-user artifact smoke, SBOM, dependency audit, unsigned local
+  provenance generation, and concise GitHub job-summary evidence.
 - Release workflow for CI-built artifacts, GitHub artifact attestations, and
   manual Trusted Publishing jobs.
 - External review guides, reproduction commands, and feedback templates that

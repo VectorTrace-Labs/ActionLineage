@@ -56,7 +56,8 @@ and checklist wording.
 | Cloud/Kubernetes observers exist as fixture-backed observers | `src/actionlineage/observers/cloud.py` | `tests/observers/test_cloud_observers.py` | No live cloud required | Preview |
 | Public release metadata is alpha and supports Python 3.12+ | `pyproject.toml`, `src/actionlineage/__init__.py` | `tests/release/test_release_readiness.py`, CI/release workflow matrices | CLI `version` output | Alpha-supported |
 | Release hardening scripts exist | `scripts/` | `tests/security/test_release_hardening.py` | SBOM and provenance generated locally | Local-proof |
-| CI runs local release proof gates | `.github/workflows/ci.yml` | `tests/release/test_release_readiness.py` | Wheel, sdist, first-time-user artifact smoke, SBOM, audit, Markdown link check, and unsigned provenance are generated in CI | Local-proof |
+| CI runs local release proof gates | `.github/workflows/ci.yml` | `tests/release/test_release_readiness.py` | Branch-enabled coverage floor, wheel, sdist, first-time-user artifact smoke, SBOM, audit, Markdown link check, and unsigned provenance are generated in CI | Local-proof |
+| CI publishes concise quality/security evidence summary | `scripts/write_ci_quality_summary.py`, `.github/workflows/ci.yml`, `docs/RELEASE_CHECKLIST.md` | `tests/security/test_release_hardening.py`, `tests/release/test_release_readiness.py` | GitHub job summary reports Python version, line/branch/combined coverage, demo visual, SBOM, provenance, artifacts, and quickstart smoke evidence | Local-proof |
 | Built artifacts pass first-time-user smoke | `scripts/smoke_public_quickstart.py`, `.github/workflows/ci.yml`, `docs/RELEASE_CHECKLIST.md` | `tests/security/test_release_hardening.py`, `tests/release/test_release_readiness.py` | Built wheel and sdist run version, demo, journal verify, contract validate, case export, and static console export | Local-proof |
 | Repository-local Markdown links are checked without network credentials | `scripts/check_markdown_links.py`, `.github/workflows/ci.yml`, `docs/RELEASE_CHECKLIST.md` | `tests/security/test_release_hardening.py`, `tests/release/test_release_readiness.py` | CI and release checklist run `uv run python scripts/check_markdown_links.py .` | Local-proof |
 | Release workflow builds, verifies on Python 3.12/3.13, and attests artifacts | `.github/workflows/release.yml`, `docs/PUBLISHING.md` | `tests/release/test_release_readiness.py`, `scripts/check_release_consistency.py` | Local workflow definition and package-index proof exist; GitHub Release object for `v0.1.0a3` remains owner-gated | Local-proof / External-validation-required |
@@ -80,6 +81,7 @@ and checklist wording.
 | Service/deployment examples are not production hardened | Operational misuse | Preview labels and security docs | External deployment review before broader claims |
 | Demo and contract examples can drift | Broken onboarding | Demo tests and contract validation | Keep README quickstart tied to passing contract |
 | Built package artifacts can drift from source-checkout quickstart | Broken first-time-user path | CI smokes built wheel and sdist through `scripts/smoke_public_quickstart.py` | Keep the smoke path focused on documented public CLI commands |
+| Coverage can regress quietly while tests remain green | Weaker release evidence for critical paths | CI runs pytest with branch coverage and an 85 percent branch-enabled total coverage floor | Treat the floor as a non-regression guard, not a public coverage badge |
 | Documentation links can drift during review preparation | Broken onboarding and reproduction paths | Repository-local Markdown link checker in CI and release checklist | Keep the checker local by default and treat external URL reachability as separate release/publication evidence |
 | Local hash chains can be overinterpreted | Integrity overclaim | Threat model and journal integrity docs | Continue using precise trust-limit wording |
 | GitHub Release object can drift from tags/package indexes | Broken release audit trail | Release-consistency checker and owner gate | Create/repair `v0.1.0a3` GitHub Release only with owner approval |
@@ -98,7 +100,7 @@ uv sync --locked --all-extras
 uv run ruff check .
 uv run ruff format --check .
 uv run mypy src
-uv run pytest
+uv run pytest --cov=actionlineage --cov-branch --cov-report=term --cov-report=xml:/tmp/actionlineage-coverage.xml --cov-fail-under=85
 uv run actionlineage demo run --output-dir /tmp/actionlineage-demo
 uv run python scripts/generate_demo_evidence_map.py --demo-dir /tmp/actionlineage-demo
 uv run python scripts/generate_demo_evidence_map.py --demo-dir /tmp/actionlineage-demo --check
@@ -112,6 +114,7 @@ uv run python scripts/smoke_public_quickstart.py --package-spec /tmp/actionlinea
 uv run python scripts/smoke_public_quickstart.py --package-spec /tmp/actionlineage-dist/actionlineage-0.1.0a3.tar.gz --output-dir /tmp/actionlineage-sdist-smoke
 uv run python scripts/check_release_consistency.py --dist-dir /tmp/actionlineage-dist
 uv run python scripts/generate_release_provenance.py --dist-dir /tmp/actionlineage-dist --output /tmp/actionlineage-provenance.json
+uv run python scripts/write_ci_quality_summary.py --python-version 3.13 --coverage-xml /tmp/actionlineage-coverage.xml --coverage-floor 85 --sbom /tmp/actionlineage-sbom.json --provenance /tmp/actionlineage-provenance.json --dist-dir /tmp/actionlineage-dist --wheel-smoke-dir /tmp/actionlineage-wheel-smoke --sdist-smoke-dir /tmp/actionlineage-sdist-smoke --demo-map-svg /tmp/actionlineage-demo/demo-evidence-map.svg --output /tmp/actionlineage-ci-summary.md
 gh workflow run release.yml -f publish_target=none
 ```
 

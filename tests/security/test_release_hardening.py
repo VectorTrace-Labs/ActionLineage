@@ -231,6 +231,72 @@ def test_public_quickstart_smoke_reports_timed_out_step(monkeypatch) -> None:
     assert "step timed out after 0.01 seconds" in result.stderr
 
 
+def test_ci_quality_summary_reports_coverage_and_artifacts(tmp_path: Path) -> None:
+    writer = _load_script("write_ci_quality_summary")
+    coverage_xml = tmp_path / "coverage.xml"
+    coverage_xml.write_text(
+        '<coverage lines-valid="100" lines-covered="90" '
+        'branches-valid="50" branches-covered="39" />',
+        encoding="utf-8",
+    )
+    sbom_path = tmp_path / "sbom.json"
+    provenance_path = tmp_path / "provenance.json"
+    dist_dir = tmp_path / "dist"
+    wheel_smoke_dir = tmp_path / "wheel-smoke"
+    sdist_smoke_dir = tmp_path / "sdist-smoke"
+    demo_map_svg = tmp_path / "demo" / "demo-evidence-map.svg"
+    sbom_path.write_text("{}", encoding="utf-8")
+    provenance_path.write_text("{}", encoding="utf-8")
+    dist_dir.mkdir()
+    (dist_dir / "actionlineage-0.1.0a3-py3-none-any.whl").write_text("", encoding="utf-8")
+    (dist_dir / "actionlineage-0.1.0a3.tar.gz").write_text("", encoding="utf-8")
+    demo_map_svg.parent.mkdir()
+    demo_map_svg.write_text("<svg />", encoding="utf-8")
+    _write_quickstart_smoke_artifacts(wheel_smoke_dir)
+    _write_quickstart_smoke_artifacts(sdist_smoke_dir)
+
+    result = writer.build_summary(
+        python_version="3.13.5",
+        coverage_xml=coverage_xml,
+        coverage_floor=85,
+        sbom_path=sbom_path,
+        provenance_path=provenance_path,
+        dist_dir=dist_dir,
+        wheel_smoke_dir=wheel_smoke_dir,
+        sdist_smoke_dir=sdist_smoke_dir,
+        demo_map_svg=demo_map_svg,
+    )
+
+    assert result.ok
+    assert "Branch-enabled total coverage: `86.00%`" in result.markdown
+    assert "Line coverage: `90.00%`" in result.markdown
+    assert "Branch coverage: `78.00%`" in result.markdown
+    assert "| Wheel quickstart smoke | PASS |" in result.markdown
+    assert "Agent Validation Lab evidence is produced by the dedicated" in result.markdown
+
+
+def test_ci_quality_summary_reports_missing_evidence(tmp_path: Path) -> None:
+    writer = _load_script("write_ci_quality_summary")
+
+    result = writer.build_summary(
+        python_version="3.13.5",
+        coverage_xml=tmp_path / "missing-coverage.xml",
+        coverage_floor=85,
+        sbom_path=tmp_path / "missing-sbom.json",
+        provenance_path=tmp_path / "missing-provenance.json",
+        dist_dir=tmp_path / "missing-dist",
+        wheel_smoke_dir=tmp_path / "missing-wheel-smoke",
+        sdist_smoke_dir=tmp_path / "missing-sdist-smoke",
+        demo_map_svg=tmp_path / "missing-demo-map.svg",
+    )
+
+    assert not result.ok
+    assert "Branch-enabled total coverage: `MISSING`" in result.markdown
+    assert "coverage XML not found" in result.markdown
+    assert "| SBOM | MISSING |" in result.markdown
+    assert "| Wheel quickstart smoke | MISSING |" in result.markdown
+
+
 def test_lightweight_sbom_includes_runtime_dependency() -> None:
     generator = _load_script("generate_sbom")
 
@@ -352,3 +418,11 @@ def _load_script(name: str) -> ModuleType:
     sys.modules[name] = module
     spec.loader.exec_module(module)
     return module
+
+
+def _write_quickstart_smoke_artifacts(path: Path) -> None:
+    (path / "demo").mkdir(parents=True)
+    (path / "case").mkdir()
+    (path / "demo" / "evidence.jsonl").write_text("{}", encoding="utf-8")
+    (path / "case" / "case.json").write_text("{}", encoding="utf-8")
+    (path / "console.html").write_text("<html></html>", encoding="utf-8")

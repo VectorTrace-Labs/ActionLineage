@@ -9,7 +9,12 @@ uv sync --locked --all-extras
 uv run ruff check .
 uv run ruff format --check .
 uv run mypy src
-uv run pytest
+uv run pytest \
+  --cov=actionlineage \
+  --cov-branch \
+  --cov-report=term \
+  --cov-report=xml:build/coverage.xml \
+  --cov-fail-under=85
 uv run actionlineage demo run --output-dir /tmp/actionlineage-demo
 uv run python scripts/generate_demo_evidence_map.py --demo-dir /tmp/actionlineage-demo
 uv run python scripts/generate_demo_evidence_map.py --demo-dir /tmp/actionlineage-demo --check
@@ -28,6 +33,17 @@ uv run python scripts/smoke_public_quickstart.py \
 uv run python scripts/generate_release_provenance.py \
   --dist-dir dist \
   --output build/actionlineage-release-provenance.json
+uv run python scripts/write_ci_quality_summary.py \
+  --python-version "$(uv run python -c 'import platform; print(platform.python_version())')" \
+  --coverage-xml build/coverage.xml \
+  --coverage-floor 85 \
+  --sbom build/actionlineage-sbom.json \
+  --provenance build/actionlineage-release-provenance.json \
+  --dist-dir dist \
+  --wheel-smoke-dir build/wheel-quickstart-smoke \
+  --sdist-smoke-dir build/sdist-quickstart-smoke \
+  --demo-map-svg /tmp/actionlineage-demo/demo-evidence-map.svg \
+  --output build/actionlineage-ci-summary.md
 ```
 
 ## Clean Snapshot Gate
@@ -182,6 +198,9 @@ See `docs/PACKAGE_MANAGERS.md`.
   merging Docker base-image changes.
 - Built wheel and source distribution first-time-user smoke validation runs in
   CI with `scripts/smoke_public_quickstart.py`.
+- CI enforces an 85 percent branch-enabled total coverage floor and writes a
+  concise quality/security evidence summary with
+  `scripts/write_ci_quality_summary.py`.
 - Dependabot version updates are configured for uv, GitHub Actions, and Docker.
 - Dependabot alerts and Dependabot security updates require repository-setting
   confirmation.
