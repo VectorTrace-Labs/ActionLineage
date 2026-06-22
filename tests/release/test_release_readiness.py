@@ -93,9 +93,11 @@ def test_readme_quickstart_uses_demo_aligned_contract() -> None:
 
     assert "Five-Minute PyPI Evaluation" in readme
     assert "Python 3.12 or newer" in readme
-    assert "After the `0.1.0a3` Trusted Publishing run completes" in readme
-    assert "uvx --from actionlineage==0.1.0a3 actionlineage version" in readme
-    assert "uvx --from actionlineage==0.1.0a3 actionlineage demo run --output-dir" in readme
+    assert "Because `0.1.0a3` is a prerelease" in readme
+    assert "uvx --prerelease allow --from actionlineage==0.1.0a3 actionlineage version" in readme
+    assert (
+        "uvx --prerelease allow --from actionlineage==0.1.0a3 actionlineage demo run --output-dir"
+    ) in readme
     assert "PyPI path needs internet access to install the package" in readme
     assert "uv sync --locked --all-extras" in readme
     assert "contracts/examples/outbound-http.json" in readme
@@ -247,13 +249,15 @@ def test_publishing_docs_record_package_publication_and_remaining_gates() -> Non
     assert "GHCR Container Images" in publishing
     assert "https://pypi.org/project/actionlineage/" in publishing
     assert "https://test.pypi.org/project/actionlineage/" in publishing
-    assert "27957719209" in publishing
-    assert "27958024445" in publishing
+    assert "27973522992" in publishing
+    assert "27973832210" in publishing
     assert "Organization ownership transfer remains an external follow-up" in publishing
     assert "ghcr.io/vectortrace-labs/actionlineage" in package_managers
     assert "PyPI/TestPyPI | Alpha-supported" in package_managers
-    assert "uvx --from actionlineage==0.1.0a3 actionlineage version" in package_managers
-    assert "Python 3.12-compatible alpha release candidate" in package_managers
+    assert (
+        "uvx --prerelease allow --from actionlineage==0.1.0a3 actionlineage version"
+    ) in package_managers
+    assert "Python 3.12-compatible alpha release" in package_managers
     assert "do not publish or document a `latest` tag" in package_managers
     assert "Homebrew tap" in package_managers
     assert "Do not commit an unvalidated formula" in package_managers
