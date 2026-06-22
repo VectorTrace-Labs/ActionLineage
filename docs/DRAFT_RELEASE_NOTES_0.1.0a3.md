@@ -21,6 +21,8 @@ exports.
   external service, or internet access after installation.
 - The demo records verified, unverified, conflicting, and not-dispatched
   outcomes without treating acknowledgement as side-effect proof.
+- Observer fixtures preserve ambiguous HTTP correlation as unverified evidence
+  instead of selecting a plausible match without enough proof.
 - Local release proof includes Ruff, mypy, pytest, branch coverage, claim scan,
   secret scan, dependency audit, SBOM, provenance, wheel/sdist build, artifact
   smoke tests, and Agent Validation no-model checks.
@@ -29,11 +31,12 @@ exports.
 
 ## Verification Snapshot
 
-- Full eval-group coverage run: 274 tests passed, 86 percent total coverage.
-- Clean tracked snapshot: 273 tests passed, 1 eval-only inspection test skipped
+- Full eval-group coverage run: 289 tests passed, 86.02 percent total coverage.
+- Clean tracked snapshot: 288 tests passed, 1 eval-only inspection test skipped
   under `--all-extras`.
 - Built wheel and source distribution both ran `actionlineage version`, demo
-  run, and journal verification successfully.
+  run, journal verification, contract validation, case export, and static
+  console export successfully.
 - Demo journal: 18 records, last hash
   `sha256:c51f29aadf75d59dd69813e0348f6fbfe2a4297a31051bbdb362017aac01b981`.
 - Agent Validation artifact audit: 236 files scanned, 0 leaks.

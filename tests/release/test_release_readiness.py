@@ -249,16 +249,19 @@ def test_release_candidate_audit_prepares_without_publishing() -> None:
     normalized = combined.lower()
 
     assert "build/release-candidate/manifest.json" in audit
-    assert "026f87007e114bcaf2516ab3f33af0aafda65f3f" in audit
+    assert "53126d609b445429194e6633f1ef843d00565607" in audit
     assert "Do not republish immutable PyPI/TestPyPI files" in audit
-    assert "274 passed" in audit
-    assert "86 percent total coverage" in audit
-    assert "273 passed, 1 skipped" in audit
+    assert "289 passed" in audit
+    assert "86.02 percent total coverage" in audit
+    assert "288 passed, 1 skipped" in audit
+    assert "contract validate, case export, and static console export" in audit
     assert "47/47 declared capabilities covered" in audit
     assert "236 files scanned, 0 leaks" in audit
     assert "GitHub Release object for `v0.1.0a3`: absent" in audit
-    assert "48946d14e9dcdb44debc244f44155e3b03c608efac28bd4040fe57c1e0f7cdfe" in audit
-    assert "94a5bbd2e27b63d60354ac0f3debf363ba0f26bb71f5cfd8a5eca696af857e06" in audit
+    assert "943eac5a50fa727979e0ecf232a93922c90de1b0db6c7d65d6e1aeaf9f3939e1" in audit
+    assert "d9c6234de90fd1b13ca70fee3da3f74da81c688e7cf4b4143811470e3687fba7" in audit
+    assert "af3cc4f842480acb30fdf72c3735ba5f7fa2b41a14343b20c71c0a5fe91bb9ce" in audit
+    assert "063cf5a60c0828f4979664fe42a71d14c0a6f0d6d5b2e9858dcda51014c8e806" in audit
 
     for status in (
         "PASS",
@@ -269,6 +272,7 @@ def test_release_candidate_audit_prepares_without_publishing() -> None:
         assert status in audit
 
     assert "not a request to republish immutable package-index artifacts" in draft_notes
+    assert "ambiguous HTTP correlation as unverified evidence" in draft_notes
     assert "No external audit, external adoption, production use, independent review" in draft_notes
     assert "Codex must not perform these actions without explicit approval" in owner_checklist
     assert (
