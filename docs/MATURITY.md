@@ -33,6 +33,8 @@ evidence and limitations.
 - Journal anchors, Git anchor statements, archive manifests, and recovery
   helpers under documented local trust assumptions.
 - Built-in sequence detections and Lineage Lab replay/mutation/minimization.
+- Agent Validation Lab scenario validation, no-model replay, provenance, and
+  artifact audits as a development-only evaluation surface.
 - Release hardening scripts for claim language, secret scanning, SBOM, local
   provenance, and dependency audit.
 - CI release-proof gates for wheel/sdist build, SBOM, dependency audit, and

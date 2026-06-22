@@ -85,12 +85,20 @@ def test_cli_version_matches_package_metadata() -> None:
 def test_readme_quickstart_uses_demo_aligned_contract() -> None:
     readme = (PROJECT_ROOT / "README.md").read_text(encoding="utf-8")
 
+    assert "Five-Minute PyPI Evaluation" in readme
+    assert "uvx --from actionlineage==0.1.0a2 actionlineage version" in readme
+    assert "uvx --from actionlineage==0.1.0a2 actionlineage demo run --output-dir" in readme
+    assert "PyPI path needs internet access to install the package" in readme
+    assert "uv sync --locked --all-extras" in readme
     assert "contracts/examples/outbound-http.json" in readme
     assert (
         "uv run actionlineage contract validate contracts/examples/restricted-exfiltration.json"
     ) not in readme
     assert "public alpha" in readme
     assert "Preview" in readme
+    assert "Agent Validation Lab" in readme
+    assert "development-only evaluation surface" in readme
+    assert "PYTHONPATH=evals uv run --group eval python -m actionlineage_evals" in readme
 
 
 def test_release_checklist_covers_required_gates() -> None:
