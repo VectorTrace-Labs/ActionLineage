@@ -437,6 +437,29 @@ def test_artifact_upload_action_is_node24_pin_and_download_action_is_not_used() 
     )
 
 
+def test_agent_validation_workflow_schedules_no_model_and_secret_gates_live_models() -> None:
+    workflow = (PROJECT_ROOT / ".github/workflows/agent-validation.yml").read_text(encoding="utf-8")
+    docs = (PROJECT_ROOT / "docs" / "AGENT_VALIDATION_ARCHITECTURE.md").read_text(encoding="utf-8")
+    evidence = (PROJECT_ROOT / "docs" / "AGENT_VALIDATION_EVIDENCE.md").read_text(encoding="utf-8")
+
+    assert "schedule:" in workflow
+    assert "if: github.event_name != 'schedule' || github.ref == 'refs/heads/main'" in workflow
+    assert "--artifact-root build/evals/no-model" in workflow
+    assert "actionlineage_evals public-report" in workflow
+    assert "--json-output build/evals/reports/agent-validation-baseline.json" in workflow
+    assert "--markdown-output build/evals/reports/agent-validation-baseline.md" in workflow
+    assert "id: live-secret" in workflow
+    assert "GH_MODELS_TOKEN: ${{ secrets.GH_MODELS_TOKEN }}" in workflow
+    assert "Skipped: GH_MODELS_TOKEN is not configured; no model requests were made." in workflow
+    assert "if: steps.live-secret.outputs.configured == 'true'" in workflow
+    assert "GITHUB_TOKEN: ${{ github.token }}" not in workflow
+    assert "failure_fingerprint" in docs
+    assert "Scheduled no-model lane" in docs
+    assert "explicit `GH_MODELS_TOKEN`" in docs
+    assert "Scheduled no-model lane" in evidence
+    assert "Scheduled live-model lane" in evidence
+
+
 def test_release_workflow_publishes_versioned_ghcr_image_without_registry_secret() -> None:
     workflow = (PROJECT_ROOT / ".github/workflows/release.yml").read_text(encoding="utf-8")
 

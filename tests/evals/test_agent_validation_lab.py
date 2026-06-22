@@ -17,6 +17,7 @@ from actionlineage_evals.adapters import (  # noqa: E402
     GitHubModelsAdapter,
     LocalToolAgent,
     OpenAICompatibleAdapter,
+    ProviderError,
 )
 from actionlineage_evals.artifact_audit import audit_artifacts  # noqa: E402
 from actionlineage_evals.boundary import check_eval_import_boundaries  # noqa: E402
@@ -207,6 +208,26 @@ def test_github_models_adapter_prefers_model_specific_token(monkeypatch) -> None
 
     assert seen["token"] == "models-token"
     assert turn.tool_calls == ()
+
+
+def test_github_models_adapter_requires_explicit_model_secret(monkeypatch) -> None:
+    monkeypatch.delenv("GH_MODELS_TOKEN", raising=False)
+    monkeypatch.delenv("GITHUB_MODELS_TOKEN", raising=False)
+    monkeypatch.setenv("GITHUB_TOKEN", "ambient-actions-token")
+
+    with pytest.raises(ProviderError, match="GH_MODELS_TOKEN or GITHUB_MODELS_TOKEN"):
+        GitHubModelsAdapter(model_id="openai/gpt-4.1-mini").generate(
+            prompt="return no tool calls",
+            tools=(),
+            budget=Budget(
+                max_model_requests=1,
+                max_model_turns=1,
+                max_tool_calls=1,
+                max_completion_tokens_per_turn=16,
+                timeout_seconds=10,
+            ),
+            request_index=0,
+        )
 
 
 def test_openai_compatible_adapter_allows_local_endpoint_without_token(monkeypatch) -> None:
@@ -444,6 +465,9 @@ def test_scripted_suite_runs_all_scenarios_and_replay(tmp_path: Path) -> None:
     suite_summary = json.loads((tmp_path / "evals" / "suite-summary.json").read_text())
     assert suite_summary["schema_version"] == "actionlineage.dev/eval-suite-summary/v0"
     assert suite_summary["failure_class_counts"]["product_failure"] == 1
+    summary_by_id = {item["scenario_id"]: item for item in suite_summary["scenarios"]}
+    assert summary_by_id["AVL-001"]["failure_fingerprint"] is None
+    assert summary_by_id["AVL-011"]["failure_fingerprint"].startswith("sha256:")
 
     avl001_oracles = [
         json.loads(line)
@@ -650,7 +674,9 @@ def test_scorecard_summary_reports_replay_commands(tmp_path: Path) -> None:
     assert summary["scenario_count"] == 1
     assert summary["scorecards"][0]["scenario_id"] == "AVL-007"
     assert summary["scorecards"][0]["failure_class"] == "provider_failure"
+    assert summary["scorecards"][0]["failure_fingerprint"].startswith("sha256:")
     assert "actionlineage_evals replay" in summary["scorecards"][0]["replay_command"]
+    assert "failure_fingerprint" in text
     assert "AVL-007" in text
 
 
@@ -689,6 +715,7 @@ def test_public_baseline_report_is_generated_from_eval_artifacts(tmp_path: Path)
     assert report["coverage"]["event_type_coverage"]["tool.execution.acknowledged"] == 1
     assert report["coverage"]["contract_coverage"]["passed"] == 1
     assert report["hard_assertion_results"]["score_counts"]["integrity"]["passed"] == 1
+    assert report["runs"][0]["failure_fingerprint"] is None
     assert written == report
     assert json.loads(json_output.read_text(encoding="utf-8")) == report
     assert markdown_output.read_text(encoding="utf-8") == markdown

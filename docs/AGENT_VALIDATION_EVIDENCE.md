@@ -48,6 +48,8 @@ PYTHONPATH=evals uv run --group eval python -m actionlineage_evals public-report
 | Eval import boundary | No ActionLineage core imports from eval-only packages |
 | Scripted no-model suite | 11 scorecards, 0 failed |
 | Artifact audit | 236 files scanned, 0 leaks |
+| Scheduled no-model lane | Trusted default-branch workflow generates deterministic artifacts and public-report outputs without model credentials |
+| Scheduled live-model lane | Optional and skipped unless maintainers configure `GH_MODELS_TOKEN`; provider instability remains non-blocking |
 | Replay equivalence in the scripted baseline | 0/0 because replay is a separate command path |
 | Public baseline report | `docs/evidence/agent-validation-baseline.md` and `docs/evidence/agent-validation-baseline.json` |
 

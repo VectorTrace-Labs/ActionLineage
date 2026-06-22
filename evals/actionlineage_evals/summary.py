@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import hashlib
 import json
 from collections import Counter
 from collections.abc import Iterable
@@ -53,7 +54,10 @@ def summarize_scorecards_text(root: Path) -> str:
 
     summary = summarize_scorecards(root)
     lines = [
-        "scenario\tpassed\tfailure_class\tfirst_failing_scorer\treplay_command",
+        (
+            "scenario\tpassed\tfailure_class\tfirst_failing_scorer\t"
+            "failure_fingerprint\treplay_command"
+        ),
     ]
     for item in summary["scorecards"]:
         if not isinstance(item, dict):
@@ -65,6 +69,7 @@ def summarize_scorecards_text(root: Path) -> str:
                     str(item.get("passed", "")),
                     str(item.get("failure_class") or "none"),
                     str(item.get("first_failing_scorer") or "none"),
+                    str(item.get("failure_fingerprint") or "none"),
                     str(item.get("replay_command") or ""),
                 )
             )
@@ -87,8 +92,11 @@ def summarize_scorecards_markdown(root: Path) -> str:
         f"| Replay equivalence | {replay.get('ok_count', 0)}/{replay.get('count', 0)} OK |",
         f"| Failure classes | `{json.dumps(failure_counts, sort_keys=True)}` |",
         "",
-        "| Scenario | Passed | Failure class | First failing scorer | Replay command |",
-        "| --- | --- | --- | --- | --- |",
+        (
+            "| Scenario | Passed | Failure class | First failing scorer | "
+            "Failure fingerprint | Replay command |"
+        ),
+        "| --- | --- | --- | --- | --- | --- |",
     ]
     for item in summary["scorecards"]:
         if not isinstance(item, dict):
@@ -97,6 +105,7 @@ def summarize_scorecards_markdown(root: Path) -> str:
             f"| `{item.get('scenario_id', '')}` | {item.get('passed', '')} | "
             f"`{item.get('failure_class') or 'none'}` | "
             f"`{item.get('first_failing_scorer') or 'none'}` | "
+            f"`{item.get('failure_fingerprint') or 'none'}` | "
             f"`{item.get('replay_command') or ''}` |"
         )
     return "\n".join(lines) + "\n"
@@ -270,6 +279,7 @@ def build_public_baseline_report(
                 "event_types": sorted(set(event_types)),
                 "expected_failure_class": scorecard.get("expected_failure_class"),
                 "failure_class": failure_class,
+                "failure_fingerprint": _scorecard_failure_fingerprint(scorecard),
                 "model_adapter": adapter,
                 "mode": run.get("mode") if isinstance(run, dict) else None,
                 "passed": scorecard.get("passed") is True,
@@ -396,16 +406,18 @@ def render_public_baseline_report_markdown(report: JsonMap) -> str:
         "## Scenario Results",
         "",
         (
-            "| Scenario | Passed | Failure class | Seed | Event count | "
-            "Verification statuses | Artifacts |"
+            "| Scenario | Passed | Failure class | Failure fingerprint | Seed | "
+            "Event count | Verification statuses | Artifacts |"
         ),
-        "| --- | --- | --- | ---: | ---: | --- | --- |",
+        "| --- | --- | --- | --- | ---: | ---: | --- | --- |",
     ]
     for run in report["runs"]:
         artifacts = run["artifact_paths"]
         lines.append(
             f"| `{run['scenario_id']}` | {run['passed']} | "
-            f"`{run['failure_class']}` | {run['seed']} | {run['event_count']} | "
+            f"`{run['failure_class']}` | "
+            f"`{run.get('failure_fingerprint') or 'none'}` | "
+            f"{run['seed']} | {run['event_count']} | "
             f"`{json.dumps(run['verification_statuses'])}` | "
             f"`{artifacts['scorecard']}` |"
         )
@@ -469,6 +481,7 @@ def write_suite_summary(path: Path, results: Iterable[ScenarioResult]) -> JsonMa
         "scenario_count": len(result_items),
         "scenarios": [
             {
+                "failure_fingerprint": _scenario_result_failure_fingerprint(result),
                 "failure_class": result.failure_class.value if result.failure_class else None,
                 "mode": result.mode.value,
                 "passed": result.passed,
@@ -594,6 +607,7 @@ def _summarize_scorecard(path: Path) -> JsonMap:
     replay_bundle = run_dir / "replay-bundle"
     return {
         "failure_class": raw.get("failure_class"),
+        "failure_fingerprint": _scorecard_failure_fingerprint(raw),
         "first_failing_scorer": first_failing,
         "passed": raw.get("passed") is True,
         "replay_bundle": str(replay_bundle),
@@ -609,3 +623,59 @@ def _summarize_scorecard(path: Path) -> JsonMap:
         "scenario_id": raw.get("scenario_id"),
         "scorecard": str(path),
     }
+
+
+def _scorecard_failure_fingerprint(scorecard: JsonMap) -> str | None:
+    failure_class = scorecard.get("failure_class")
+    if scorecard.get("passed") is True and not failure_class:
+        return None
+    scores = scorecard.get("scores", ())
+    score_fingerprints: list[JsonMap] = []
+    if isinstance(scores, list):
+        for score in scores:
+            if not isinstance(score, dict):
+                continue
+            if score.get("ok") is True and not score.get("failure_class"):
+                continue
+            score_fingerprints.append(
+                {
+                    "failure_class": score.get("failure_class"),
+                    "name": score.get("name"),
+                    "ok": score.get("ok") is True,
+                }
+            )
+    return _sha256_json(
+        {
+            "failure_class": failure_class,
+            "passed": scorecard.get("passed") is True,
+            "scenario_id": scorecard.get("scenario_id"),
+            "scores": score_fingerprints,
+        }
+    )
+
+
+def _scenario_result_failure_fingerprint(result: ScenarioResult) -> str | None:
+    if result.passed and result.failure_class is None:
+        return None
+    score_fingerprints = [
+        {
+            "failure_class": score.failure_class.value if score.failure_class else None,
+            "name": score.name,
+            "ok": score.ok,
+        }
+        for score in result.scores
+        if not score.ok or score.failure_class is not None
+    ]
+    return _sha256_json(
+        {
+            "failure_class": result.failure_class.value if result.failure_class else None,
+            "passed": result.passed,
+            "scenario_id": result.scenario_id,
+            "scores": score_fingerprints,
+        }
+    )
+
+
+def _sha256_json(value: JsonMap) -> str:
+    payload = json.dumps(value, sort_keys=True, separators=(",", ":")).encode("utf-8")
+    return f"sha256:{hashlib.sha256(payload).hexdigest()}"

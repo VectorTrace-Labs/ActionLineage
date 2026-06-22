@@ -43,7 +43,9 @@ evidence and limitations.
 - Agent Validation Lab scenario validation, no-model replay, provenance, and
   artifact audits as a development-only evaluation surface; the current
   deterministic baseline is summarized in `docs/AGENT_VALIDATION_EVIDENCE.md`
-  and generated into `docs/evidence/agent-validation-baseline.*`.
+  and generated into `docs/evidence/agent-validation-baseline.*`. Scheduled
+  no-model artifacts run on trusted default-branch code; optional live-model
+  execution is skipped unless maintainers configure `GH_MODELS_TOKEN`.
 - Deterministic demo evidence map generated from local demo artifacts for
   onboarding and visual review; canonical evidence remains the local journal.
 - Release hardening scripts for claim language, secret scanning, SBOM, local
