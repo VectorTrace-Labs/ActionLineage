@@ -249,16 +249,16 @@ def test_release_candidate_audit_prepares_without_publishing() -> None:
     normalized = combined.lower()
 
     assert "build/release-candidate/manifest.json" in audit
-    assert "17be9bbedd4cc1d0cfea231803cc3415a811f800" in audit
+    assert "026f87007e114bcaf2516ab3f33af0aafda65f3f" in audit
     assert "Do not republish immutable PyPI/TestPyPI files" in audit
-    assert "271 passed" in audit
+    assert "274 passed" in audit
     assert "86 percent total coverage" in audit
-    assert "269 passed, 1 skipped" in audit
+    assert "273 passed, 1 skipped" in audit
     assert "47/47 declared capabilities covered" in audit
     assert "236 files scanned, 0 leaks" in audit
     assert "GitHub Release object for `v0.1.0a3`: absent" in audit
-    assert "8052a2e11f6e7da4b77d50d1c8308f3e849b1070798598eb6dc7b0115f232f06" in audit
-    assert "ca48c27a683c8bc8fffa94885a1c6a4ccc310169886ee33dea39e9feaa81c9ff" in audit
+    assert "48946d14e9dcdb44debc244f44155e3b03c608efac28bd4040fe57c1e0f7cdfe" in audit
+    assert "94a5bbd2e27b63d60354ac0f3debf363ba0f26bb71f5cfd8a5eca696af857e06" in audit
 
     for status in (
         "PASS",
