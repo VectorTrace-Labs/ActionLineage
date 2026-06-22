@@ -46,6 +46,7 @@ def test_release_docs_are_present() -> None:
         "docs/FAQ.md",
         "docs/RELEASE_CHECKLIST.md",
         "docs/PACKAGE_MANAGERS.md",
+        "docs/REVIEW_PROCESS.md",
         "docs/QUALITY_SCORECARD.md",
         "docs/PERFECTION_PLAN.md",
         "docs/MATURITY.md",
@@ -201,3 +202,17 @@ def test_publishing_docs_keep_package_publication_externally_gated() -> None:
     assert "TestPyPI/PyPI trusted publishers" in decisions
     assert "GHCR package visibility" in decisions
     assert "Homebrew tap" in decisions
+
+
+def test_review_process_keeps_ai_review_advisory() -> None:
+    review_process = (PROJECT_ROOT / "docs/REVIEW_PROCESS.md").read_text(encoding="utf-8")
+    readme = (PROJECT_ROOT / "README.md").read_text(encoding="utf-8")
+
+    assert "AI review is advisory" in review_process
+    assert "does not" in review_process
+    assert "count as an approving review" in review_process
+    assert "replace maintainer judgment" in review_process
+    assert "override failing required checks" in review_process
+    assert "Required human approvals are not enabled" in review_process
+    assert "required checks pass" in review_process
+    assert "docs/REVIEW_PROCESS.md" in readme

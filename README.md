@@ -282,6 +282,8 @@ reference.
   attestations, and Trusted Publishing setup.
 - [Package managers](docs/PACKAGE_MANAGERS.md): GHCR, PyPI, Homebrew,
   conda-forge, and deferred channel plan.
+- [Review process](docs/REVIEW_PROCESS.md): required checks, advisory AI
+  review, and solo-maintainer merge policy.
 - [Decisions required](docs/DECISIONS_REQUIRED.md): owner and external gates.
 
 ## Packages and Extras
