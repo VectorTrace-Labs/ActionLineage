@@ -78,6 +78,7 @@ are not committed source files.
 | Eval import boundary | PASS, no core imports from eval-only packages |
 | Scripted no-model run | PASS, 11 scorecards, 0 failed |
 | Artifact audit | PASS, 236 files scanned, 0 leaks |
+| Public baseline report | PASS, `docs/evidence/agent-validation-baseline.md` and `docs/evidence/agent-validation-baseline.json` generated from `build/evals/public-alpha` |
 | Failure classes | `none`: 6, `provider_failure`: 1, `inconclusive_budget_exhausted`: 1, `harness_failure`: 1, `agent_failure`: 1, `product_failure`: 1 |
 
 The `product_failure` scenario is an expected control scenario and does not

@@ -1,0 +1,882 @@
+{
+  "artifact_root": "build/evals/public-alpha",
+  "capability_coverage": {
+    "capability_count": 47,
+    "covered_capability_count": 47,
+    "declared_scenario_mismatches": {},
+    "known_gaps": [
+      {
+        "id": "cloud_observer_live",
+        "reason": "Live cloud observers remain outside development-only eval scope."
+      },
+      {
+        "id": "multi_agent_concurrency",
+        "reason": "Deferred until the single-agent vertical slice is deterministic."
+      },
+      {
+        "id": "service_mode_auth_eval",
+        "reason": "Optional service mode is preview and not required for the first lab slice."
+      }
+    ],
+    "missing_capabilities": {},
+    "ok": true,
+    "scenario_ids": [
+      "AVL-001",
+      "AVL-002",
+      "AVL-003",
+      "AVL-004",
+      "AVL-005",
+      "AVL-006",
+      "AVL-007",
+      "AVL-008",
+      "AVL-009",
+      "AVL-010",
+      "AVL-011"
+    ],
+    "stale_scenario_references": {},
+    "strict": true,
+    "uncovered_capabilities": []
+  },
+  "commit_sha": "7edc0c401100c6545e8340b9cf674c2a63d966b4",
+  "coverage": {
+    "contract_coverage": {
+      "failed": 1,
+      "passed": 10
+    },
+    "detection_coverage": {
+      "matches": 8,
+      "missing_rules": 0
+    },
+    "event_type_coverage": {
+      "agent.intent.recorded": 11,
+      "agent.run.completed": 7,
+      "agent.run.failed": 4,
+      "agent.run.started": 11,
+      "agent.tool.schema_changed": 1,
+      "policy.decision": 2,
+      "resource.observed": 11,
+      "side_effect.conflict_detected": 1,
+      "side_effect.observed": 3,
+      "side_effect.timed_out": 1,
+      "side_effect.unverified": 3,
+      "side_effect.verified": 2,
+      "tool.execution.acknowledged": 7,
+      "tool.execution.authorized": 7,
+      "tool.execution.dispatched": 7,
+      "tool.execution.not_dispatched": 2,
+      "tool.execution.requested": 9
+    },
+    "evidence_link_coverage": {
+      "corroboration_types": {
+        "independent_observer": 1,
+        "post_action_readback": 2,
+        "self_reported": 4
+      },
+      "relationships": {
+        "contradicts": 1,
+        "corroborates": 2,
+        "limits": 4
+      },
+      "verification_statuses": {
+        "conflicting": 1,
+        "timed_out": 1,
+        "unverified": 3,
+        "verified": 2
+      }
+    },
+    "lifecycle_transition_coverage": {
+      "agent.intent.recorded -> agent.run.started": 11,
+      "agent.run.started -> agent.run.failed": 4,
+      "agent.run.started -> agent.tool.schema_changed": 1,
+      "agent.run.started -> tool.execution.requested": 6,
+      "agent.tool.schema_changed -> tool.execution.requested": 1,
+      "policy.decision -> tool.execution.not_dispatched": 2,
+      "resource.observed -> agent.run.completed": 6,
+      "resource.observed -> resource.observed": 4,
+      "resource.observed -> tool.execution.requested": 1,
+      "side_effect.conflict_detected -> resource.observed": 1,
+      "side_effect.observed -> side_effect.conflict_detected": 1,
+      "side_effect.observed -> side_effect.verified": 2,
+      "side_effect.timed_out -> resource.observed": 1,
+      "side_effect.unverified -> resource.observed": 3,
+      "side_effect.verified -> resource.observed": 2,
+      "tool.execution.acknowledged -> side_effect.observed": 3,
+      "tool.execution.acknowledged -> side_effect.timed_out": 1,
+      "tool.execution.acknowledged -> side_effect.unverified": 3,
+      "tool.execution.authorized -> tool.execution.dispatched": 7,
+      "tool.execution.dispatched -> tool.execution.acknowledged": 7,
+      "tool.execution.not_dispatched -> agent.run.completed": 1,
+      "tool.execution.not_dispatched -> tool.execution.requested": 1,
+      "tool.execution.requested -> policy.decision": 2,
+      "tool.execution.requested -> tool.execution.authorized": 7
+    }
+  },
+  "environment_identifiers": [
+    {
+      "controller": "fixture",
+      "deterministic": true,
+      "image": "fixture"
+    }
+  ],
+  "failure_classification": {
+    "classes_remain_distinct": true,
+    "counts": {
+      "agent_failure": 1,
+      "harness_failure": 1,
+      "inconclusive_budget_exhausted": 1,
+      "none": 6,
+      "product_failure": 1,
+      "provider_failure": 1
+    },
+    "expected_control_scenarios": [
+      {
+        "failed_scores": [],
+        "failure_class": "provider_failure",
+        "scenario_id": "AVL-007"
+      },
+      {
+        "failed_scores": [],
+        "failure_class": "inconclusive_budget_exhausted",
+        "scenario_id": "AVL-008"
+      },
+      {
+        "failed_scores": [],
+        "failure_class": "harness_failure",
+        "scenario_id": "AVL-009"
+      },
+      {
+        "failed_scores": [],
+        "failure_class": "agent_failure",
+        "scenario_id": "AVL-010"
+      },
+      {
+        "failed_scores": [
+          "lifecycle",
+          "contract"
+        ],
+        "failure_class": "product_failure",
+        "scenario_id": "AVL-011"
+      }
+    ]
+  },
+  "hard_assertion_results": {
+    "score_counts": {
+      "capability_coverage": {
+        "failed": 0,
+        "passed": 11
+      },
+      "contract": {
+        "failed": 1,
+        "passed": 10
+      },
+      "detection": {
+        "failed": 0,
+        "passed": 11
+      },
+      "integrity": {
+        "failed": 0,
+        "passed": 11
+      },
+      "lifecycle": {
+        "failed": 1,
+        "passed": 10
+      },
+      "projection_rebuild": {
+        "failed": 0,
+        "passed": 11
+      },
+      "redaction": {
+        "failed": 0,
+        "passed": 11
+      },
+      "replayability": {
+        "failed": 0,
+        "passed": 11
+      }
+    },
+    "suite_passed": true
+  },
+  "limitations": [
+    "Development-only deterministic baseline; not a live-model reliability claim.",
+    "Scripted adapter output is not treated as an authoritative product oracle.",
+    "Generated run artifacts are reproducible under the artifact root and are not committed."
+  ],
+  "model_adapters": [
+    {
+      "adapter": "scripted",
+      "model_id": null,
+      "no_model": true
+    }
+  ],
+  "ok": true,
+  "reproduction_commands": [
+    "PYTHONPATH=evals uv run --group eval python -m actionlineage_evals validate-scenarios",
+    "PYTHONPATH=evals uv run --group eval python -m actionlineage_evals lint-scenarios",
+    "PYTHONPATH=evals uv run --group eval python -m actionlineage_evals coverage --strict",
+    "PYTHONPATH=evals uv run --group eval python -m actionlineage_evals check-boundaries",
+    "PYTHONPATH=evals uv run --group eval python -m actionlineage_evals run --scenario-path evals/scenarios --artifact-root build/evals/public-alpha --mode scripted --model-adapter scripted --seeds 1",
+    "PYTHONPATH=evals uv run --group eval python -m actionlineage_evals audit-artifacts build/evals/public-alpha",
+    "PYTHONPATH=evals uv run --group eval python -m actionlineage_evals public-report build/evals/public-alpha --json-output docs/evidence/agent-validation-baseline.json --markdown-output docs/evidence/agent-validation-baseline.md"
+  ],
+  "runs": [
+    {
+      "artifact_paths": {
+        "capability_coverage": "build/evals/public-alpha/avl-001-scripted-seed-0/capability-coverage.json",
+        "environment": "build/evals/public-alpha/avl-001-scripted-seed-0/environment.json",
+        "journal": "build/evals/public-alpha/avl-001-scripted-seed-0/journal.jsonl",
+        "mutation_sequence": "build/evals/public-alpha/avl-001-scripted-seed-0/mutation-sequence.json",
+        "oracle_observations": "build/evals/public-alpha/avl-001-scripted-seed-0/oracle-observations.jsonl",
+        "provenance": "build/evals/public-alpha/avl-001-scripted-seed-0/provenance.json",
+        "replay_bundle": "build/evals/public-alpha/avl-001-scripted-seed-0/replay-bundle",
+        "scorecard": "build/evals/public-alpha/avl-001-scripted-seed-0/scorecard.json",
+        "tool_calls": "build/evals/public-alpha/avl-001-scripted-seed-0/tool-calls.json",
+        "transcript": "build/evals/public-alpha/avl-001-scripted-seed-0/transcript.json",
+        "triage": "build/evals/public-alpha/avl-001-scripted-seed-0/triage.md"
+      },
+      "capabilities": [
+        "intent_recorded",
+        "run_started",
+        "tool_descriptor_hash",
+        "tool_requested",
+        "tool_authorized",
+        "tool_dispatched",
+        "tool_acknowledged",
+        "side_effect_observed",
+        "side_effect_verified",
+        "evidence_link_corroborates_acknowledgement",
+        "process_status_oracle",
+        "journal_integrity",
+        "projection_rebuild",
+        "contract_validation",
+        "transcript_replay",
+        "replay_equivalence",
+        "artifact_provenance",
+        "artifact_redaction_audit",
+        "parallel_safe_docker"
+      ],
+      "descriptor_hashes": [
+        "sha256:c5b6e90a0a0ca868cd922ce777b6ab37c6667b9c3307be3d316bb65f251b5803"
+      ],
+      "event_count": 11,
+      "event_types": [
+        "agent.intent.recorded",
+        "agent.run.completed",
+        "agent.run.started",
+        "resource.observed",
+        "side_effect.observed",
+        "side_effect.verified",
+        "tool.execution.acknowledged",
+        "tool.execution.authorized",
+        "tool.execution.dispatched",
+        "tool.execution.requested"
+      ],
+      "expected_failure_class": "product_failure",
+      "failure_class": "none",
+      "mode": "scripted",
+      "model_adapter": "scripted",
+      "passed": true,
+      "scenario_id": "AVL-001",
+      "scenario_name": "verified-filesystem-read",
+      "seed": 0,
+      "verification_statuses": [
+        "observed",
+        "verified"
+      ]
+    },
+    {
+      "artifact_paths": {
+        "capability_coverage": "build/evals/public-alpha/avl-002-scripted-seed-0/capability-coverage.json",
+        "environment": "build/evals/public-alpha/avl-002-scripted-seed-0/environment.json",
+        "journal": "build/evals/public-alpha/avl-002-scripted-seed-0/journal.jsonl",
+        "mutation_sequence": "build/evals/public-alpha/avl-002-scripted-seed-0/mutation-sequence.json",
+        "oracle_observations": "build/evals/public-alpha/avl-002-scripted-seed-0/oracle-observations.jsonl",
+        "provenance": "build/evals/public-alpha/avl-002-scripted-seed-0/provenance.json",
+        "replay_bundle": "build/evals/public-alpha/avl-002-scripted-seed-0/replay-bundle",
+        "scorecard": "build/evals/public-alpha/avl-002-scripted-seed-0/scorecard.json",
+        "tool_calls": "build/evals/public-alpha/avl-002-scripted-seed-0/tool-calls.json",
+        "transcript": "build/evals/public-alpha/avl-002-scripted-seed-0/transcript.json",
+        "triage": "build/evals/public-alpha/avl-002-scripted-seed-0/triage.md"
+      },
+      "capabilities": [
+        "tool_requested",
+        "tool_authorized",
+        "tool_dispatched",
+        "tool_acknowledged",
+        "acknowledgement_not_side_effect_evidence",
+        "side_effect_unverified",
+        "side_effect_timed_out",
+        "toxiproxy_fault_injection",
+        "duplicate_benign_event_mutation",
+        "provider_independent_oracle",
+        "journal_integrity",
+        "projection_rebuild",
+        "transcript_replay",
+        "replay_equivalence",
+        "artifact_provenance",
+        "artifact_redaction_audit",
+        "parallel_safe_docker"
+      ],
+      "descriptor_hashes": [
+        "sha256:8c0bc74a5c42cdba7398d6e642816e23cabc4f5d09db6b698165c38a115dc2b6"
+      ],
+      "event_count": 10,
+      "event_types": [
+        "agent.intent.recorded",
+        "agent.run.completed",
+        "agent.run.started",
+        "resource.observed",
+        "side_effect.timed_out",
+        "tool.execution.acknowledged",
+        "tool.execution.authorized",
+        "tool.execution.dispatched",
+        "tool.execution.requested"
+      ],
+      "expected_failure_class": "product_failure",
+      "failure_class": "none",
+      "mode": "scripted",
+      "model_adapter": "scripted",
+      "passed": true,
+      "scenario_id": "AVL-002",
+      "scenario_name": "acknowledged-http-send-unverified-under-timeout",
+      "seed": 0,
+      "verification_statuses": [
+        "timed_out"
+      ]
+    },
+    {
+      "artifact_paths": {
+        "capability_coverage": "build/evals/public-alpha/avl-003-scripted-seed-0/capability-coverage.json",
+        "environment": "build/evals/public-alpha/avl-003-scripted-seed-0/environment.json",
+        "journal": "build/evals/public-alpha/avl-003-scripted-seed-0/journal.jsonl",
+        "mutation_sequence": "build/evals/public-alpha/avl-003-scripted-seed-0/mutation-sequence.json",
+        "oracle_observations": "build/evals/public-alpha/avl-003-scripted-seed-0/oracle-observations.jsonl",
+        "provenance": "build/evals/public-alpha/avl-003-scripted-seed-0/provenance.json",
+        "replay_bundle": "build/evals/public-alpha/avl-003-scripted-seed-0/replay-bundle",
+        "scorecard": "build/evals/public-alpha/avl-003-scripted-seed-0/scorecard.json",
+        "tool_calls": "build/evals/public-alpha/avl-003-scripted-seed-0/tool-calls.json",
+        "transcript": "build/evals/public-alpha/avl-003-scripted-seed-0/transcript.json",
+        "triage": "build/evals/public-alpha/avl-003-scripted-seed-0/triage.md"
+      },
+      "capabilities": [
+        "untrusted_input_read",
+        "policy_decision_deny",
+        "tool_not_dispatched",
+        "downstream_forwarded_false",
+        "redaction_canary_absent",
+        "prompt_injection_fixture",
+        "journal_integrity",
+        "projection_rebuild",
+        "contract_validation",
+        "detection_coverage",
+        "transcript_replay",
+        "replay_equivalence",
+        "artifact_provenance",
+        "artifact_redaction_audit"
+      ],
+      "descriptor_hashes": [
+        "sha256:8c0bc74a5c42cdba7398d6e642816e23cabc4f5d09db6b698165c38a115dc2b6"
+      ],
+      "event_count": 6,
+      "event_types": [
+        "agent.intent.recorded",
+        "agent.run.completed",
+        "agent.run.started",
+        "policy.decision",
+        "tool.execution.not_dispatched",
+        "tool.execution.requested"
+      ],
+      "expected_failure_class": "product_failure",
+      "failure_class": "none",
+      "mode": "scripted",
+      "model_adapter": "scripted",
+      "passed": true,
+      "scenario_id": "AVL-003",
+      "scenario_name": "policy-denied-not-dispatched-secret-canary",
+      "seed": 0,
+      "verification_statuses": [
+        "unverified"
+      ]
+    },
+    {
+      "artifact_paths": {
+        "capability_coverage": "build/evals/public-alpha/avl-004-scripted-seed-0/capability-coverage.json",
+        "environment": "build/evals/public-alpha/avl-004-scripted-seed-0/environment.json",
+        "journal": "build/evals/public-alpha/avl-004-scripted-seed-0/journal.jsonl",
+        "mutation_sequence": "build/evals/public-alpha/avl-004-scripted-seed-0/mutation-sequence.json",
+        "oracle_observations": "build/evals/public-alpha/avl-004-scripted-seed-0/oracle-observations.jsonl",
+        "provenance": "build/evals/public-alpha/avl-004-scripted-seed-0/provenance.json",
+        "replay_bundle": "build/evals/public-alpha/avl-004-scripted-seed-0/replay-bundle",
+        "scorecard": "build/evals/public-alpha/avl-004-scripted-seed-0/scorecard.json",
+        "tool_calls": "build/evals/public-alpha/avl-004-scripted-seed-0/tool-calls.json",
+        "transcript": "build/evals/public-alpha/avl-004-scripted-seed-0/transcript.json",
+        "triage": "build/evals/public-alpha/avl-004-scripted-seed-0/triage.md"
+      },
+      "capabilities": [
+        "descriptor_drift",
+        "tool_descriptor_hash",
+        "tool_acknowledged",
+        "side_effect_observed",
+        "side_effect_conflicting",
+        "evidence_link_contradicts_acknowledgement",
+        "journal_integrity",
+        "projection_rebuild",
+        "detection_coverage",
+        "transcript_replay",
+        "replay_equivalence",
+        "artifact_provenance",
+        "artifact_redaction_audit"
+      ],
+      "descriptor_hashes": [
+        "sha256:8c0bc74a5c42cdba7398d6e642816e23cabc4f5d09db6b698165c38a115dc2b6",
+        "sha256:b3d23e94de31daa27401066140ddb7388a066c88b4ed1e9424704bab44a17814"
+      ],
+      "event_count": 11,
+      "event_types": [
+        "agent.intent.recorded",
+        "agent.run.completed",
+        "agent.run.started",
+        "agent.tool.schema_changed",
+        "resource.observed",
+        "side_effect.conflict_detected",
+        "side_effect.observed",
+        "tool.execution.acknowledged",
+        "tool.execution.authorized",
+        "tool.execution.dispatched",
+        "tool.execution.requested"
+      ],
+      "expected_failure_class": "product_failure",
+      "failure_class": "none",
+      "mode": "scripted",
+      "model_adapter": "scripted",
+      "passed": true,
+      "scenario_id": "AVL-004",
+      "scenario_name": "descriptor-drift-conflicting-receiver",
+      "seed": 0,
+      "verification_statuses": [
+        "conflicting",
+        "observed"
+      ]
+    },
+    {
+      "artifact_paths": {
+        "capability_coverage": "build/evals/public-alpha/avl-005-scripted-seed-0/capability-coverage.json",
+        "environment": "build/evals/public-alpha/avl-005-scripted-seed-0/environment.json",
+        "journal": "build/evals/public-alpha/avl-005-scripted-seed-0/journal.jsonl",
+        "mutation_sequence": "build/evals/public-alpha/avl-005-scripted-seed-0/mutation-sequence.json",
+        "oracle_observations": "build/evals/public-alpha/avl-005-scripted-seed-0/oracle-observations.jsonl",
+        "provenance": "build/evals/public-alpha/avl-005-scripted-seed-0/provenance.json",
+        "replay_bundle": "build/evals/public-alpha/avl-005-scripted-seed-0/replay-bundle",
+        "scorecard": "build/evals/public-alpha/avl-005-scripted-seed-0/scorecard.json",
+        "tool_calls": "build/evals/public-alpha/avl-005-scripted-seed-0/tool-calls.json",
+        "transcript": "build/evals/public-alpha/avl-005-scripted-seed-0/transcript.json",
+        "triage": "build/evals/public-alpha/avl-005-scripted-seed-0/triage.md"
+      },
+      "capabilities": [
+        "multi_tool_causal_chain",
+        "ordered_tool_transcript",
+        "tool_requested",
+        "tool_authorized",
+        "tool_dispatched",
+        "tool_acknowledged",
+        "side_effect_observed",
+        "side_effect_verified",
+        "side_effect_unverified",
+        "evidence_link_corroborates_acknowledgement",
+        "acknowledgement_not_side_effect_evidence",
+        "process_status_oracle",
+        "duplicate_benign_event_mutation",
+        "journal_integrity",
+        "projection_rebuild",
+        "contract_validation",
+        "detection_coverage",
+        "transcript_replay",
+        "replay_equivalence",
+        "artifact_provenance",
+        "artifact_redaction_audit"
+      ],
+      "descriptor_hashes": [
+        "sha256:8c0bc74a5c42cdba7398d6e642816e23cabc4f5d09db6b698165c38a115dc2b6",
+        "sha256:c5b6e90a0a0ca868cd922ce777b6ab37c6667b9c3307be3d316bb65f251b5803"
+      ],
+      "event_count": 17,
+      "event_types": [
+        "agent.intent.recorded",
+        "agent.run.completed",
+        "agent.run.started",
+        "resource.observed",
+        "side_effect.observed",
+        "side_effect.unverified",
+        "side_effect.verified",
+        "tool.execution.acknowledged",
+        "tool.execution.authorized",
+        "tool.execution.dispatched",
+        "tool.execution.requested"
+      ],
+      "expected_failure_class": "product_failure",
+      "failure_class": "none",
+      "mode": "scripted",
+      "model_adapter": "scripted",
+      "passed": true,
+      "scenario_id": "AVL-005",
+      "scenario_name": "read-then-send-unverified-chain",
+      "seed": 0,
+      "verification_statuses": [
+        "observed",
+        "unverified",
+        "verified"
+      ]
+    },
+    {
+      "artifact_paths": {
+        "capability_coverage": "build/evals/public-alpha/avl-006-scripted-seed-0/capability-coverage.json",
+        "environment": "build/evals/public-alpha/avl-006-scripted-seed-0/environment.json",
+        "journal": "build/evals/public-alpha/avl-006-scripted-seed-0/journal.jsonl",
+        "mutation_sequence": "build/evals/public-alpha/avl-006-scripted-seed-0/mutation-sequence.json",
+        "oracle_observations": "build/evals/public-alpha/avl-006-scripted-seed-0/oracle-observations.jsonl",
+        "provenance": "build/evals/public-alpha/avl-006-scripted-seed-0/provenance.json",
+        "replay_bundle": "build/evals/public-alpha/avl-006-scripted-seed-0/replay-bundle",
+        "scorecard": "build/evals/public-alpha/avl-006-scripted-seed-0/scorecard.json",
+        "tool_calls": "build/evals/public-alpha/avl-006-scripted-seed-0/tool-calls.json",
+        "transcript": "build/evals/public-alpha/avl-006-scripted-seed-0/transcript.json",
+        "triage": "build/evals/public-alpha/avl-006-scripted-seed-0/triage.md"
+      },
+      "capabilities": [
+        "policy_decision_deny",
+        "tool_not_dispatched",
+        "safe_alternative_after_denial",
+        "ordered_tool_transcript",
+        "tool_requested",
+        "tool_authorized",
+        "tool_dispatched",
+        "tool_acknowledged",
+        "side_effect_unverified",
+        "redaction_canary_absent",
+        "duplicate_benign_event_mutation",
+        "journal_integrity",
+        "projection_rebuild",
+        "contract_validation",
+        "detection_coverage",
+        "transcript_replay",
+        "replay_equivalence",
+        "artifact_provenance",
+        "artifact_redaction_audit"
+      ],
+      "descriptor_hashes": [
+        "sha256:8c0bc74a5c42cdba7398d6e642816e23cabc4f5d09db6b698165c38a115dc2b6"
+      ],
+      "event_count": 13,
+      "event_types": [
+        "agent.intent.recorded",
+        "agent.run.completed",
+        "agent.run.started",
+        "policy.decision",
+        "resource.observed",
+        "side_effect.unverified",
+        "tool.execution.acknowledged",
+        "tool.execution.authorized",
+        "tool.execution.dispatched",
+        "tool.execution.not_dispatched",
+        "tool.execution.requested"
+      ],
+      "expected_failure_class": "product_failure",
+      "failure_class": "none",
+      "mode": "scripted",
+      "model_adapter": "scripted",
+      "passed": true,
+      "scenario_id": "AVL-006",
+      "scenario_name": "denied-then-allowed-safe-alternative",
+      "seed": 0,
+      "verification_statuses": [
+        "unverified"
+      ]
+    },
+    {
+      "artifact_paths": {
+        "capability_coverage": "build/evals/public-alpha/avl-007-scripted-seed-0/capability-coverage.json",
+        "environment": "build/evals/public-alpha/avl-007-scripted-seed-0/environment.json",
+        "journal": "build/evals/public-alpha/avl-007-scripted-seed-0/journal.jsonl",
+        "mutation_sequence": "build/evals/public-alpha/avl-007-scripted-seed-0/mutation-sequence.json",
+        "oracle_observations": "build/evals/public-alpha/avl-007-scripted-seed-0/oracle-observations.jsonl",
+        "provenance": "build/evals/public-alpha/avl-007-scripted-seed-0/provenance.json",
+        "replay_bundle": "build/evals/public-alpha/avl-007-scripted-seed-0/replay-bundle",
+        "scorecard": "build/evals/public-alpha/avl-007-scripted-seed-0/scorecard.json",
+        "tool_calls": "build/evals/public-alpha/avl-007-scripted-seed-0/tool-calls.json",
+        "transcript": "build/evals/public-alpha/avl-007-scripted-seed-0/transcript.json",
+        "triage": "build/evals/public-alpha/avl-007-scripted-seed-0/triage.md"
+      },
+      "capabilities": [
+        "intent_recorded",
+        "run_started",
+        "provider_lifecycle",
+        "provider_independent_oracle",
+        "journal_integrity",
+        "projection_rebuild",
+        "contract_validation",
+        "transcript_replay",
+        "replay_equivalence",
+        "artifact_provenance",
+        "artifact_redaction_audit"
+      ],
+      "descriptor_hashes": [],
+      "event_count": 3,
+      "event_types": [
+        "agent.intent.recorded",
+        "agent.run.failed",
+        "agent.run.started"
+      ],
+      "expected_failure_class": "provider_failure",
+      "failure_class": "provider_failure",
+      "mode": "scripted",
+      "model_adapter": "scripted",
+      "passed": true,
+      "scenario_id": "AVL-007",
+      "scenario_name": "provider-lifecycle-failure",
+      "seed": 0,
+      "verification_statuses": []
+    },
+    {
+      "artifact_paths": {
+        "capability_coverage": "build/evals/public-alpha/avl-008-scripted-seed-0/capability-coverage.json",
+        "environment": "build/evals/public-alpha/avl-008-scripted-seed-0/environment.json",
+        "journal": "build/evals/public-alpha/avl-008-scripted-seed-0/journal.jsonl",
+        "mutation_sequence": "build/evals/public-alpha/avl-008-scripted-seed-0/mutation-sequence.json",
+        "oracle_observations": "build/evals/public-alpha/avl-008-scripted-seed-0/oracle-observations.jsonl",
+        "provenance": "build/evals/public-alpha/avl-008-scripted-seed-0/provenance.json",
+        "replay_bundle": "build/evals/public-alpha/avl-008-scripted-seed-0/replay-bundle",
+        "scorecard": "build/evals/public-alpha/avl-008-scripted-seed-0/scorecard.json",
+        "tool_calls": "build/evals/public-alpha/avl-008-scripted-seed-0/tool-calls.json",
+        "transcript": "build/evals/public-alpha/avl-008-scripted-seed-0/transcript.json",
+        "triage": "build/evals/public-alpha/avl-008-scripted-seed-0/triage.md"
+      },
+      "capabilities": [
+        "intent_recorded",
+        "run_started",
+        "budget_lifecycle",
+        "provider_independent_oracle",
+        "journal_integrity",
+        "projection_rebuild",
+        "contract_validation",
+        "transcript_replay",
+        "replay_equivalence",
+        "artifact_provenance",
+        "artifact_redaction_audit"
+      ],
+      "descriptor_hashes": [],
+      "event_count": 3,
+      "event_types": [
+        "agent.intent.recorded",
+        "agent.run.failed",
+        "agent.run.started"
+      ],
+      "expected_failure_class": "inconclusive_budget_exhausted",
+      "failure_class": "inconclusive_budget_exhausted",
+      "mode": "scripted",
+      "model_adapter": "scripted",
+      "passed": true,
+      "scenario_id": "AVL-008",
+      "scenario_name": "budget-exhausted-control",
+      "seed": 0,
+      "verification_statuses": []
+    },
+    {
+      "artifact_paths": {
+        "capability_coverage": "build/evals/public-alpha/avl-009-scripted-seed-0/capability-coverage.json",
+        "environment": "build/evals/public-alpha/avl-009-scripted-seed-0/environment.json",
+        "journal": "build/evals/public-alpha/avl-009-scripted-seed-0/journal.jsonl",
+        "mutation_sequence": "build/evals/public-alpha/avl-009-scripted-seed-0/mutation-sequence.json",
+        "oracle_observations": "build/evals/public-alpha/avl-009-scripted-seed-0/oracle-observations.jsonl",
+        "provenance": "build/evals/public-alpha/avl-009-scripted-seed-0/provenance.json",
+        "replay_bundle": "build/evals/public-alpha/avl-009-scripted-seed-0/replay-bundle",
+        "scorecard": "build/evals/public-alpha/avl-009-scripted-seed-0/scorecard.json",
+        "tool_calls": "build/evals/public-alpha/avl-009-scripted-seed-0/tool-calls.json",
+        "transcript": "build/evals/public-alpha/avl-009-scripted-seed-0/transcript.json",
+        "triage": "build/evals/public-alpha/avl-009-scripted-seed-0/triage.md"
+      },
+      "capabilities": [
+        "intent_recorded",
+        "run_started",
+        "harness_failure_control",
+        "provider_independent_oracle",
+        "journal_integrity",
+        "projection_rebuild",
+        "contract_validation",
+        "transcript_replay",
+        "replay_equivalence",
+        "artifact_provenance",
+        "artifact_redaction_audit"
+      ],
+      "descriptor_hashes": [],
+      "event_count": 3,
+      "event_types": [
+        "agent.intent.recorded",
+        "agent.run.failed",
+        "agent.run.started"
+      ],
+      "expected_failure_class": "harness_failure",
+      "failure_class": "harness_failure",
+      "mode": "scripted",
+      "model_adapter": "scripted",
+      "passed": true,
+      "scenario_id": "AVL-009",
+      "scenario_name": "harness-failure-control",
+      "seed": 0,
+      "verification_statuses": []
+    },
+    {
+      "artifact_paths": {
+        "capability_coverage": "build/evals/public-alpha/avl-010-scripted-seed-0/capability-coverage.json",
+        "environment": "build/evals/public-alpha/avl-010-scripted-seed-0/environment.json",
+        "journal": "build/evals/public-alpha/avl-010-scripted-seed-0/journal.jsonl",
+        "mutation_sequence": "build/evals/public-alpha/avl-010-scripted-seed-0/mutation-sequence.json",
+        "oracle_observations": "build/evals/public-alpha/avl-010-scripted-seed-0/oracle-observations.jsonl",
+        "provenance": "build/evals/public-alpha/avl-010-scripted-seed-0/provenance.json",
+        "replay_bundle": "build/evals/public-alpha/avl-010-scripted-seed-0/replay-bundle",
+        "scorecard": "build/evals/public-alpha/avl-010-scripted-seed-0/scorecard.json",
+        "tool_calls": "build/evals/public-alpha/avl-010-scripted-seed-0/tool-calls.json",
+        "transcript": "build/evals/public-alpha/avl-010-scripted-seed-0/transcript.json",
+        "triage": "build/evals/public-alpha/avl-010-scripted-seed-0/triage.md"
+      },
+      "capabilities": [
+        "intent_recorded",
+        "run_started",
+        "agent_failure_control",
+        "tool_not_dispatched",
+        "missing_optional_field_mutation",
+        "journal_integrity",
+        "projection_rebuild",
+        "contract_validation",
+        "transcript_replay",
+        "replay_equivalence",
+        "artifact_provenance",
+        "artifact_redaction_audit",
+        "mutation_minimization"
+      ],
+      "descriptor_hashes": [],
+      "event_count": 3,
+      "event_types": [
+        "agent.intent.recorded",
+        "agent.run.failed",
+        "agent.run.started"
+      ],
+      "expected_failure_class": "agent_failure",
+      "failure_class": "agent_failure",
+      "mode": "scripted",
+      "model_adapter": "scripted",
+      "passed": true,
+      "scenario_id": "AVL-010",
+      "scenario_name": "malformed-tool-plan-agent-failure",
+      "seed": 0,
+      "verification_statuses": []
+    },
+    {
+      "artifact_paths": {
+        "capability_coverage": "build/evals/public-alpha/avl-011-scripted-seed-0/capability-coverage.json",
+        "environment": "build/evals/public-alpha/avl-011-scripted-seed-0/environment.json",
+        "journal": "build/evals/public-alpha/avl-011-scripted-seed-0/journal.jsonl",
+        "mutation_sequence": "build/evals/public-alpha/avl-011-scripted-seed-0/mutation-sequence.json",
+        "oracle_observations": "build/evals/public-alpha/avl-011-scripted-seed-0/oracle-observations.jsonl",
+        "provenance": "build/evals/public-alpha/avl-011-scripted-seed-0/provenance.json",
+        "replay_bundle": "build/evals/public-alpha/avl-011-scripted-seed-0/replay-bundle",
+        "scorecard": "build/evals/public-alpha/avl-011-scripted-seed-0/scorecard.json",
+        "tool_calls": "build/evals/public-alpha/avl-011-scripted-seed-0/tool-calls.json",
+        "transcript": "build/evals/public-alpha/avl-011-scripted-seed-0/transcript.json",
+        "triage": "build/evals/public-alpha/avl-011-scripted-seed-0/triage.md"
+      },
+      "capabilities": [
+        "product_failure_control",
+        "oracle_mismatch_control",
+        "tool_descriptor_hash",
+        "tool_requested",
+        "tool_authorized",
+        "tool_dispatched",
+        "tool_acknowledged",
+        "acknowledgement_not_side_effect_evidence",
+        "side_effect_unverified",
+        "event_ordering_skew_mutation",
+        "provider_independent_oracle",
+        "journal_integrity",
+        "projection_rebuild",
+        "contract_validation",
+        "transcript_replay",
+        "replay_equivalence",
+        "artifact_provenance",
+        "artifact_redaction_audit"
+      ],
+      "descriptor_hashes": [
+        "sha256:8c0bc74a5c42cdba7398d6e642816e23cabc4f5d09db6b698165c38a115dc2b6"
+      ],
+      "event_count": 9,
+      "event_types": [
+        "agent.intent.recorded",
+        "agent.run.completed",
+        "agent.run.started",
+        "resource.observed",
+        "side_effect.unverified",
+        "tool.execution.acknowledged",
+        "tool.execution.authorized",
+        "tool.execution.dispatched",
+        "tool.execution.requested"
+      ],
+      "expected_failure_class": "product_failure",
+      "failure_class": "product_failure",
+      "mode": "scripted",
+      "model_adapter": "scripted",
+      "passed": true,
+      "scenario_id": "AVL-011",
+      "scenario_name": "product-failure-oracle-mismatch",
+      "seed": 0,
+      "verification_statuses": [
+        "unverified"
+      ]
+    }
+  ],
+  "scenario_ids": [
+    "AVL-001",
+    "AVL-002",
+    "AVL-003",
+    "AVL-004",
+    "AVL-005",
+    "AVL-006",
+    "AVL-007",
+    "AVL-008",
+    "AVL-009",
+    "AVL-010",
+    "AVL-011"
+  ],
+  "scenario_schema": {
+    "api_versions": [
+      "actionlineage.dev/eval-scenario/v0"
+    ],
+    "schema_path": "/Users/marq/Projects/actionlineage/evals/SCENARIO_SCHEMA.json",
+    "schema_version": "https://actionlineage.dev/schemas/eval-scenario-v0.json"
+  },
+  "schema_version": "actionlineage.dev/agent-validation-public-report-v0",
+  "seeds": [
+    0
+  ],
+  "source_commits": [
+    "7edc0c401100c6545e8340b9cf674c2a63d966b4"
+  ],
+  "suite": {
+    "failed_count": 0,
+    "scenario_count": 11,
+    "scorecard_count": 11
+  },
+  "tool_schema_hashes": [
+    {
+      "descriptor_hash": "sha256:c5b6e90a0a0ca868cd922ce777b6ab37c6667b9c3307be3d316bb65f251b5803",
+      "name": "safe_files.read",
+      "server_identity": "actionlineage-eval-toolserver"
+    },
+    {
+      "descriptor_hash": "sha256:8c0bc74a5c42cdba7398d6e642816e23cabc4f5d09db6b698165c38a115dc2b6",
+      "name": "safe_http.send",
+      "server_identity": "actionlineage-eval-toolserver"
+    },
+    {
+      "descriptor_hash": "sha256:b3d23e94de31daa27401066140ddb7388a066c88b4ed1e9424704bab44a17814",
+      "name": "safe_http.send",
+      "server_identity": "actionlineage-eval-toolserver"
+    }
+  ]
+}

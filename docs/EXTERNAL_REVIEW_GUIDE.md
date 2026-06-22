@@ -84,8 +84,10 @@ Use `docs/EVALUATION_REPRODUCTION.md` for exact command bundles covering:
 - deterministic no-model Agent Validation Lab;
 - release proof gates that can run without credentials.
 
-Use `docs/AGENT_VALIDATION_EVIDENCE.md` for the current no-model baseline and
-known Agent Validation gaps.
+Use `docs/AGENT_VALIDATION_EVIDENCE.md` plus
+`docs/evidence/agent-validation-baseline.md` and
+`docs/evidence/agent-validation-baseline.json` for the current generated
+no-model baseline and known Agent Validation gaps.
 
 ## What Data Is Safe To Share
 

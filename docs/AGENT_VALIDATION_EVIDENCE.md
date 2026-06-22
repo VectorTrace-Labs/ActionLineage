@@ -8,8 +8,14 @@ surface. It is not packaged as a runtime dependency. Model output is not
 authoritative product evidence.
 
 Generated eval artifacts belong under `build/evals/` or `/tmp` and are not
-committed by default. The committed evidence here is a concise summary of the
-commands, counts, controls, and limitations needed for independent reruns.
+committed by default. The committed public baseline report is generated from
+those artifacts and stored in:
+
+- `docs/evidence/agent-validation-baseline.md`;
+- `docs/evidence/agent-validation-baseline.json`.
+
+This page remains the concise human summary of the commands, counts, controls,
+and limitations needed for independent reruns.
 
 ## Reproduction Commands
 
@@ -26,9 +32,10 @@ PYTHONPATH=evals uv run --group eval python -m actionlineage_evals run \
   --seeds 1
 PYTHONPATH=evals uv run --group eval python -m actionlineage_evals audit-artifacts \
   build/evals/public-alpha
-PYTHONPATH=evals uv run --group eval python -m actionlineage_evals summarize \
+PYTHONPATH=evals uv run --group eval python -m actionlineage_evals public-report \
   build/evals/public-alpha \
-  --format markdown
+  --json-output docs/evidence/agent-validation-baseline.json \
+  --markdown-output docs/evidence/agent-validation-baseline.md
 ```
 
 ## Current No-Model Baseline
@@ -42,6 +49,7 @@ PYTHONPATH=evals uv run --group eval python -m actionlineage_evals summarize \
 | Scripted no-model suite | 11 scorecards, 0 failed |
 | Artifact audit | 236 files scanned, 0 leaks |
 | Replay equivalence in the scripted baseline | 0/0 because replay is a separate command path |
+| Public baseline report | `docs/evidence/agent-validation-baseline.md` and `docs/evidence/agent-validation-baseline.json` |
 
 Failure-class counts from the scripted baseline:
 

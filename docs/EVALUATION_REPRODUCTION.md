@@ -54,9 +54,10 @@ PYTHONPATH=evals uv run --group eval python -m actionlineage_evals run \
   --seeds 1
 PYTHONPATH=evals uv run --group eval python -m actionlineage_evals audit-artifacts \
   build/evals/public-alpha
-PYTHONPATH=evals uv run --group eval python -m actionlineage_evals summarize \
+PYTHONPATH=evals uv run --group eval python -m actionlineage_evals public-report \
   build/evals/public-alpha \
-  --format markdown
+  --json-output docs/evidence/agent-validation-baseline.json \
+  --markdown-output docs/evidence/agent-validation-baseline.md
 ```
 
 Expected current baseline:
@@ -68,7 +69,9 @@ Expected current baseline:
 - 0 audited leaks.
 
 See `docs/AGENT_VALIDATION_EVIDENCE.md` for the current scenario index,
-failure-class counts, and known gaps.
+failure-class counts, and known gaps. The generated committed baseline is in
+`docs/evidence/agent-validation-baseline.md` and
+`docs/evidence/agent-validation-baseline.json`.
 
 ## Local Release Proof
 

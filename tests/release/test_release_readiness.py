@@ -78,6 +78,8 @@ def test_release_docs_are_present() -> None:
         ".github/copilot-instructions.md",
         "docs/QUALITY_SCORECARD.md",
         "docs/AGENT_VALIDATION_EVIDENCE.md",
+        "docs/evidence/agent-validation-baseline.json",
+        "docs/evidence/agent-validation-baseline.md",
         "docs/PERFECTION_PLAN.md",
         "docs/MATURITY.md",
         "docs/DECISIONS_REQUIRED.md",
@@ -188,6 +190,7 @@ def test_external_review_docs_prepare_review_without_claiming_validation() -> No
         "actionlineage journal verify",
         "contracts/examples/outbound-http.json",
         "PYTHONPATH=evals uv run --group eval python -m actionlineage_evals",
+        "docs/evidence/agent-validation-baseline.json",
         "scripts/check_claims_language.py",
         "scripts/secret_scan.py",
     ):
@@ -257,6 +260,8 @@ def test_release_candidate_audit_prepares_without_publishing() -> None:
     assert "contract validate, case export, and static console export" in audit
     assert "47/47 declared capabilities covered" in audit
     assert "236 files scanned, 0 leaks" in audit
+    assert "docs/evidence/agent-validation-baseline.md" in audit
+    assert "docs/evidence/agent-validation-baseline.json" in audit
     assert "GitHub Release object for `v0.1.0a3`: absent" in audit
     assert "943eac5a50fa727979e0ecf232a93922c90de1b0db6c7d65d6e1aeaf9f3939e1" in audit
     assert "d9c6234de90fd1b13ca70fee3da3f74da81c688e7cf4b4143811470e3687fba7" in audit
@@ -314,6 +319,9 @@ def test_release_checklist_covers_required_gates() -> None:
         "--package-spec dist/actionlineage-0.1.0a3.tar.gz",
         "scripts/write_ci_quality_summary.py",
         "--coverage-floor 85",
+        "actionlineage_evals public-report",
+        "--json-output docs/evidence/agent-validation-baseline.json",
+        "--markdown-output docs/evidence/agent-validation-baseline.md",
         "uv build --out-dir /tmp/actionlineage-dist",
         "scripts/generate_release_provenance.py",
         "--dist-dir /tmp/actionlineage-dist",

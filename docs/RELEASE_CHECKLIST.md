@@ -46,6 +46,31 @@ uv run python scripts/write_ci_quality_summary.py \
   --output build/actionlineage-ci-summary.md
 ```
 
+## Agent Validation Gates
+
+These are development-only, no-model gates. They generate committed summary
+evidence from synthetic artifacts without treating model output as an
+authoritative oracle.
+
+```bash
+PYTHONPATH=evals uv run --group eval python -m actionlineage_evals validate-scenarios
+PYTHONPATH=evals uv run --group eval python -m actionlineage_evals lint-scenarios
+PYTHONPATH=evals uv run --group eval python -m actionlineage_evals coverage --strict
+PYTHONPATH=evals uv run --group eval python -m actionlineage_evals check-boundaries
+PYTHONPATH=evals uv run --group eval python -m actionlineage_evals run \
+  --scenario-path evals/scenarios \
+  --artifact-root build/evals/public-alpha \
+  --mode scripted \
+  --model-adapter scripted \
+  --seeds 1
+PYTHONPATH=evals uv run --group eval python -m actionlineage_evals audit-artifacts \
+  build/evals/public-alpha
+PYTHONPATH=evals uv run --group eval python -m actionlineage_evals public-report \
+  build/evals/public-alpha \
+  --json-output docs/evidence/agent-validation-baseline.json \
+  --markdown-output docs/evidence/agent-validation-baseline.md
+```
+
 ## Clean Snapshot Gate
 
 Run tests from tracked repository content so ignored local planning files do not
