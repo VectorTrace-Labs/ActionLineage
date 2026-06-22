@@ -26,6 +26,7 @@ external-validation surfaces until they are externally validated.
 | Deterministic verified/unverified/conflicting/not-dispatched demo | Alpha-supported | `make demo`, demo tests, contract validation |
 | Case export, graph export, grounded summary, static console | Alpha-supported | Projection and console tests |
 | Lineage Contracts, sequence detections, Lineage Lab | Local-proof | Contract, detection, and replay tests |
+| Agent Validation Lab | Local-proof | Development-only eval group, scenario fixtures, no-model CI lanes |
 | MCP, policy, OpenTelemetry, service, Postgres, cloud/Kubernetes fixtures | Preview | Optional extras and local fixture tests |
 | GitHub release artifacts and attestations | Local-proof | Release workflow and `v0.1.0a2` pre-release |
 | PyPI/TestPyPI package publication | Alpha-supported | `v0.1.0a2` published through Trusted Publishing; fresh install/demo smoke passed |
@@ -35,21 +36,14 @@ external-validation surfaces until they are externally validated.
 Full claim mapping lives in
 [docs/QUALITY_SCORECARD.md](docs/QUALITY_SCORECARD.md).
 
-## Five-Minute Local Evaluation
+## Five-Minute PyPI Evaluation
 
 Prerequisites:
 
 - Python 3.13 or newer
 - `uv`
-- `make` for convenience targets
 
-Install all optional extras used by the test suite:
-
-```bash
-uv sync --locked --all-extras
-```
-
-Or run the published public-alpha package directly from PyPI:
+For normal evaluation, run the published public-alpha package from PyPI:
 
 ```bash
 uvx --from actionlineage==0.1.0a2 actionlineage version
@@ -57,21 +51,28 @@ uvx --from actionlineage==0.1.0a2 actionlineage demo run --output-dir /tmp/actio
 uvx --from actionlineage==0.1.0a2 actionlineage journal verify /tmp/actionlineage-demo/evidence.jsonl
 ```
 
-Run the deterministic local demo:
+The demo requires no model API key, cloud account, or external service. The
+PyPI path needs internet access to install the package; the demo itself is
+deterministic and local after installation.
 
-```bash
-make demo
-```
-
-The demo requires no model API key, cloud account, external service, or internet
-access. It writes artifacts under `build/actionlineage-demo/`:
+The demo writes artifacts under `/tmp/actionlineage-demo/`:
 
 - `evidence.jsonl`: canonical append-only local journal.
 - `projection.sqlite`: rebuildable query projection.
 - `timeline.json`: compact event-order summary.
 - `incident.json`: machine-readable incident export.
 
-Inspect the evidence:
+If you cloned the repository for development, install the full local test
+environment and run the same demo through the checkout:
+
+```bash
+uv sync --locked --all-extras
+make demo
+```
+
+Repository demo artifacts are written under `build/actionlineage-demo/`.
+
+Inspect repository-generated evidence:
 
 ```bash
 uv run actionlineage journal verify build/actionlineage-demo/evidence.jsonl
@@ -156,6 +157,38 @@ flowchart LR
 
 Core packages do not import MCP, OpenTelemetry, model-provider SDKs, FastAPI, or
 cloud SDKs. Those surfaces live behind optional adapter or service boundaries.
+
+## Agent Validation Lab
+
+The Agent Validation Lab is a development-only evaluation surface for testing
+tool-using agents against ActionLineage evidence requirements. It lives under
+`evals/`, is not packaged as an ActionLineage runtime dependency, and does not
+change the `v1alpha1` event schema.
+
+It provides scenario fixtures, no-model replay, scorer output, provenance,
+artifact audits, Docker-backed local receiver scenarios, and optional scheduled
+live-model lanes for maintainers. Pull-request validation remains secret-free
+and no model response is treated as authoritative product evidence.
+
+Run the deterministic no-model lab locally from a repository checkout:
+
+```bash
+PYTHONPATH=evals uv run --group eval python -m actionlineage_evals validate-scenarios
+PYTHONPATH=evals uv run --group eval python -m actionlineage_evals coverage --strict
+PYTHONPATH=evals uv run --group eval python -m actionlineage_evals run \
+  --scenario-path evals/scenarios \
+  --artifact-root build/evals/local \
+  --mode scripted \
+  --model-adapter scripted
+PYTHONPATH=evals uv run --group eval python -m actionlineage_evals summarize \
+  build/evals/local \
+  --format markdown
+```
+
+See [evals/README.md](evals/README.md),
+[docs/AGENT_VALIDATION_ARCHITECTURE.md](docs/AGENT_VALIDATION_ARCHITECTURE.md),
+[docs/AGENT_VALIDATION_THREAT_MODEL.md](docs/AGENT_VALIDATION_THREAT_MODEL.md),
+and [docs/AGENT_VALIDATION_PLAN.md](docs/AGENT_VALIDATION_PLAN.md).
 
 ## How This Differs
 
@@ -280,6 +313,12 @@ reference.
   code.
 - [Detection Lab](docs/DETECTION_LAB.md): replay, mutation, minimization, and
   scorecards.
+- [Agent Validation Lab](evals/README.md): development-only agent evaluation,
+  replay, scorer, Docker, and artifact-audit workflow.
+- [Agent Validation architecture](docs/AGENT_VALIDATION_ARCHITECTURE.md):
+  eval boundaries, adapters, artifacts, and CI lanes.
+- [Agent Validation threat model](docs/AGENT_VALIDATION_THREAT_MODEL.md):
+  development-lab trust boundaries and failure modes.
 - [Observers](docs/OBSERVERS.md): local, fixture, cloud, Kubernetes, and external
   sensor evidence.
 - [Integrations](docs/INTEGRATIONS.md): exporters and optional ecosystem
