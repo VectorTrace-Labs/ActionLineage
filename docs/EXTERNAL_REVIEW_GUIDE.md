@@ -33,6 +33,15 @@ The demo itself is deterministic and credential-free after installation. It
 does not need a model API key, cloud account, live MCP server, or internet
 access.
 
+From a repository checkout, reviewers can run the same first-time-user path
+through one JSON-reporting smoke command:
+
+```bash
+uv run python scripts/smoke_public_quickstart.py \
+  --command "uv run actionlineage" \
+  --output-dir build/review-quickstart-smoke
+```
+
 ## Flagship Repository Demo
 
 From a repository checkout:

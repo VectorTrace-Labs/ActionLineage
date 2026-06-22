@@ -130,6 +130,107 @@ def test_markdown_link_check_handles_reference_links_and_file_uris(tmp_path: Pat
     assert [issue.code for issue in result.issues] == ["file_uri"]
 
 
+def test_public_quickstart_smoke_runs_local_cli(tmp_path: Path) -> None:
+    smoker = _load_script("smoke_public_quickstart")
+
+    result = smoker.run_smoke(
+        cli_prefix=("uv", "run", "actionlineage"),
+        output_dir=tmp_path / "quickstart",
+        contract_path=PROJECT_ROOT / "contracts/examples/outbound-http.json",
+    )
+
+    assert result.ok
+    assert [step.name for step in result.steps] == [
+        "version",
+        "demo",
+        "demo_artifacts_exist",
+        "journal_verify",
+        "contract_validate",
+        "case_export",
+        "case_export_artifacts_exist",
+        "console_export",
+        "console_export_artifacts_exist",
+    ]
+    assert (tmp_path / "quickstart/demo/evidence.jsonl").exists()
+    assert (tmp_path / "quickstart/case/case.json").exists()
+    assert (tmp_path / "quickstart/console.html").exists()
+
+
+def test_public_quickstart_smoke_builds_uvx_package_prefix() -> None:
+    smoker = _load_script("smoke_public_quickstart")
+    args = smoker._parse_args(
+        (
+            "--package-spec",
+            "actionlineage==0.1.0a3",
+            "--uvx-prerelease",
+            "allow",
+        )
+    )
+
+    assert smoker.cli_prefix_from_args(args) == (
+        "uvx",
+        "--prerelease",
+        "allow",
+        "--from",
+        "actionlineage==0.1.0a3",
+        "actionlineage",
+    )
+
+
+def test_public_quickstart_smoke_fails_when_expected_artifacts_are_missing(
+    monkeypatch,
+    tmp_path: Path,
+) -> None:
+    smoker = _load_script("smoke_public_quickstart")
+
+    def fake_run_step(*, name: str, command: tuple[str, ...], timeout_seconds: float):
+        assert timeout_seconds == smoker.DEFAULT_STEP_TIMEOUT_SECONDS
+        return smoker.SmokeStep(
+            name=name,
+            command=command,
+            exit_code=0,
+            stdout="0.1.0a3\n" if name == "version" else "{}\n",
+            stderr="",
+        )
+
+    monkeypatch.setattr(smoker, "_run_step", fake_run_step)
+
+    result = smoker.run_smoke(
+        cli_prefix=("actionlineage",),
+        output_dir=tmp_path / "quickstart",
+        contract_path=PROJECT_ROOT / "contracts/examples/outbound-http.json",
+    )
+
+    assert not result.ok
+    assert result.steps[-1].name == "demo_artifacts_exist"
+    assert "evidence.jsonl" in result.steps[-1].stdout
+
+
+def test_public_quickstart_smoke_reports_timed_out_step(monkeypatch) -> None:
+    smoker = _load_script("smoke_public_quickstart")
+
+    def fake_run(*args, **kwargs):
+        raise smoker.subprocess.TimeoutExpired(
+            cmd=args[0],
+            timeout=kwargs["timeout"],
+            output="partial stdout",
+            stderr="partial stderr",
+        )
+
+    monkeypatch.setattr(smoker.subprocess, "run", fake_run)
+
+    result = smoker._run_step(
+        name="demo",
+        command=("actionlineage", "demo", "run"),
+        timeout_seconds=0.01,
+    )
+
+    assert result.exit_code == 124
+    assert "partial stdout" in result.stdout
+    assert "partial stderr" in result.stderr
+    assert "step timed out after 0.01 seconds" in result.stderr
+
+
 def test_lightweight_sbom_includes_runtime_dependency() -> None:
     generator = _load_script("generate_sbom")
 

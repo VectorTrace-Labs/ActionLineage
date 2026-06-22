@@ -80,7 +80,7 @@ data, not universal performance guarantees.
 | 1 | Release and version consistency | In progress: checker added; GitHub Release object remains owner-gated |
 | 2 | Package metadata and discoverability | In progress: local metadata improved; public metadata waits for next release |
 | 3 | README landing experience and visual proof | In progress: generated demo evidence map and freshness check added |
-| 4 | Clean installation and first-time-user testing | Baseline public smoke completed; CI hardening remains |
+| 4 | Clean installation and first-time-user testing | In progress: baseline public smoke completed; built wheel and sdist first-time-user smoke gate added to CI |
 | 5 | Visible quality and security evidence | In progress: baseline captured; CI now runs repository-local Markdown link checking; workflow summary hardening remains |
 | 6 | Agent Validation Lab public evidence | In progress: deterministic no-model baseline report added; external/live lanes remain separate |
 | 7 | Reliability and adversarial hardening | In progress: SQLite projection handles close under warning-as-error coverage; static console context bounds and CSP added; verified-prefix recovery rejects in-place overwrite and streams output |

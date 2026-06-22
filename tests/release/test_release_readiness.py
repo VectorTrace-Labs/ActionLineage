@@ -301,7 +301,10 @@ def test_release_checklist_covers_required_gates() -> None:
         "scripts/secret_scan.py",
         "scripts/generate_sbom.py",
         "uv run pip-audit",
-        "uv build",
+        "uv build --out-dir dist",
+        "scripts/smoke_public_quickstart.py",
+        "--package-spec dist/actionlineage-0.1.0a3-py3-none-any.whl",
+        "--package-spec dist/actionlineage-0.1.0a3.tar.gz",
         "uv build --out-dir /tmp/actionlineage-dist",
         "scripts/generate_release_provenance.py",
         "--dist-dir /tmp/actionlineage-dist",
@@ -343,6 +346,11 @@ def test_ci_runs_local_release_proof_gates() -> None:
     assert "scripts/generate_release_provenance.py" in workflow
     assert "--dist-dir /tmp/actionlineage-dist" in workflow
     assert "--output /tmp/actionlineage-release-provenance.json" in workflow
+    assert "name: Built wheel first-time-user smoke" in workflow
+    assert "name: Built sdist first-time-user smoke" in workflow
+    assert "scripts/smoke_public_quickstart.py" in workflow
+    assert '--package-spec "$wheel"' in workflow
+    assert '--package-spec "$sdist"' in workflow
 
 
 def test_release_workflow_builds_attests_and_uses_trusted_publishing() -> None:

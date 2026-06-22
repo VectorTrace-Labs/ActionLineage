@@ -18,7 +18,13 @@ uv run python scripts/check_markdown_links.py .
 uv run python scripts/secret_scan.py .
 uv run python scripts/generate_sbom.py --output build/actionlineage-sbom.json
 uv run pip-audit
-uv build
+uv build --out-dir dist
+uv run python scripts/smoke_public_quickstart.py \
+  --package-spec dist/actionlineage-0.1.0a3-py3-none-any.whl \
+  --output-dir build/wheel-quickstart-smoke
+uv run python scripts/smoke_public_quickstart.py \
+  --package-spec dist/actionlineage-0.1.0a3.tar.gz \
+  --output-dir build/sdist-quickstart-smoke
 uv run python scripts/generate_release_provenance.py \
   --dist-dir dist \
   --output build/actionlineage-release-provenance.json
@@ -174,6 +180,8 @@ See `docs/PACKAGE_MANAGERS.md`.
 - Dependency Review workflow is present for pull requests.
 - Docker image build and runtime smoke validation are required in CI before
   merging Docker base-image changes.
+- Built wheel and source distribution first-time-user smoke validation runs in
+  CI with `scripts/smoke_public_quickstart.py`.
 - Dependabot version updates are configured for uv, GitHub Actions, and Docker.
 - Dependabot alerts and Dependabot security updates require repository-setting
   confirmation.

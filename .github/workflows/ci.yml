@@ -57,6 +57,18 @@ jobs:
         run: uv run pip-audit
       - name: Build distribution artifacts
         run: uv build --out-dir /tmp/actionlineage-dist
+      - name: Built wheel first-time-user smoke
+        run: |
+          wheel="$(find /tmp/actionlineage-dist -name '*.whl' -print -quit)"
+          uv run python scripts/smoke_public_quickstart.py \
+            --package-spec "$wheel" \
+            --output-dir /tmp/actionlineage-wheel-smoke
+      - name: Built sdist first-time-user smoke
+        run: |
+          sdist="$(find /tmp/actionlineage-dist -name '*.tar.gz' -print -quit)"
+          uv run python scripts/smoke_public_quickstart.py \
+            --package-spec "$sdist" \
+            --output-dir /tmp/actionlineage-sdist-smoke
       - name: Release consistency check
         run: |
           uv run python scripts/check_release_consistency.py \
