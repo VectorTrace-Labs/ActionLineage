@@ -20,6 +20,7 @@ from actionlineage_evals.scenarios import (
     load_scenarios,
     validate_capability_coverage,
 )
+from actionlineage_evals.summary import summarize_scorecards, summarize_scorecards_text
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -85,6 +86,10 @@ def main(argv: list[str] | None = None) -> int:
         default=DEFAULT_ARTIFACT_ROOT / "docker-smoke",
     )
 
+    summarize = subcommands.add_parser("summarize")
+    summarize.add_argument("artifact_root", type=Path)
+    summarize.add_argument("--format", choices=["json", "text"], default="json")
+
     args = parser.parse_args(argv)
     if args.command == "validate-scenarios":
         scenarios = load_scenarios(args.scenario_path)
@@ -136,6 +141,13 @@ def main(argv: list[str] | None = None) -> int:
         stop = controller.stop()
         _print({"ok": True, "start": start, "stop": stop})
         return 0
+    if args.command == "summarize":
+        if args.format == "text":
+            sys.stdout.write(summarize_scorecards_text(args.artifact_root))
+            return 0
+        summary = summarize_scorecards(args.artifact_root)
+        _print(summary)
+        return 0 if summary["ok"] else 1
     raise AssertionError(f"unhandled command: {args.command}")
 
 

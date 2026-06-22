@@ -235,13 +235,42 @@ scenarios:
       - detection_coverage
       - transcript_replay
 
+  - id: AVL-007
+    name: provider-lifecycle-failure
+    maturity: development-only
+    first_slice: false
+    agent_task: classify synthetic provider failure before any tool call
+    expected_failure_class_on_mismatch: provider_failure
+    required_oracles:
+      - journal_verification
+      - projection_rebuild
+      - redaction_scan
+    required_scorers:
+      - lifecycle
+      - integrity
+      - redaction
+      - contract
+      - detection
+      - capability_coverage
+      - replayability
+      - failure_classification
+    covers:
+      - intent_recorded
+      - run_started
+      - provider_lifecycle
+      - provider_independent_oracle
+      - journal_integrity
+      - projection_rebuild
+      - contract_validation
+      - transcript_replay
+
 capabilities:
   intent_recorded:
     description: Root intent is recorded with initiating principal.
-    scenarios: [AVL-001]
+    scenarios: [AVL-001, AVL-007]
   run_started:
     description: Agent run lifecycle is visible.
-    scenarios: [AVL-001]
+    scenarios: [AVL-001, AVL-007]
   tool_descriptor_hash:
     description: Tool identity includes canonical descriptor hash when descriptor data is available.
     scenarios: [AVL-001, AVL-004]
@@ -304,16 +333,16 @@ capabilities:
     scenarios: [AVL-003, AVL-006]
   provider_independent_oracle:
     description: Pass/fail evidence comes from environment or ActionLineage state, not provider output.
-    scenarios: [AVL-002]
+    scenarios: [AVL-002, AVL-007]
   journal_integrity:
     description: Journal hash-chain verification is part of scoring.
-    scenarios: [AVL-001, AVL-002, AVL-003, AVL-004, AVL-005, AVL-006]
+    scenarios: [AVL-001, AVL-002, AVL-003, AVL-004, AVL-005, AVL-006, AVL-007]
   projection_rebuild:
     description: SQLite projection rebuild is part of scoring.
-    scenarios: [AVL-001, AVL-002, AVL-003, AVL-004, AVL-005, AVL-006]
+    scenarios: [AVL-001, AVL-002, AVL-003, AVL-004, AVL-005, AVL-006, AVL-007]
   contract_validation:
     description: Lineage Contract requirements are evaluated.
-    scenarios: [AVL-001, AVL-003, AVL-005, AVL-006]
+    scenarios: [AVL-001, AVL-003, AVL-005, AVL-006, AVL-007]
   detection_coverage:
     description: Scenario-required detections are evaluated with evidence references.
     scenarios: [AVL-003, AVL-004, AVL-005, AVL-006]
@@ -322,7 +351,7 @@ capabilities:
     scenarios: [AVL-002]
   transcript_replay:
     description: Dynamic run can be replayed without model calls.
-    scenarios: [AVL-001, AVL-002, AVL-003, AVL-004, AVL-005, AVL-006]
+    scenarios: [AVL-001, AVL-002, AVL-003, AVL-004, AVL-005, AVL-006, AVL-007]
   multi_tool_causal_chain:
     description: A scenario records an ordered multi-tool chain under one run.
     scenarios: [AVL-005]
@@ -337,7 +366,7 @@ capabilities:
     scenarios: [AVL-002, AVL-005, AVL-006]
   provider_lifecycle:
     description: Provider failures are classified separately from product and harness failures.
-    scenarios: []
+    scenarios: [AVL-007]
 
 known_gaps:
   - id: cloud_observer_live
@@ -346,5 +375,3 @@ known_gaps:
     reason: Deferred until the single-agent vertical slice is deterministic.
   - id: service_mode_auth_eval
     reason: Optional service mode is preview and not required for the first lab slice.
-  - id: provider_lifecycle_scenario
-    reason: Provider-failure classification is unit-tested but not yet covered by a scenario.

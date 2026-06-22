@@ -1,0 +1,99 @@
+apiVersion: actionlineage.dev/eval-scenario/v0
+kind: AgentValidationScenario
+metadata:
+  id: AVL-007
+  name: provider-lifecycle-failure
+  owner: security-platform
+  maturity: development-only
+  tags: [provider, failure-classification, replay]
+spec:
+  deterministic: true
+  intent:
+    summary: Classify a model provider failure without treating it as a product failure.
+    prompt: Trigger the synthetic provider failure adapter before any tool call is returned.
+    successCriteria:
+      - The run records intent, start, and failed lifecycle evidence.
+      - The scorecard classifies the terminal error as provider_failure.
+      - No tool call or side effect is invented from provider output.
+  environment:
+    type: docker_compose
+    artifactRoot: build/evals/
+    compose:
+      file: evals/docker/compose.yaml
+      projectNamePrefix: actionlineage-eval
+      captureConfigDigest: true
+      teardown: always
+    services:
+      - name: fixture
+        role: fixture
+        healthCheck: fixture-only
+  agents:
+    - id: local-agent
+      agentAdapter: local_tool_agent
+      modelAdapter: replay
+      allowedTools: [provider.synthetic_failure]
+  tools:
+    - name: provider.synthetic_failure
+      descriptorHashRequired: false
+      sideEffectClass: none
+      policyMode: not_applicable
+  oracles:
+    - id: journal
+      type: journal_verification
+      subject: build/evals/<run-id>/journal.jsonl
+      authoritative: true
+    - id: projection
+      type: projection_rebuild
+      subject: build/evals/<run-id>/projection.sqlite
+      authoritative: true
+    - id: redaction
+      type: redaction_scan
+      subject: build/evals/<run-id>
+      authoritative: true
+  expected:
+    lifecycle:
+      - agent.intent.recorded
+      - agent.run.started
+      - agent.run.failed
+    verificationStatuses: []
+    mustNotIncludeVerificationStatuses: [observed, verified, unverified, timed_out, conflicting]
+    evidenceLinks: []
+    contracts: [AVL-007-contract]
+    detections: []
+    failureClass: provider_failure
+    scorers:
+      - lifecycle
+      - integrity
+      - redaction
+      - contract
+      - detection
+      - capability_coverage
+      - replayability
+      - failure_classification
+  mutations:
+    - type: transcript_replay_variant
+      seeded: true
+      parameters: {source: provider_error}
+  budgets:
+    maxModelRequests: 1
+    maxModelTurns: 1
+    maxToolCalls: 0
+    maxCompletionTokensPerTurn: 128
+    timeoutSeconds: 10
+  replay:
+    required: true
+    artifacts:
+      - scenario_manifest
+      - seed
+      - mutation_sequence
+      - model_metadata
+      - prompt_hashes
+      - transcript
+      - tool_calls
+      - oracle_observations
+      - journal
+      - projection
+      - contract_results
+      - detection_results
+      - environment_digests
+      - scorecard

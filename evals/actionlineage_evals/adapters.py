@@ -91,6 +91,8 @@ class ScriptedModelAdapter:
         request_index: int,
     ) -> ModelTurn:
         del prompt, budget
+        if self.scenario_id == "AVL-007":
+            raise ProviderError("synthetic provider failure for AVL-007")
         calls = tuple(call for call in _scripted_calls(self.scenario_id) if call.name in tools)
         return ModelTurn(
             content="scripted deterministic tool plan",

@@ -20,6 +20,20 @@ class ReceiverHandler(BaseHTTPRequestHandler):
             self.end_headers()
             self.wfile.write(b"ok\n")
             return
+        if self.path == "/requests":
+            events = []
+            if self.log_path.exists():
+                with self.log_path.open(encoding="utf-8") as log_file:
+                    for line in log_file:
+                        if line.strip():
+                            events.append(json.loads(line))
+            body = json.dumps(events, sort_keys=True).encode("utf-8")
+            self.send_response(200)
+            self.send_header("Content-Type", "application/json")
+            self.send_header("Content-Length", str(len(body)))
+            self.end_headers()
+            self.wfile.write(body)
+            return
         self.send_response(404)
         self.end_headers()
 

@@ -144,7 +144,7 @@ def run_scenario(
             model_id=model_id,
             replay_turns=replay_turns,
         )
-        recorder.record_run_started(
+        run_started = recorder.record_run_started(
             mode=mode.value,
             provider=adapter.provider,
             model_id=adapter.model_id,
@@ -185,7 +185,15 @@ def run_scenario(
             observations_path=paths.oracle_observations_path,
             toxiproxy_path=paths.toxiproxy_timeline_path,
         )
-        recorder.record_run_completed(passed=True)
+        terminal_error = provider_error or agent_error
+        if terminal_error is None:
+            recorder.record_run_completed(passed=True)
+        else:
+            recorder.record_run_failed(
+                error_type=type(terminal_error).__name__,
+                message=str(terminal_error),
+                parent_event_id=run_started.event_id,
+            )
         scores = score_run(scenario=scenario, paths=paths, canary_values=_canaries(scenario, seed))
     except Exception as exc:
         harness_error = exc
@@ -205,9 +213,15 @@ def run_scenario(
         harness_error=harness_error,
         budget_exhausted=budget_exhausted,
     )
-    passed = failure_class is None and bool(scores) and all(score.ok for score in scores)
+    scores_ok = bool(scores) and all(score.ok for score in scores)
+    expected_failure_class = scenario.mismatch_failure_class
+    expected_terminal_failure = (
+        expected_failure_class != FailureClass.PRODUCT and failure_class == expected_failure_class
+    )
+    passed = (failure_class is None and scores_ok) or (expected_terminal_failure and scores_ok)
     scorecard = {
         "agent_error": _error_dict(agent_error),
+        "expected_failure_class": expected_failure_class.value,
         "failure_class": failure_class.value if failure_class else None,
         "harness_error": _error_dict(harness_error),
         "passed": passed,

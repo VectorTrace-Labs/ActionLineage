@@ -83,7 +83,7 @@ spec:
       - side_effect.timed_out
       - agent.run.completed
     verificationStatuses: [timed_out]
-    mustNotIncludeVerificationStatuses: [verified]
+    mustNotIncludeVerificationStatuses: [verified, conflicting]
     evidenceLinks:
       - subjectEventType: tool.execution.acknowledged
         evidenceEventType: tool.execution.acknowledged

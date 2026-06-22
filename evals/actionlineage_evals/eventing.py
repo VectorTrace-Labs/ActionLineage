@@ -169,6 +169,25 @@ class EventRecorder:
             {"run": {"passed": passed, "scenario_id": self.scenario_id}},
         )
 
+    def record_run_failed(
+        self,
+        *,
+        error_type: str,
+        message: str,
+        parent_event_id: str | None = None,
+    ) -> EventEnvelope:
+        return self.record(
+            EventType.AGENT_RUN_FAILED,
+            {
+                "run": {
+                    "error_message_digest": sha256_text(message),
+                    "error_type": error_type,
+                    "scenario_id": self.scenario_id,
+                }
+            },
+            parent_event_id=parent_event_id,
+        )
+
     def _require_events(self) -> list[EventEnvelope]:
         if self._events is None:
             raise RuntimeError("event recorder not initialized")

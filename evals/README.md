@@ -50,6 +50,9 @@ PYTHONPATH=evals uv run --group eval python -m actionlineage_evals replay-regres
   --regression-dir evals/regressions \
   --artifact-root build/evals/regression-replay \
   --allow-empty
+PYTHONPATH=evals uv run --group eval python -m actionlineage_evals summarize \
+  build/evals/local \
+  --format text
 PYTHONPATH=evals uv run --group eval python -m actionlineage_evals docker-smoke
 ```
 
@@ -72,8 +75,14 @@ Every scenario run writes:
 - `mutation-sequence.json`: deterministic mutation provenance.
 - `replay-bundle/`: transcript and journal material for no-model replay.
 
+The scheduled GitHub Models lane runs the first six scenarios. `AVL-007` is a
+deterministic no-model provider-failure control, so it runs in the scripted and
+replay lanes rather than calling a live provider.
+
 ## Artifact Policy
 
 Generated eval outputs should go under `build/evals/<run-id>/` or `/tmp`.
 Committed fixtures under `evals/replay/` or `evals/regressions/` must be small,
-synthetic, reviewed, redacted, and reproducible.
+synthetic, reviewed, redacted, and reproducible. Reviewed regression bundles
+must include `"reviewed": true` in `manifest.json`; unreviewed promoted
+failures are candidates and are not replayed by CI.

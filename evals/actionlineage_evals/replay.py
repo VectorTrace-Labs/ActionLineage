@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import re
 import shutil
 from pathlib import Path
 from typing import Any
@@ -113,6 +114,7 @@ def write_replay_bundle(
         },
         "scorecard": scorecard,
         "seed": seed,
+        "reviewed": False,
         "mutation_sequence": str(copied_mutation_sequence.name)
         if copied_mutation_sequence.exists()
         else None,
@@ -123,7 +125,12 @@ def write_replay_bundle(
     _write_json(bundle_dir / "manifest.json", manifest)
 
 
-def promote_regression_bundle(bundle_dir: Path, regression_dir: Path) -> Path:
+def promote_regression_bundle(
+    bundle_dir: Path,
+    regression_dir: Path,
+    *,
+    reviewed: bool = False,
+) -> Path:
     """Promote a minimized/dynamic failure bundle into a reviewed corpus path."""
 
     manifest_path = bundle_dir / "manifest.json"
@@ -132,10 +139,23 @@ def promote_regression_bundle(bundle_dir: Path, regression_dir: Path) -> Path:
         raise ValueError("replay bundle manifest must be an object")
     scenario = raw.get("scenario", {})
     scenario_id = scenario.get("id", "unknown") if isinstance(scenario, dict) else "unknown"
-    destination = regression_dir / f"{scenario_id}-{_sha256_file(manifest_path)[:16]}"
+    if reviewed:
+        _validate_reviewed_bundle(bundle_dir, raw)
+    parent = regression_dir if reviewed else regression_dir / "_candidates"
+    destination = parent / f"{scenario_id}-{_sha256_file(manifest_path)[:16]}"
     if destination.exists():
         shutil.rmtree(destination)
     shutil.copytree(bundle_dir, destination)
+    promoted_manifest: Any = json.loads((destination / "manifest.json").read_text(encoding="utf-8"))
+    if not isinstance(promoted_manifest, dict):
+        raise ValueError("promoted replay bundle manifest must be an object")
+    promoted_manifest["reviewed"] = reviewed
+    if reviewed:
+        promoted_manifest["review"] = {
+            "policy": "synthetic redacted reviewed regression corpus",
+            "status": "reviewed",
+        }
+    _write_json(destination / "manifest.json", promoted_manifest)
     return destination
 
 
@@ -145,7 +165,49 @@ def discover_regression_bundles(regression_dir: Path) -> tuple[Path, ...]:
     root = Path(regression_dir)
     if not root.exists():
         return ()
-    return tuple(sorted(path.parent for path in root.glob("*/manifest.json")))
+    bundles: list[Path] = []
+    for path in sorted(root.glob("*/manifest.json")):
+        raw: Any = json.loads(path.read_text(encoding="utf-8"))
+        if not isinstance(raw, dict):
+            raise ValueError(f"regression manifest must be an object: {path}")
+        if raw.get("reviewed") is not True:
+            raise ValueError(f"regression bundle is not reviewed: {path.parent}")
+        bundles.append(path.parent)
+    return tuple(bundles)
+
+
+def _validate_reviewed_bundle(bundle_dir: Path, manifest: JsonMap) -> None:
+    _reject_live_provider_metadata(manifest)
+    forbidden = (
+        re.compile(r"AVL_CANARY_[A-Za-z0-9_-]+"),
+        re.compile(r"Bearer\s+[A-Za-z0-9._~+/=-]+"),
+        re.compile(r"ghp_[A-Za-z0-9_]+"),
+        re.compile(r"github_pat_[A-Za-z0-9_]+"),
+        re.compile(r"sk-[A-Za-z0-9_-]+"),
+    )
+    for path in sorted(Path(bundle_dir).rglob("*")):
+        if not path.is_file():
+            continue
+        try:
+            text = path.read_text(encoding="utf-8")
+        except UnicodeDecodeError:
+            continue
+        for pattern in forbidden:
+            if pattern.search(text):
+                raise ValueError(f"reviewed regression bundle contains forbidden text: {path}")
+
+
+def _reject_live_provider_metadata(manifest: JsonMap) -> None:
+    metadata = manifest.get("model_metadata", ())
+    if not isinstance(metadata, list):
+        raise ValueError("replay bundle model_metadata must be a list")
+    allowed_providers = {"replay", "scripted"}
+    for item in metadata:
+        if not isinstance(item, dict):
+            raise ValueError("replay bundle model metadata entries must be objects")
+        provider = str(item.get("provider", "unknown"))
+        if provider not in allowed_providers:
+            raise ValueError(f"reviewed regression bundle cannot contain live provider: {provider}")
 
 
 def _write_json(path: Path, value: JsonMap) -> None:

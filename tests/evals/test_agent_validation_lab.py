@@ -40,6 +40,10 @@ from actionlineage_evals.scenarios import (  # noqa: E402
 )
 from actionlineage_evals.scoring import classify_failure  # noqa: E402
 from actionlineage_evals.stateful import deterministic_mutation_sequence  # noqa: E402
+from actionlineage_evals.summary import (  # noqa: E402
+    summarize_scorecards,
+    summarize_scorecards_text,
+)
 
 
 def test_scenarios_and_capability_coverage_validate() -> None:
@@ -53,6 +57,7 @@ def test_scenarios_and_capability_coverage_validate() -> None:
         "AVL-004",
         "AVL-005",
         "AVL-006",
+        "AVL-007",
     ]
     assert coverage["ok"] is True
     assert coverage["scenario_ids"] == [
@@ -62,8 +67,9 @@ def test_scenarios_and_capability_coverage_validate() -> None:
         "AVL-004",
         "AVL-005",
         "AVL-006",
+        "AVL-007",
     ]
-    assert coverage["uncovered_capabilities"] == ["provider_lifecycle"]
+    assert coverage["uncovered_capabilities"] == []
 
 
 def test_actionlineage_core_does_not_import_eval_package() -> None:
@@ -247,9 +253,13 @@ def test_scripted_suite_runs_all_scenarios_and_replay(tmp_path: Path) -> None:
         "AVL-004",
         "AVL-005",
         "AVL-006",
+        "AVL-007",
     ]
     for scenario_result in result.results:
-        assert scenario_result.failure_class is None
+        if scenario_result.scenario_id == "AVL-007":
+            assert scenario_result.failure_class == FailureClass.PROVIDER
+        else:
+            assert scenario_result.failure_class is None
         assert scenario_result.artifacts.replay_bundle_path.exists()
         assert scenario_result.artifacts.mutation_sequence_path.exists()
         assert scenario_result.artifacts.triage_path.exists()
@@ -287,13 +297,30 @@ def test_scripted_suite_runs_all_scenarios_and_replay(tmp_path: Path) -> None:
         ).read_text(encoding="utf-8")
     )
     assert avl005_manifest["mutation_sequence"] == "mutation-sequence.json"
+    assert avl005_manifest["reviewed"] is False
     assert avl005_manifest["triage"] == "triage.md"
+
+    avl007_scorecard = json.loads(
+        (tmp_path / "evals" / "avl-007-scripted-seed-0" / "scorecard.json").read_text(
+            encoding="utf-8"
+        )
+    )
+    assert avl007_scorecard["passed"] is True
+    assert avl007_scorecard["failure_class"] == "provider_failure"
+    assert avl007_scorecard["provider_error"]["type"] == "ProviderError"
 
     replayed = replay_bundle(
         tmp_path / "evals" / "avl-001-scripted-seed-0" / "replay-bundle",
         artifact_root=tmp_path / "replay",
     )
     assert replayed.passed is True
+
+    replayed_provider_failure = replay_bundle(
+        tmp_path / "evals" / "avl-007-scripted-seed-0" / "replay-bundle",
+        artifact_root=tmp_path / "provider-replay",
+    )
+    assert replayed_provider_failure.passed is True
+    assert replayed_provider_failure.failure_class == FailureClass.PROVIDER
 
 
 def test_regression_corpus_replay_supports_empty_and_promoted_bundles(tmp_path: Path) -> None:
@@ -312,18 +339,67 @@ def test_regression_corpus_replay_supports_empty_and_promoted_bundles(tmp_path: 
         model_adapter_name="scripted",
     )
     assert result.passed is True
-    promoted = promote_regression_bundle(
+    candidate = promote_regression_bundle(
         tmp_path / "evals" / "avl-001-scripted-seed-0" / "replay-bundle",
         tmp_path / "regressions",
     )
+    assert "_candidates" in candidate.parts
+
+    reviewed = promote_regression_bundle(
+        tmp_path / "evals" / "avl-001-scripted-seed-0" / "replay-bundle",
+        tmp_path / "regressions",
+        reviewed=True,
+    )
 
     replayed = run_regression_corpus(
-        regression_dir=promoted.parent,
+        regression_dir=reviewed.parent,
         artifact_root=tmp_path / "regression-replay",
     )
 
     assert replayed.passed is True
     assert [item.scenario_id for item in replayed.results] == ["AVL-001"]
+
+
+def test_unreviewed_regression_bundle_is_rejected(tmp_path: Path) -> None:
+    result = run_suite(
+        scenario_path=PROJECT_ROOT / "evals" / "scenarios" / "AVL-001.yaml",
+        artifact_root=tmp_path / "evals",
+        mode=RunMode.SCRIPTED,
+        model_adapter_name="scripted",
+    )
+    assert result.passed is True
+    unreviewed = tmp_path / "regressions" / "AVL-001-unreviewed"
+    source = tmp_path / "evals" / "avl-001-scripted-seed-0" / "replay-bundle"
+    unreviewed.mkdir(parents=True)
+    for item in source.iterdir():
+        if item.is_file():
+            (unreviewed / item.name).write_bytes(item.read_bytes())
+
+    with pytest.raises(ValueError, match="not reviewed"):
+        run_regression_corpus(
+            regression_dir=unreviewed.parent,
+            artifact_root=tmp_path / "regression-replay",
+        )
+
+
+def test_scorecard_summary_reports_replay_commands(tmp_path: Path) -> None:
+    result = run_suite(
+        scenario_path=PROJECT_ROOT / "evals" / "scenarios" / "AVL-007.yaml",
+        artifact_root=tmp_path / "evals",
+        mode=RunMode.SCRIPTED,
+        model_adapter_name="scripted",
+    )
+    assert result.passed is True
+
+    summary = summarize_scorecards(tmp_path / "evals")
+    text = summarize_scorecards_text(tmp_path / "evals")
+
+    assert summary["ok"] is True
+    assert summary["scenario_count"] == 1
+    assert summary["scorecards"][0]["scenario_id"] == "AVL-007"
+    assert summary["scorecards"][0]["failure_class"] == "provider_failure"
+    assert "actionlineage_evals replay" in summary["scorecards"][0]["replay_command"]
+    assert "AVL-007" in text
 
 
 def test_inspect_task_accepts_live_configuration_metadata() -> None:

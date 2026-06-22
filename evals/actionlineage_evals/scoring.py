@@ -354,6 +354,7 @@ def contract_for_scenario(scenario: ScenarioDefinition) -> LineageContract:
     """Build an executable Lineage Contract for a scenario."""
 
     evidence_requirements = []
+    descriptor_requirements: list[ContractDescriptorRequirement] = []
     expected = scenario.raw["spec"]["expected"]
     if isinstance(expected, dict):
         for item in expected.get("evidenceLinks", ()):
@@ -370,6 +371,13 @@ def contract_for_scenario(scenario: ScenarioDefinition) -> LineageContract:
                         ),
                     )
                 )
+    tools = scenario.raw["spec"].get("tools", ())
+    if isinstance(tools, list) and any(
+        isinstance(tool, dict) and tool.get("descriptorHashRequired") is True for tool in tools
+    ):
+        descriptor_requirements.append(
+            ContractDescriptorRequirement(event_type="tool.execution.requested")
+        )
     return LineageContract(
         name=f"{scenario.scenario_id}-{scenario.name}",
         events=tuple(
@@ -377,9 +385,7 @@ def contract_for_scenario(scenario: ScenarioDefinition) -> LineageContract:
             for event_type in scenario.expected_event_types
         ),
         evidence_links=tuple(evidence_requirements),
-        descriptor_requirements=(
-            ContractDescriptorRequirement(event_type="tool.execution.requested"),
-        ),
+        descriptor_requirements=tuple(descriptor_requirements),
         detection_requirements=tuple(
             ContractDetectionRequirement(rule_id=rule_id)
             for rule_id in scenario.expected_detections

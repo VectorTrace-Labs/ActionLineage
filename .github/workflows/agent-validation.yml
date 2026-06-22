@@ -59,7 +59,7 @@ jobs:
             --allow-empty
       - name: Upload no-model eval artifacts
         if: always()
-        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f
         with:
           name: actionlineage-agent-validation-no-model
           path: build/evals
@@ -84,6 +84,25 @@ jobs:
         env:
           PYTHONPATH: evals
         run: uv run --group eval python -m actionlineage_evals docker-smoke
+      - name: Run AVL-002 through Docker and Toxiproxy
+        env:
+          PYTHONPATH: evals
+        run: |
+          uv run --group eval python -m actionlineage_evals run \
+            --scenario-path evals/scenarios/AVL-002.yaml \
+            --artifact-root build/evals/docker-avl-002 \
+            --mode scripted \
+            --model-adapter scripted \
+            --seeds 1 \
+            --use-docker
+      - name: Upload Docker eval artifacts
+        if: always()
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f
+        with:
+          name: actionlineage-agent-validation-docker
+          path: build/evals
+          if-no-files-found: ignore
+          retention-days: 14
 
   scheduled-github-models:
     name: Scheduled GitHub Models agent run
@@ -119,7 +138,7 @@ jobs:
             --max-scenarios 6
       - name: Upload scheduled eval artifacts
         if: always()
-        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f
         with:
           name: actionlineage-agent-validation-scheduled
           path: build/evals

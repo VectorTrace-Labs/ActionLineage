@@ -262,24 +262,41 @@ class ToolHarness:
             str(call.arguments.get("body", "")),
             timeout_seconds=0.2,
         )
-        self.world.receiver_log.clear()
+        self.world.receiver_log = self._fetch_receiver_log_if_available()
+        receipt_count = len(self.world.receiver_log)
+        event_type = (
+            EventType.SIDE_EFFECT_TIMED_OUT
+            if receipt_count == 0
+            else EventType.SIDE_EFFECT_CONFLICT_DETECTED
+        )
+        relationship = (
+            EvidenceRelationship.LIMITS if receipt_count == 0 else EvidenceRelationship.CONTRADICTS
+        )
+        verification_status = (
+            VerificationStatus.TIMED_OUT if receipt_count == 0 else VerificationStatus.CONFLICTING
+        )
+        limitations = (
+            "receiver oracle observed no corroborating request"
+            if receipt_count == 0
+            else "receiver oracle observed a request despite timeout toxic"
+        )
         timeout = self.recorder.record(
-            EventType.SIDE_EFFECT_TIMED_OUT,
+            event_type,
             {
                 "evidence_link": evidence_link_payload(
                     EvidenceLink(
                         subject_event_id=ack.event_id,
-                        relationship=EvidenceRelationship.LIMITS,
+                        relationship=relationship,
                         evidence_event_id=ack.event_id,
                         corroboration_type=CorroborationType.SELF_REPORTED,
                         observer_identity="receiver_oracle",
                         confidence=0.1,
-                        verification_status=VerificationStatus.TIMED_OUT,
-                        limitations=("receiver oracle observed no corroborating request",),
+                        verification_status=verification_status,
+                        limitations=(limitations,),
                     )
                 ),
                 "receiver_observation": {
-                    "receipt_count": 0,
+                    "receipt_count": receipt_count,
                     "send_result": send_result,
                     "toxiproxy_mode": "timeout",
                 },
@@ -289,8 +306,8 @@ class ToolHarness:
         )
         oracle = {
             "event_id": timeout.event_id,
-            "receipt_count": 0,
-            "status": "timed_out",
+            "receipt_count": receipt_count,
+            "status": verification_status.value,
             "tool_ack_event_id": ack.event_id,
         }
         self.world.oracle_observations.append(oracle)
@@ -417,6 +434,20 @@ class ToolHarness:
                 return {"http_status": response.status, "sent": True}
         except (TimeoutError, urllib.error.URLError) as exc:
             return {"error": type(exc).__name__, "sent": False}
+
+    def _fetch_receiver_log_if_available(self) -> list[JsonMap]:
+        if not self.world.use_docker:
+            return []
+        receiver_base_url = self.world.receiver_url.removesuffix("/collect")
+        request = urllib.request.Request(f"{receiver_base_url}/requests")
+        try:
+            with urllib.request.urlopen(request, timeout=1.0) as response:
+                raw = json.loads(response.read().decode("utf-8"))
+        except (TimeoutError, urllib.error.URLError, json.JSONDecodeError):
+            return []
+        if not isinstance(raw, list):
+            return []
+        return [item for item in raw if isinstance(item, dict)]
 
     def _configure_timeout_toxic_if_available(self) -> None:
         if not self.world.use_docker:

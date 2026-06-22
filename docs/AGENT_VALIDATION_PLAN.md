@@ -37,6 +37,19 @@ Planned improvements:
    semantics. The initial additions are a multi-tool causal chain and a denied
    request followed by an allowed safe alternative.
 
+Current hardening slice:
+
+1. Close the `upload-artifact` Node 20 workflow warning by pinning the
+   agent-validation workflow to a Node 24-compatible action release.
+2. Add `AVL-007 provider-lifecycle-failure` as a deterministic no-model
+   scenario that validates `provider_failure` classification without depending
+   on a real provider outage.
+3. Add a scorecard summary command for CI logs and local triage.
+4. Require explicit reviewed manifests before replay bundles enter the
+   regression corpus; unreviewed promotions remain candidates.
+5. Run `AVL-002` once through Docker/Toxiproxy in the Docker eval lane so the
+   declared timeout scenario has live disposable-environment coverage.
+
 Acceptance commands for this phase:
 
 ```bash
@@ -52,6 +65,8 @@ PYTHONPATH=evals uv run --group eval python -m actionlineage_evals replay-regres
   --regression-dir evals/regressions \
   --artifact-root build/evals/regression-replay \
   --allow-empty
+PYTHONPATH=evals uv run --group eval python -m actionlineage_evals summarize \
+  build/evals/local
 PYTHONPATH=evals uv run --group eval pytest tests/evals/test_agent_validation_lab.py
 uv run ruff check .
 uv run ruff format --check .
@@ -90,6 +105,7 @@ Implemented artifacts:
 - `evals/scenarios/AVL-004.yaml`
 - `evals/scenarios/AVL-005.yaml`
 - `evals/scenarios/AVL-006.yaml`
+- `evals/scenarios/AVL-007.yaml`
 - `evals/regressions/README.md`
 - `evals/actionlineage_evals/`
 - `evals/docker/`
@@ -343,6 +359,7 @@ Implemented eval runner:
 - `AVL-001` through `AVL-004` pass no-model scripted runs.
 - `AVL-005` and `AVL-006` pass no-model scripted runs as next-phase coverage
   extensions.
+- `AVL-007` passes as a deterministic expected provider-failure scenario.
 - `AVL-001` replay passes from a captured replay bundle.
 - Journal verification, projection rebuild, contract validation, detection
   matching, redaction scan, and capability coverage pass for all scripted
@@ -350,6 +367,11 @@ Implemented eval runner:
 - Failure classification preserves product, agent, harness, provider, and
   budget classes.
 - Docker Compose lifecycle smoke passes when a Docker daemon is available.
+- `AVL-002` runs through Docker/Toxiproxy in the Docker eval lane when a Docker
+  daemon is available.
+- Scorecard summaries report pass/fail, failure class, first failing scorer,
+  and replay command.
+- Regression corpus replay rejects unreviewed bundles.
 
 ## Required Commands
 
