@@ -148,15 +148,18 @@ def test_release_workflow_builds_attests_and_uses_trusted_publishing() -> None:
     assert "publish_target:" in workflow
     assert "name: Verify release candidate" in workflow
     assert "name: Build release artifacts" in workflow
-    assert "name: Attest release artifacts" in workflow
+    assert "name: Attest release artifacts" not in workflow
     assert "needs: verify" in workflow
-    assert "needs: build" in workflow
+    assert workflow.count("needs: build") == 2
     assert "attestations: write" in workflow
     assert "artifact-metadata: write" in workflow
     assert "id-token: write" in workflow
     assert "actions/attest@" in workflow
-    assert 'subject-path: "release-artifacts/**"' in workflow
+    assert "dist/*" in workflow
+    assert "build/release/*" in workflow
     assert "pypa/gh-action-pypi-publish@" in workflow
+    assert 'gh run download "${GITHUB_RUN_ID}"' in workflow
+    assert "actions: read" in workflow
     assert "repository-url: https://test.pypi.org/legacy/" in workflow
     assert "packages-dir: release-artifacts/dist" in workflow
     assert "startsWith(github.ref, 'refs/tags/v')" in workflow
@@ -167,7 +170,7 @@ def test_release_workflow_builds_attests_and_uses_trusted_publishing() -> None:
     assert "PYPI_TOKEN" not in workflow
 
 
-def test_artifact_actions_are_node24_compatible_pins() -> None:
+def test_artifact_upload_action_is_node24_pin_and_download_action_is_not_used() -> None:
     release = (PROJECT_ROOT / ".github/workflows/release.yml").read_text(encoding="utf-8")
     agent_validation = (PROJECT_ROOT / ".github/workflows/agent-validation.yml").read_text(
         encoding="utf-8"
@@ -175,13 +178,12 @@ def test_artifact_actions_are_node24_compatible_pins() -> None:
     combined = release + "\n" + agent_validation
 
     upload_artifact_v7_0_1 = "043fb46d1a93c77aae656e7c1c64a875d1fc6a0a"
-    download_artifact_v8_0_1 = "3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c"
     upload_artifact_v5_0_0 = "330a01c490aca151604b8cf639adc76d48f6c5d4"
     download_artifact_v5_0_0 = "634f93cb2916e3fdff6788551b99b062d0335ce0"
 
     assert upload_artifact_v7_0_1 in release
     assert upload_artifact_v7_0_1 in agent_validation
-    assert download_artifact_v8_0_1 in release
+    assert "actions/download-artifact@" not in combined
     assert upload_artifact_v5_0_0 not in combined
     assert download_artifact_v5_0_0 not in combined
     assert "FORCE_JAVASCRIPT_ACTIONS_TO_NODE24" not in agent_validation
