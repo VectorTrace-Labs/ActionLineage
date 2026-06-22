@@ -166,6 +166,26 @@ def test_release_workflow_builds_attests_and_uses_trusted_publishing() -> None:
     assert "PYPI_TOKEN" not in workflow
 
 
+def test_artifact_actions_are_node24_compatible_pins() -> None:
+    release = (PROJECT_ROOT / ".github/workflows/release.yml").read_text(encoding="utf-8")
+    agent_validation = (PROJECT_ROOT / ".github/workflows/agent-validation.yml").read_text(
+        encoding="utf-8"
+    )
+    combined = release + "\n" + agent_validation
+
+    upload_artifact_v7_0_1 = "043fb46d1a93c77aae656e7c1c64a875d1fc6a0a"
+    download_artifact_v8_0_1 = "3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c"
+    upload_artifact_v5_0_0 = "330a01c490aca151604b8cf639adc76d48f6c5d4"
+    download_artifact_v5_0_0 = "634f93cb2916e3fdff6788551b99b062d0335ce0"
+
+    assert upload_artifact_v7_0_1 in release
+    assert upload_artifact_v7_0_1 in agent_validation
+    assert download_artifact_v8_0_1 in release
+    assert upload_artifact_v5_0_0 not in combined
+    assert download_artifact_v5_0_0 not in combined
+    assert "FORCE_JAVASCRIPT_ACTIONS_TO_NODE24" not in agent_validation
+
+
 def test_release_workflow_publishes_versioned_ghcr_image_without_registry_secret() -> None:
     workflow = (PROJECT_ROOT / ".github/workflows/release.yml").read_text(encoding="utf-8")
 
