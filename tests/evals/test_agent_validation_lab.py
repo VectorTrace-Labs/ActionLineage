@@ -550,6 +550,12 @@ def test_world_state_uses_dynamic_docker_ports(tmp_path: Path) -> None:
     assert world.toxiproxy_url == "http://127.0.0.1:49154/collect"
 
 
+def test_docker_eval_fixture_uses_supported_python_floor() -> None:
+    compose = (PROJECT_ROOT / "evals" / "docker" / "compose.yaml").read_text(encoding="utf-8")
+
+    assert "image: python:3.12-alpine" in compose
+
+
 def test_unreviewed_regression_bundle_is_rejected(tmp_path: Path) -> None:
     result = run_suite(
         scenario_path=PROJECT_ROOT / "evals" / "scenarios" / "AVL-001.yaml",

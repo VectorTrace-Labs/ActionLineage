@@ -28,8 +28,8 @@ external-validation surfaces until they are externally validated.
 | Lineage Contracts, sequence detections, Lineage Lab | Local-proof | Contract, detection, and replay tests |
 | Agent Validation Lab | Local-proof | Development-only eval group, scenario fixtures, no-model CI lanes |
 | MCP, policy, OpenTelemetry, service, Postgres, cloud/Kubernetes fixtures | Preview | Optional extras and local fixture tests |
-| GitHub release artifacts and attestations | Local-proof | Release workflow and `v0.1.0a2` pre-release |
-| PyPI/TestPyPI package publication | Alpha-supported | `v0.1.0a2` published through Trusted Publishing; fresh install/demo smoke passed |
+| GitHub release artifacts and attestations | Local-proof | Release workflow and `v0.1.0a3` pre-release path |
+| PyPI/TestPyPI package publication | Alpha-supported | `v0.1.0a3` uses Trusted Publishing; fresh install/demo smoke required before announcement |
 | GHCR container publication | Preview | Tag-gated release workflow path |
 | Homebrew tap, external audits, production history | Planned or external-validation-required | See `docs/DECISIONS_REQUIRED.md` |
 
@@ -40,15 +40,16 @@ Full claim mapping lives in
 
 Prerequisites:
 
-- Python 3.13 or newer
+- Python 3.12 or newer
 - `uv`
 
-For normal evaluation, run the published public-alpha package from PyPI:
+After the `0.1.0a3` Trusted Publishing run completes, run the public-alpha
+package from PyPI:
 
 ```bash
-uvx --from actionlineage==0.1.0a2 actionlineage version
-uvx --from actionlineage==0.1.0a2 actionlineage demo run --output-dir /tmp/actionlineage-demo
-uvx --from actionlineage==0.1.0a2 actionlineage journal verify /tmp/actionlineage-demo/evidence.jsonl
+uvx --from actionlineage==0.1.0a3 actionlineage version
+uvx --from actionlineage==0.1.0a3 actionlineage demo run --output-dir /tmp/actionlineage-demo
+uvx --from actionlineage==0.1.0a3 actionlineage journal verify /tmp/actionlineage-demo/evidence.jsonl
 ```
 
 The demo requires no model API key, cloud account, or external service. The
@@ -231,7 +232,7 @@ journal_path = Path("build/example/evidence.jsonl")
 journal = LocalJournal(journal_path)
 normalizer = EvidenceNormalizer(
     correlation=Correlation(trace_id="trace_example", run_id="run_example"),
-    source=Source(component="example_adapter", instance_id="local", version="0.1.0a2"),
+    source=Source(component="example_adapter", instance_id="local", version="0.1.0a3"),
     principal=Principal(principal_id="agent_example", principal_type=PrincipalType.AGENT),
     classification=Classification(sensitivity=Sensitivity.INTERNAL),
     clock=FixedClock(datetime(2026, 1, 1, tzinfo=UTC)),
@@ -350,7 +351,7 @@ hold MCP, OpenTelemetry, SQLAlchemy, FastAPI, JWT, and related integration
 dependencies.
 
 Public alpha artifacts are attached to GitHub Releases and `actionlineage`
-`0.1.0a2` is published on PyPI and TestPyPI through Trusted Publishing. The
+`0.1.0a3` is prepared for PyPI and TestPyPI through Trusted Publishing. The
 release workflow is prepared to publish preview GHCR images for version tags,
 while Homebrew and additional package-manager channels remain gated on external
 setup and validation. See [docs/PACKAGE_MANAGERS.md](docs/PACKAGE_MANAGERS.md).

@@ -1,6 +1,6 @@
 services:
   receiver:
-    image: python:3.13-alpine
+    image: python:3.12-alpine
     read_only: true
     cap_drop:
       - ALL

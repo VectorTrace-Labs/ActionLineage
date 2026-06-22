@@ -91,7 +91,7 @@ Lineage Lab shall:
 
 ## 6. Nonfunctional requirements
 
-- Python 3.13 or newer.
+- Python 3.12 or newer.
 - Strong typing at public interfaces.
 - Deterministic serialization and tests.
 - No required external service for the default demo.

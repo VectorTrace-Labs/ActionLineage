@@ -10,6 +10,7 @@ def test_docker_compose_runs_optional_service_factory() -> None:
     dockerfile = (PROJECT_ROOT / "deploy/docker/Dockerfile").read_text(encoding="utf-8")
     compose = (PROJECT_ROOT / "deploy/docker/compose.yaml").read_text(encoding="utf-8")
 
+    assert "FROM python:3.12-slim" in dockerfile
     assert 'pip install --no-cache-dir ".[service]"' in dockerfile
     assert "actionlineage.service.runtime:create_service_app_from_env" in compose
     assert "--factory" in compose

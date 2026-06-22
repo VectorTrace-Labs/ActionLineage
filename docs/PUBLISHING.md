@@ -67,7 +67,8 @@ avoid implying production stability and make release evidence easier to audit.
 
 Package publishing uses Trusted Publisher records in TestPyPI and PyPI. Version
 `0.1.0a2` was published from `.github/workflows/release.yml` with no registry
-API token.
+API token. Version `0.1.0a3` is the Python 3.12-compatible alpha release
+candidate and must use the same Trusted Publishing path.
 
 For TestPyPI:
 
@@ -112,9 +113,9 @@ After a successful release workflow run, verify downloaded artifacts with GitHub
 CLI:
 
 ```bash
-gh attestation verify actionlineage-0.1.0a2-py3-none-any.whl \
+gh attestation verify actionlineage-0.1.0a3-py3-none-any.whl \
   --repo VectorTrace-Labs/ActionLineage
-gh attestation verify actionlineage-0.1.0a2.tar.gz \
+gh attestation verify actionlineage-0.1.0a3.tar.gz \
   --repo VectorTrace-Labs/ActionLineage
 ```
 
@@ -126,7 +127,8 @@ shasum -a 256 -c SHA256SUMS.txt
 
 ## Current Alpha Publication Evidence
 
-Current public package publication:
+Current public package publication proof before the Python 3.12 compatibility
+release:
 
 - TestPyPI: `https://test.pypi.org/project/actionlineage/`
 - PyPI: `https://pypi.org/project/actionlineage/`
@@ -135,7 +137,9 @@ Current public package publication:
 - PyPI workflow run: `27958024445`
 
 Fresh `uvx` install, deterministic demo, and journal verification passed from
-both indexes. Organization ownership transfer remains an external follow-up.
+both indexes for the prior package metadata. Publish and smoke-test `0.1.0a3`
+before using PyPI as public proof of Python 3.12 compatibility.
+Organization ownership transfer remains an external follow-up.
 
 See `docs/PACKAGE_MANAGERS.md` for GHCR, Homebrew, conda-forge, and deferred
 channel planning.

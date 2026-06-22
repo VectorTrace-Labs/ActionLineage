@@ -27,6 +27,7 @@ evidence and limitations.
 - JSON Lineage Contract validation for local journal evidence.
 - PyPI and TestPyPI package publication for the current public-alpha version,
   with fresh install and demo smoke validation.
+- Python 3.12+ source, package metadata, CI, and release workflow validation.
 
 ## Local-Proof Surface
 

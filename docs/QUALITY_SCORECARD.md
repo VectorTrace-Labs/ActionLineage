@@ -13,8 +13,8 @@ and checklist wording.
 | Branch | `main` after the public-alpha package publication workflow; docs update on `codex/pypi-publication-proof` |
 | Local ignored files | `AGENTS.md`, `Uplift.md` |
 | Required checks before uplift | Ruff, format, mypy, pip-audit, build, demo, and clean tracked snapshot passed; local pytest and claim scan failed only because ignored `Uplift.md` was included |
-| Current alpha version | `0.1.0a2` |
-| Supported Python | Python 3.13+ |
+| Current alpha version | `0.1.0a3` |
+| Supported Python | Python 3.12+ |
 | Default demo | No model API key, cloud account, external service, or internet access |
 
 ## Claim Matrix
@@ -49,16 +49,16 @@ and checklist wording.
 | Optional service mode exists | `src/actionlineage/service` | `tests/service` | Docker/Compose smoke in CI | Preview |
 | Optional Postgres projection schema exists | `src/actionlineage/projection/postgres.py` | `tests/projection/test_postgres_projection.py` | Local statement fixtures | Preview |
 | Cloud/Kubernetes observers exist as fixture-backed observers | `src/actionlineage/observers/cloud.py` | `tests/observers/test_cloud_observers.py` | No live cloud required | Preview |
-| Public release metadata is alpha | `pyproject.toml`, `src/actionlineage/__init__.py` | `tests/release/test_release_readiness.py` | CLI `version` output | Alpha-supported |
+| Public release metadata is alpha and supports Python 3.12+ | `pyproject.toml`, `src/actionlineage/__init__.py` | `tests/release/test_release_readiness.py`, CI/release workflow matrices | CLI `version` output | Alpha-supported |
 | Release hardening scripts exist | `scripts/` | `tests/security/test_release_hardening.py` | SBOM and provenance generated locally | Local-proof |
 | CI runs local release proof gates | `.github/workflows/ci.yml` | `tests/release/test_release_readiness.py` | Wheel, sdist, SBOM, audit, and unsigned provenance are generated in CI | Local-proof |
-| Release workflow builds and attests artifacts | `.github/workflows/release.yml`, `docs/PUBLISHING.md` | `tests/release/test_release_readiness.py` | GitHub Actions run `27920690328` for `v0.1.0a2` | Local-proof |
+| Release workflow builds, verifies on Python 3.12/3.13, and attests artifacts | `.github/workflows/release.yml`, `docs/PUBLISHING.md` | `tests/release/test_release_readiness.py` | GitHub Actions run required for `v0.1.0a3` after merge | Local-proof |
 | GHCR container publishing path exists | `.github/workflows/release.yml`, `docs/PACKAGE_MANAGERS.md` | `tests/release/test_release_readiness.py` | First GHCR package publication still requires a tag workflow run after this change lands | Preview |
 | TestPyPI/PyPI Trusted Publishing publishes packages | `.github/workflows/release.yml`, `docs/PUBLISHING.md` | `tests/release/test_release_readiness.py` | TestPyPI run `27957719209`; PyPI run `27958024445`; fresh `uvx` install, demo, and journal verify passed | Alpha-supported |
 | GitHub security controls are enabled | `.github/workflows` plus repository settings | Workflow files and API validation | GitHub UI/API required | External-validation-required |
 | Homebrew tap exists | `docs/PACKAGE_MANAGERS.md` | Documentation tests | Tap repository and validated formula required | Planned |
-| PyPI package exists | `docs/PUBLISHING.md`, `docs/PACKAGE_MANAGERS.md` | Fresh package install smoke | `https://pypi.org/project/actionlineage/` publishes `0.1.0a2` wheel and sdist | Alpha-supported |
-| TestPyPI package exists | `docs/PUBLISHING.md`, `docs/PACKAGE_MANAGERS.md` | Fresh package install smoke | `https://test.pypi.org/project/actionlineage/` publishes `0.1.0a2` wheel and sdist | Alpha-supported |
+| PyPI package exists | `docs/PUBLISHING.md`, `docs/PACKAGE_MANAGERS.md` | Fresh package install smoke | `https://pypi.org/project/actionlineage/` publishes `0.1.0a2`; `0.1.0a3` publication is required for PyPI Python 3.12 installs | Alpha-supported |
+| TestPyPI package exists | `docs/PUBLISHING.md`, `docs/PACKAGE_MANAGERS.md` | Fresh package install smoke | `https://test.pypi.org/project/actionlineage/` publishes `0.1.0a2`; `0.1.0a3` publication is required for TestPyPI Python 3.12 installs | Alpha-supported |
 | Package-index organization ownership transfer | `docs/PACKAGE_MANAGERS.md`, `docs/DECISIONS_REQUIRED.md` | Not executable locally | PyPI/TestPyPI organization approval and ownership transfer required | External-validation-required |
 | GHCR package exists | Release checklist and publishing guide | Not executable locally | Registry publication required | External-validation-required |
 

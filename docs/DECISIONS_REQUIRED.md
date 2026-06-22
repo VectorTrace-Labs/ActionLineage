@@ -8,13 +8,13 @@ implementation change.
 
 | Decision | Recommended default | Needed before |
 | --- | --- | --- |
-| Public version posture | Keep `0.1.0a2` and `Development Status :: 3 - Alpha` | Any public announcement |
+| Public version posture | Keep `0.1.0a3` and `Development Status :: 3 - Alpha` | Any public announcement |
 | Schema namespace | Keep `actionlineage.dev/v1alpha1` | External integrations depend on schemas |
 | API promise | Core event/journal/projection/ingestion are alpha-supported; optional service/cloud/adapter exports are preview | 1.0 planning |
 | Demo contract | Use `outbound-http.json` for five-minute demo | README quickstart changes |
 | Restricted-exfiltration demo | Keep as preview design example until demo emits required normalized action and detection evidence | Promoting that contract in README |
 | `AGENTS.md` visibility | Keep ignored/local; publish contributor guidance through normal docs | Making local assistant instructions public |
-| Python support | Keep Python 3.13+ until 3.11/3.12 are tested and justified | Widening package metadata |
+| Python support | Support Python 3.12+ after CI and local validation; keep Python 3.11 deferred until tested and justified | Widening support below 3.12 |
 | Service/deployment support | Keep Docker/Kubernetes/Helm preview | Production deployment claims |
 | External release targets | Use GitHub Releases and PyPI/TestPyPI for the public alpha; publish preview GHCR images from version tags; keep Homebrew planned | Publishing new package-manager channels or Homebrew formulae |
 | Signing/provenance | Use GitHub artifact attestations for release artifacts; keep local provenance as a supplemental manifest | Claiming attested package artifacts |
