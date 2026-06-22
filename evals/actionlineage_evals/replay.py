@@ -81,8 +81,14 @@ def write_replay_bundle(
     bundle_dir = paths.replay_bundle_path
     bundle_dir.mkdir(parents=True, exist_ok=True)
     copied_journal = bundle_dir / "journal.jsonl"
+    copied_mutation_sequence = bundle_dir / "mutation-sequence.json"
+    copied_triage = bundle_dir / "triage.md"
     copied_transcript = bundle_dir / "transcript.json"
     shutil.copy2(paths.journal_path, copied_journal)
+    if paths.mutation_sequence_path.exists():
+        shutil.copy2(paths.mutation_sequence_path, copied_mutation_sequence)
+    if paths.triage_path.exists():
+        shutil.copy2(paths.triage_path, copied_triage)
     shutil.copy2(paths.transcript_path, copied_transcript)
     manifest: JsonMap = {
         "schema_version": "actionlineage.dev/eval-replay-bundle/v0",
@@ -107,7 +113,11 @@ def write_replay_bundle(
         },
         "scorecard": scorecard,
         "seed": seed,
+        "mutation_sequence": str(copied_mutation_sequence.name)
+        if copied_mutation_sequence.exists()
+        else None,
         "tool_calls": str(paths.tool_calls_path),
+        "triage": str(copied_triage.name) if copied_triage.exists() else None,
         "transcript": str(copied_transcript.name),
     }
     _write_json(bundle_dir / "manifest.json", manifest)
@@ -127,6 +137,15 @@ def promote_regression_bundle(bundle_dir: Path, regression_dir: Path) -> Path:
         shutil.rmtree(destination)
     shutil.copytree(bundle_dir, destination)
     return destination
+
+
+def discover_regression_bundles(regression_dir: Path) -> tuple[Path, ...]:
+    """Return reviewed regression bundle directories under a corpus root."""
+
+    root = Path(regression_dir)
+    if not root.exists():
+        return ()
+    return tuple(sorted(path.parent for path in root.glob("*/manifest.json")))
 
 
 def _write_json(path: Path, value: JsonMap) -> None:

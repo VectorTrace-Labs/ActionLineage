@@ -295,7 +295,7 @@
           "enum": ["local_tool_agent", "inspect_agent", "replay_agent"]
         },
         "modelAdapter": {
-          "enum": ["replay", "github_models", "ollama"]
+          "enum": ["replay", "github_models", "openai_compatible", "ollama"]
         },
         "modelId": {
           "type": "string",

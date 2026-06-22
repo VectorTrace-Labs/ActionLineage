@@ -9,7 +9,12 @@ from pathlib import Path
 
 from actionlineage_evals.environment import DockerComposeEnvironmentController
 from actionlineage_evals.models import RunMode
-from actionlineage_evals.runner import DEFAULT_ARTIFACT_ROOT, replay_bundle, run_suite
+from actionlineage_evals.runner import (
+    DEFAULT_ARTIFACT_ROOT,
+    replay_bundle,
+    run_regression_corpus,
+    run_suite,
+)
 from actionlineage_evals.scenarios import (
     SCENARIO_DIR,
     load_scenarios,
@@ -30,6 +35,7 @@ def main(argv: list[str] | None = None) -> int:
         type=Path,
         default=Path("evals/CAPABILITY_COVERAGE.yaml"),
     )
+    coverage.add_argument("--strict", action="store_true")
 
     run = subcommands.add_parser("run")
     run.add_argument("--scenario-path", type=Path, default=SCENARIO_DIR)
@@ -41,7 +47,7 @@ def main(argv: list[str] | None = None) -> int:
     )
     run.add_argument(
         "--model-adapter",
-        choices=["scripted", "replay", "github_models", "ollama"],
+        choices=["scripted", "replay", "github_models", "openai_compatible", "ollama"],
         default="scripted",
     )
     run.add_argument("--model-id")
@@ -53,6 +59,19 @@ def main(argv: list[str] | None = None) -> int:
     replay = subcommands.add_parser("replay")
     replay.add_argument("bundle_dir", type=Path)
     replay.add_argument("--artifact-root", type=Path, default=DEFAULT_ARTIFACT_ROOT / "replay")
+
+    replay_regressions = subcommands.add_parser("replay-regressions")
+    replay_regressions.add_argument(
+        "--regression-dir",
+        type=Path,
+        default=Path("evals/regressions"),
+    )
+    replay_regressions.add_argument(
+        "--artifact-root",
+        type=Path,
+        default=DEFAULT_ARTIFACT_ROOT / "regression-replay",
+    )
+    replay_regressions.add_argument("--allow-empty", action="store_true")
 
     docker_smoke = subcommands.add_parser("docker-smoke")
     docker_smoke.add_argument(
@@ -78,7 +97,7 @@ def main(argv: list[str] | None = None) -> int:
         )
         return 0
     if args.command == "coverage":
-        report = validate_capability_coverage(args.coverage_path)
+        report = validate_capability_coverage(args.coverage_path, strict=args.strict)
         _print(report)
         return 0 if report["ok"] else 1
     if args.command == "run":
@@ -99,6 +118,14 @@ def main(argv: list[str] | None = None) -> int:
         replay_result = replay_bundle(args.bundle_dir, artifact_root=args.artifact_root)
         _print(replay_result.as_dict())
         return 0 if replay_result.passed else 1
+    if args.command == "replay-regressions":
+        regression_result = run_regression_corpus(
+            regression_dir=args.regression_dir,
+            artifact_root=args.artifact_root,
+            allow_empty=args.allow_empty,
+        )
+        _print(regression_result.as_dict())
+        return 0 if regression_result.passed else 1
     if args.command == "docker-smoke":
         controller = DockerComposeEnvironmentController(
             run_id="smoke",

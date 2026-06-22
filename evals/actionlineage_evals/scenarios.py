@@ -73,7 +73,11 @@ def load_capability_coverage(path: Path = CAPABILITY_COVERAGE_PATH) -> JsonMap:
     return raw
 
 
-def validate_capability_coverage(path: Path = CAPABILITY_COVERAGE_PATH) -> JsonMap:
+def validate_capability_coverage(
+    path: Path = CAPABILITY_COVERAGE_PATH,
+    *,
+    strict: bool = False,
+) -> JsonMap:
     """Validate coverage references and return a machine-readable report."""
 
     coverage = load_capability_coverage(path)
@@ -84,6 +88,7 @@ def validate_capability_coverage(path: Path = CAPABILITY_COVERAGE_PATH) -> JsonM
 
     scenario_ids = [str(item["id"]) for item in scenarios if isinstance(item, dict)]
     missing_capabilities: dict[str, list[str]] = {}
+    actual_capability_scenarios: dict[str, list[str]] = {str(key): [] for key in capabilities}
     capability_ids = set(capabilities)
     for scenario in scenarios:
         if not isinstance(scenario, dict):
@@ -94,12 +99,51 @@ def validate_capability_coverage(path: Path = CAPABILITY_COVERAGE_PATH) -> JsonM
         missing = sorted(str(item) for item in covers if str(item) not in capability_ids)
         if missing:
             missing_capabilities[str(scenario["id"])] = missing
+        for capability in covers:
+            capability_id = str(capability)
+            if capability_id in actual_capability_scenarios:
+                actual_capability_scenarios[capability_id].append(str(scenario["id"]))
+
+    stale_scenario_references: dict[str, list[str]] = {}
+    declared_scenario_mismatches: dict[str, dict[str, list[str]]] = {}
+    scenario_id_set = set(scenario_ids)
+    for capability_id, definition in capabilities.items():
+        declared: list[str] = []
+        if isinstance(definition, dict):
+            raw_declared = definition.get("scenarios", ())
+            if isinstance(raw_declared, list):
+                declared = [str(item) for item in raw_declared]
+        stale = sorted(set(declared) - scenario_id_set)
+        if stale:
+            stale_scenario_references[str(capability_id)] = stale
+        actual = sorted(set(actual_capability_scenarios[str(capability_id)]))
+        if sorted(set(declared)) != actual:
+            declared_scenario_mismatches[str(capability_id)] = {
+                "actual": actual,
+                "declared": sorted(set(declared)),
+            }
+
+    uncovered_capabilities = sorted(
+        capability_id
+        for capability_id, mapped_scenarios in actual_capability_scenarios.items()
+        if not mapped_scenarios
+    )
+    known_gaps = coverage.get("known_gaps", ())
+    ok = not missing_capabilities and not stale_scenario_references
+    if strict:
+        ok = ok and not uncovered_capabilities and not declared_scenario_mismatches
 
     return {
-        "ok": not missing_capabilities,
+        "ok": ok,
         "scenario_ids": scenario_ids,
         "capability_count": len(capability_ids),
+        "covered_capability_count": len(capability_ids) - len(uncovered_capabilities),
+        "declared_scenario_mismatches": declared_scenario_mismatches,
+        "known_gaps": known_gaps if isinstance(known_gaps, list) else [],
         "missing_capabilities": missing_capabilities,
+        "stale_scenario_references": stale_scenario_references,
+        "strict": strict,
+        "uncovered_capabilities": uncovered_capabilities,
     }
 
 

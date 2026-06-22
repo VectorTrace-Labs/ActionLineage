@@ -49,6 +49,14 @@ jobs:
           uv run --group eval python -m actionlineage_evals replay \
             build/evals/pr/avl-001-scripted-seed-0/replay-bundle \
             --artifact-root build/evals/pr-replay
+      - name: Replay reviewed regression corpus
+        env:
+          PYTHONPATH: evals
+        run: |
+          uv run --group eval python -m actionlineage_evals replay-regressions \
+            --regression-dir evals/regressions \
+            --artifact-root build/evals/regression-replay \
+            --allow-empty
       - name: Upload no-model eval artifacts
         if: always()
         uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4
@@ -108,7 +116,7 @@ jobs:
             --model-adapter github_models \
             --model-id openai/gpt-4.1-mini \
             --seeds 1 \
-            --max-scenarios 4
+            --max-scenarios 6
       - name: Upload scheduled eval artifacts
         if: always()
         uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4

@@ -12,7 +12,12 @@ PROJECT_ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(PROJECT_ROOT / "evals"))
 
 from actionlineage_evals import adapters as adapters_module  # noqa: E402
-from actionlineage_evals.adapters import GitHubModelsAdapter, LocalToolAgent  # noqa: E402
+from actionlineage_evals.adapters import (  # noqa: E402
+    GitHubModelsAdapter,
+    LocalToolAgent,
+    OpenAICompatibleAdapter,
+)
+from actionlineage_evals.inspect_tasks import agent_validation_lab  # noqa: E402
 from actionlineage_evals.minimization import (  # noqa: E402
     minimize_tool_calls,
     tool_call_count,
@@ -27,7 +32,8 @@ from actionlineage_evals.models import (  # noqa: E402
     ScoreResult,
     ToolCall,
 )
-from actionlineage_evals.runner import replay_bundle, run_suite  # noqa: E402
+from actionlineage_evals.replay import promote_regression_bundle  # noqa: E402
+from actionlineage_evals.runner import replay_bundle, run_regression_corpus, run_suite  # noqa: E402
 from actionlineage_evals.scenarios import (  # noqa: E402
     load_scenarios,
     validate_capability_coverage,
@@ -45,9 +51,19 @@ def test_scenarios_and_capability_coverage_validate() -> None:
         "AVL-002",
         "AVL-003",
         "AVL-004",
+        "AVL-005",
+        "AVL-006",
     ]
     assert coverage["ok"] is True
-    assert coverage["scenario_ids"] == ["AVL-001", "AVL-002", "AVL-003", "AVL-004"]
+    assert coverage["scenario_ids"] == [
+        "AVL-001",
+        "AVL-002",
+        "AVL-003",
+        "AVL-004",
+        "AVL-005",
+        "AVL-006",
+    ]
+    assert coverage["uncovered_capabilities"] == ["provider_lifecycle"]
 
 
 def test_actionlineage_core_does_not_import_eval_package() -> None:
@@ -108,6 +124,57 @@ def test_github_models_adapter_prefers_model_specific_token(monkeypatch) -> None
     )
 
     assert seen["token"] == "models-token"
+    assert turn.tool_calls == ()
+
+
+def test_openai_compatible_adapter_allows_local_endpoint_without_token(monkeypatch) -> None:
+    seen: dict[str, object] = {}
+
+    def fake_post_openai_compatible(
+        *,
+        endpoint: str,
+        token: str | None,
+        model_id: str,
+        prompt: str,
+        max_tokens: int,
+        timeout_seconds: int,
+    ) -> JsonMap:
+        del prompt, max_tokens, timeout_seconds
+        seen.update({"endpoint": endpoint, "model_id": model_id, "token": token})
+        return {
+            "choices": [
+                {
+                    "message": {
+                        "content": json.dumps({"final": "ok", "tool_calls": []}, sort_keys=True),
+                    },
+                },
+            ],
+        }
+
+    monkeypatch.delenv("OPENAI_COMPATIBLE_API_KEY", raising=False)
+    monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+    monkeypatch.setenv("OPENAI_COMPATIBLE_BASE_URL", "http://localhost:9999/v1")
+    monkeypatch.setattr(adapters_module, "_post_openai_compatible", fake_post_openai_compatible)
+
+    turn = OpenAICompatibleAdapter(model_id="local/test").generate(
+        prompt="return no tool calls",
+        tools=(),
+        budget=Budget(
+            max_model_requests=1,
+            max_model_turns=1,
+            max_tool_calls=1,
+            max_completion_tokens_per_turn=16,
+            timeout_seconds=10,
+        ),
+        request_index=0,
+    )
+
+    assert seen == {
+        "endpoint": "http://localhost:9999/v1/chat/completions",
+        "model_id": "local/test",
+        "token": None,
+    }
+    assert turn.provider == "openai_compatible"
     assert turn.tool_calls == ()
 
 
@@ -178,10 +245,14 @@ def test_scripted_suite_runs_all_scenarios_and_replay(tmp_path: Path) -> None:
         "AVL-002",
         "AVL-003",
         "AVL-004",
+        "AVL-005",
+        "AVL-006",
     ]
     for scenario_result in result.results:
         assert scenario_result.failure_class is None
         assert scenario_result.artifacts.replay_bundle_path.exists()
+        assert scenario_result.artifacts.mutation_sequence_path.exists()
+        assert scenario_result.artifacts.triage_path.exists()
         score_names = {score.name for score in scenario_result.scores}
         assert {
             "capability_coverage",
@@ -201,12 +272,76 @@ def test_scripted_suite_runs_all_scenarios_and_replay(tmp_path: Path) -> None:
     )
     lifecycle = next(score for score in avl002_scorecard["scores"] if score["name"] == "lifecycle")
     assert "verified" not in lifecycle["details"]["observed_verification_statuses"]
+    assert lifecycle["details"]["observed_event_types"].count("resource.observed") == 2
+
+    avl006_triage = (tmp_path / "evals" / "avl-006-scripted-seed-0" / "triage.md").read_text(
+        encoding="utf-8"
+    )
+    assert "denied-then-allowed-safe-alternative" in avl006_triage
+    assert "body_digest" in avl006_triage
+    assert "safe-summary-only" not in avl006_triage
+
+    avl005_manifest = json.loads(
+        (
+            tmp_path / "evals" / "avl-005-scripted-seed-0" / "replay-bundle" / "manifest.json"
+        ).read_text(encoding="utf-8")
+    )
+    assert avl005_manifest["mutation_sequence"] == "mutation-sequence.json"
+    assert avl005_manifest["triage"] == "triage.md"
 
     replayed = replay_bundle(
         tmp_path / "evals" / "avl-001-scripted-seed-0" / "replay-bundle",
         artifact_root=tmp_path / "replay",
     )
     assert replayed.passed is True
+
+
+def test_regression_corpus_replay_supports_empty_and_promoted_bundles(tmp_path: Path) -> None:
+    empty = run_regression_corpus(
+        regression_dir=tmp_path / "empty-regressions",
+        artifact_root=tmp_path / "empty-replay",
+        allow_empty=True,
+    )
+    assert empty.passed is True
+    assert empty.results == ()
+
+    result = run_suite(
+        scenario_path=PROJECT_ROOT / "evals" / "scenarios" / "AVL-001.yaml",
+        artifact_root=tmp_path / "evals",
+        mode=RunMode.SCRIPTED,
+        model_adapter_name="scripted",
+    )
+    assert result.passed is True
+    promoted = promote_regression_bundle(
+        tmp_path / "evals" / "avl-001-scripted-seed-0" / "replay-bundle",
+        tmp_path / "regressions",
+    )
+
+    replayed = run_regression_corpus(
+        regression_dir=promoted.parent,
+        artifact_root=tmp_path / "regression-replay",
+    )
+
+    assert replayed.passed is True
+    assert [item.scenario_id for item in replayed.results] == ["AVL-001"]
+
+
+def test_inspect_task_accepts_live_configuration_metadata() -> None:
+    task = agent_validation_lab(
+        scenario_path=str(PROJECT_ROOT / "evals" / "scenarios"),
+        artifact_root="build/evals/inspect-test",
+        mode="live",
+        model_adapter="openai_compatible",
+        model_id="local/test",
+        seed=7,
+        max_scenarios=1,
+    )
+    sample = task.dataset[0]
+
+    assert sample.metadata["mode"] == "live"
+    assert sample.metadata["model_adapter"] == "openai_compatible"
+    assert sample.metadata["model_id"] == "local/test"
+    assert sample.metadata["seed"] == 7
 
 
 def test_failure_classification_preserves_distinct_classes() -> None:

@@ -6,6 +6,7 @@ import json
 from dataclasses import dataclass
 from pathlib import Path
 
+from actionlineage.domain import EventType
 from actionlineage_evals.adapters import (
     AgentBudgetError,
     LocalToolAgent,
@@ -16,7 +17,12 @@ from actionlineage_evals.environment import (
     build_environment_controller,
     write_environment_report,
 )
-from actionlineage_evals.eventing import EventRecorder, write_json
+from actionlineage_evals.eventing import (
+    EventRecorder,
+    internal_local_classification,
+    observer_source,
+    write_json,
+)
 from actionlineage_evals.models import (
     FailureClass,
     ModelTurn,
@@ -27,6 +33,7 @@ from actionlineage_evals.models import (
     ScoreResult,
 )
 from actionlineage_evals.replay import (
+    discover_regression_bundles,
     load_transcript,
     promote_regression_bundle,
     write_replay_bundle,
@@ -36,6 +43,7 @@ from actionlineage_evals.replay import (
 from actionlineage_evals.scenarios import load_scenarios
 from actionlineage_evals.scoring import classify_failure, score_run, write_scorecard
 from actionlineage_evals.tools import ToolHarness, WorldState
+from actionlineage_evals.triage import write_triage_report
 
 DEFAULT_ARTIFACT_ROOT = Path("build/evals")
 DEFAULT_COMPOSE_FILE = Path("evals/docker/compose.yaml")
@@ -152,10 +160,25 @@ def run_scenario(
             budget_exhausted = True
             turns = ()
         harness = ToolHarness(recorder=recorder, world=world)
+        mutation_sequence = _mutation_sequence(scenario, seed)
         if provider_error is None and agent_error is None:
             for turn in turns:
                 for call in turn.tool_calls:
                     harness.execute(call)
+            _apply_runtime_mutations(
+                recorder=recorder,
+                scenario=scenario,
+                mutation_sequence=mutation_sequence,
+            )
+        write_json(
+            paths.mutation_sequence_path,
+            {
+                "mutations": mutation_sequence,
+                "scenario_id": scenario.scenario_id,
+                "schema_version": "actionlineage.dev/eval-mutation-sequence/v0",
+                "seed": seed,
+            },
+        )
         write_transcript(paths.transcript_path, turns)
         write_tool_calls(paths.tool_calls_path, turns)
         world.write_oracle_artifacts(
@@ -194,6 +217,16 @@ def run_scenario(
     }
     write_scorecard(paths.scorecard_path, scorecard)
     write_json(paths.coverage_path, _coverage_report(scenario))
+    write_triage_report(
+        paths.triage_path,
+        scenario=scenario,
+        mode=mode,
+        seed=seed,
+        scorecard=scorecard,
+        scores=scores,
+        turns=turns,
+        paths=paths,
+    )
     if paths.transcript_path.exists() and paths.journal_path.exists():
         write_replay_bundle(
             scenario=scenario,
@@ -214,6 +247,23 @@ def run_scenario(
         scores=scores,
         artifacts=paths,
     )
+
+
+def run_regression_corpus(
+    *,
+    regression_dir: Path,
+    artifact_root: Path = DEFAULT_ARTIFACT_ROOT / "regression-replay",
+    allow_empty: bool = False,
+) -> SuiteResult:
+    """Replay reviewed regression bundles without model calls."""
+
+    bundles = discover_regression_bundles(regression_dir)
+    if not bundles:
+        return SuiteResult(passed=allow_empty, results=())
+    results = tuple(
+        replay_bundle(bundle, artifact_root=artifact_root / bundle.name) for bundle in bundles
+    )
+    return SuiteResult(passed=all(result.passed for result in results), results=results)
 
 
 def replay_bundle(
@@ -250,6 +300,8 @@ def _run_paths(run_dir: Path) -> RunPaths:
         coverage_path=run_dir / "capability-coverage.json",
         environment_path=run_dir / "environment.json",
         toxiproxy_timeline_path=run_dir / "toxiproxy-timeline.jsonl",
+        mutation_sequence_path=run_dir / "mutation-sequence.json",
+        triage_path=run_dir / "triage.md",
     )
 
 
@@ -281,3 +333,60 @@ def _coverage_report(scenario: ScenarioDefinition) -> dict[str, object]:
         "coverage_goal": coverage.get("coverage_goal", ""),
         "scenario_id": scenario.scenario_id,
     }
+
+
+def _mutation_sequence(scenario: ScenarioDefinition, seed: int) -> list[dict[str, object]]:
+    mutations: list[dict[str, object]] = []
+    for index, mutation in enumerate(scenario.mutations):
+        parameters = mutation.get("parameters", {})
+        mutations.append(
+            {
+                "index": index,
+                "parameters": parameters if isinstance(parameters, dict) else {},
+                "seed": seed + index,
+                "semantic_property": _mutation_semantic_property(str(mutation.get("type", ""))),
+                "type": str(mutation.get("type", "")),
+            }
+        )
+    return mutations
+
+
+def _apply_runtime_mutations(
+    *,
+    recorder: EventRecorder,
+    scenario: ScenarioDefinition,
+    mutation_sequence: list[dict[str, object]],
+) -> None:
+    for mutation in mutation_sequence:
+        if mutation.get("type") != "duplicate_benign_event":
+            continue
+        parent_event_id = recorder.events[-1].event_id if recorder.events else None
+        for duplicate_index in range(2):
+            event = recorder.record(
+                EventType.RESOURCE_OBSERVED,
+                {
+                    "mutation": {
+                        "duplicate_index": duplicate_index,
+                        "semantic_property": mutation.get("semantic_property"),
+                        "type": mutation.get("type"),
+                    },
+                    "observation": {
+                        "benign": True,
+                        "status": "observed",
+                    },
+                    "resource": {
+                        "path": f"fixture://benign/{scenario.scenario_id.lower()}.txt",
+                        "type": "file",
+                    },
+                },
+                classification=internal_local_classification(),
+                parent_event_id=parent_event_id,
+                source=observer_source("mutation_oracle"),
+            )
+            parent_event_id = event.event_id
+
+
+def _mutation_semantic_property(mutation_type: str) -> str:
+    if mutation_type == "duplicate_benign_event":
+        return "duplicate benign evidence must not change expected scenario outcome"
+    return "declared mutation is tracked for replay provenance"

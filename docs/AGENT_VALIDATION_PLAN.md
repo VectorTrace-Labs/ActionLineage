@@ -8,6 +8,72 @@ scenario fixtures, CI lanes, and validation commands outside ActionLineage core.
 It does not add an alpha-supported runtime surface or change ActionLineage
 `v1alpha1` events.
 
+## Next-Phase Objective
+
+The next phase turns the first executable slice into an operator-usable
+development lab. The goal is not to add a broad framework or public support
+claim; it is to make failures diagnosable, replayable, and coverage-guided
+without model credentials in pull-request workflows.
+
+Planned improvements:
+
+1. Failure triage reports: every run writes a short Markdown triage artifact
+   naming the failure class, first failing scorer, missing lifecycle evidence,
+   observed tool calls, relevant errors, and exact replay command.
+2. Reviewed regression corpus: replay bundles can be promoted into a
+   development-only corpus and replayed in no-model CI. Empty corpora are
+   allowed until a reviewed failure is added.
+3. Inspect live configuration: the Inspect task accepts mode, adapter, model
+   ID, seed, Docker, and artifact-root settings instead of hardcoding scripted
+   execution.
+4. Capability gap reporting: coverage output reports covered capabilities,
+   declared-but-uncovered debt, stale references, and known gaps without
+   pretending line coverage is sufficient.
+5. Narrow mutation execution: the runner applies the first deterministic
+   mutation path, `duplicate_benign_event`, and records mutation provenance.
+6. Common model adapter hardening: expose a local OpenAI-compatible adapter
+   alongside GitHub Models and Ollama using the same `ModelAdapter` protocol.
+7. Scenario expansion: add only small scenarios that exercise existing harness
+   semantics. The initial additions are a multi-tool causal chain and a denied
+   request followed by an allowed safe alternative.
+
+Acceptance commands for this phase:
+
+```bash
+PYTHONPATH=evals uv run --group eval python -m actionlineage_evals validate-scenarios
+PYTHONPATH=evals uv run --group eval python -m actionlineage_evals coverage
+PYTHONPATH=evals uv run --group eval python -m actionlineage_evals run \
+  --scenario-path evals/scenarios \
+  --artifact-root build/evals/local \
+  --mode scripted \
+  --model-adapter scripted \
+  --seeds 1
+PYTHONPATH=evals uv run --group eval python -m actionlineage_evals replay-regressions \
+  --regression-dir evals/regressions \
+  --artifact-root build/evals/regression-replay \
+  --allow-empty
+PYTHONPATH=evals uv run --group eval pytest tests/evals/test_agent_validation_lab.py
+uv run ruff check .
+uv run ruff format --check .
+uv run mypy src
+PYTHONPATH=evals uv run --group eval mypy evals/actionlineage_evals
+uv run pytest
+uv run python scripts/check_claims_language.py .
+uv run python scripts/secret_scan.py .
+uv run pip-audit
+```
+
+Stop conditions:
+
+- The phase requires ActionLineage event schema changes.
+- Eval dependencies must enter runtime dependencies or package extras.
+- PR workflows need model credentials.
+- A model response would become authoritative pass/fail evidence.
+- Regression promotion would commit unreviewed, unredacted, or non-synthetic
+  artifacts.
+- Scenario expansion requires real secrets, live cloud accounts, paid
+  providers, or unsupported public maturity claims.
+
 ## Scope
 
 Implemented artifacts:
@@ -22,6 +88,9 @@ Implemented artifacts:
 - `evals/scenarios/AVL-002.yaml`
 - `evals/scenarios/AVL-003.yaml`
 - `evals/scenarios/AVL-004.yaml`
+- `evals/scenarios/AVL-005.yaml`
+- `evals/scenarios/AVL-006.yaml`
+- `evals/regressions/README.md`
 - `evals/actionlineage_evals/`
 - `evals/docker/`
 - `.github/workflows/agent-validation.yml`
@@ -84,8 +153,8 @@ All live and replay paths use a common adapter interface:
   OpenAI-compatible local `/v1` endpoint.
 
 Agent adapters represent real tool-using agents. The implemented local runner
-can execute the first four scenarios through the same tool-call recording path
-used by replay and scheduled model runs.
+can execute the development-only scenario set through the same tool-call
+recording path used by replay and scheduled model runs.
 
 ## Docker Environment Lifecycle
 
@@ -248,12 +317,13 @@ Local lane:
 Initial defaults:
 
 - PR lane: 0 model requests.
-- Scheduled lane: 4 scenarios, 1 model, 1 seed each.
+- Scheduled lane: 6 scenarios, 1 model, 1 seed each.
 - Max model turns per scenario: 8.
 - Max tool calls per scenario: 16.
 - Max completion tokens per turn: 512.
 - Scheduled job timeout: 20 minutes.
-- Local Ollama: first four scenarios, up to 3 seeds, 60-minute timeout.
+- Local Ollama or OpenAI-compatible endpoint: scenario set, up to 3 seeds,
+  60-minute timeout.
 
 Budget exhaustion is reported as `inconclusive_budget_exhausted` unless journal,
 oracle, or harness evidence supports a more specific failure class.
@@ -271,9 +341,11 @@ Design and schema:
 Implemented eval runner:
 
 - `AVL-001` through `AVL-004` pass no-model scripted runs.
+- `AVL-005` and `AVL-006` pass no-model scripted runs as next-phase coverage
+  extensions.
 - `AVL-001` replay passes from a captured replay bundle.
 - Journal verification, projection rebuild, contract validation, detection
-  matching, redaction scan, and capability coverage pass for all four scripted
+  matching, redaction scan, and capability coverage pass for all scripted
   scenarios.
 - Failure classification preserves product, agent, harness, provider, and
   budget classes.

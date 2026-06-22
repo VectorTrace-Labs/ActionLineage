@@ -28,7 +28,13 @@ class RunMode(StrEnum):
     REPLAY = "replay"
 
 
-type ModelAdapterName = Literal["replay", "github_models", "ollama", "scripted"]
+type ModelAdapterName = Literal[
+    "replay",
+    "github_models",
+    "openai_compatible",
+    "ollama",
+    "scripted",
+]
 
 
 @dataclass(frozen=True, slots=True)
@@ -132,6 +138,16 @@ class ScenarioDefinition:
         return tuple(str(item) for item in self.raw["spec"]["expected"]["lifecycle"])
 
     @property
+    def mutations(self) -> tuple[JsonMap, ...]:
+        spec = self.raw["spec"]
+        if not isinstance(spec, dict):
+            raise TypeError("scenario spec must be an object")
+        mutations = spec.get("mutations", ())
+        if not isinstance(mutations, list):
+            raise TypeError("scenario spec.mutations must be a list")
+        return tuple(item for item in mutations if isinstance(item, dict))
+
+    @property
     def expected_statuses(self) -> tuple[str, ...]:
         return tuple(str(item) for item in self.raw["spec"]["expected"]["verificationStatuses"])
 
@@ -196,6 +212,8 @@ class RunPaths:
     coverage_path: Path
     environment_path: Path
     toxiproxy_timeline_path: Path
+    mutation_sequence_path: Path
+    triage_path: Path
 
 
 @dataclass(frozen=True, slots=True)
@@ -232,6 +250,7 @@ class ScenarioResult:
                 "coverage_path": str(self.artifacts.coverage_path),
                 "environment_path": str(self.artifacts.environment_path),
                 "journal_path": str(self.artifacts.journal_path),
+                "mutation_sequence_path": str(self.artifacts.mutation_sequence_path),
                 "oracle_observations_path": str(self.artifacts.oracle_observations_path),
                 "projection_path": str(self.artifacts.projection_path),
                 "replay_bundle_path": str(self.artifacts.replay_bundle_path),
@@ -239,6 +258,7 @@ class ScenarioResult:
                 "scorecard_path": str(self.artifacts.scorecard_path),
                 "toxiproxy_timeline_path": str(self.artifacts.toxiproxy_timeline_path),
                 "tool_calls_path": str(self.artifacts.tool_calls_path),
+                "triage_path": str(self.artifacts.triage_path),
                 "transcript_path": str(self.artifacts.transcript_path),
             },
             "failure_class": self.failure_class.value if self.failure_class is not None else None,

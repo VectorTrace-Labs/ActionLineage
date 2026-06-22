@@ -18,7 +18,15 @@ from actionlineage_evals.scenarios import SCENARIO_DIR, load_scenarios
 
 
 @solver
-def actionlineage_solver() -> Any:
+def actionlineage_solver(
+    *,
+    artifact_root: str = "build/evals/inspect",
+    mode: str = RunMode.SCRIPTED.value,
+    model_adapter: str = "scripted",
+    model_id: str | None = None,
+    seed: int = 0,
+    use_docker: bool = False,
+) -> Any:
     """Inspect solver that delegates execution to ActionLineage eval oracles."""
 
     async def solve(state: TaskState, generate: Any) -> TaskState:
@@ -27,11 +35,16 @@ def actionlineage_solver() -> Any:
         scenarios = load_scenarios(scenario_path)
         scenario_id = str(state.metadata["scenario_id"])
         scenario = next(item for item in scenarios if item.scenario_id == scenario_id)
+        active_mode = RunMode(str(state.metadata.get("mode", mode)))
+        active_model_id = state.metadata.get("model_id", model_id)
         result = run_scenario(
             scenario=scenario,
-            artifact_root=Path("build/evals/inspect"),
-            mode=RunMode.SCRIPTED,
-            model_adapter_name="scripted",
+            artifact_root=Path(str(state.metadata.get("artifact_root", artifact_root))),
+            mode=active_mode,
+            model_adapter_name=str(state.metadata.get("model_adapter", model_adapter)),
+            model_id=str(active_model_id) if active_model_id else None,
+            seed=int(state.metadata.get("seed", seed)),
+            use_docker=bool(state.metadata.get("use_docker", use_docker)),
         )
         state.output.completion = "pass" if result.passed else "fail"
         state.metadata["actionlineage_result"] = result.as_dict()
@@ -54,17 +67,49 @@ def actionlineage_scorer() -> Any:
 
 
 @task
-def agent_validation_lab(scenario_path: str = str(SCENARIO_DIR)) -> Task:
+def agent_validation_lab(
+    scenario_path: str = str(SCENARIO_DIR),
+    *,
+    artifact_root: str = "build/evals/inspect",
+    mode: str = RunMode.SCRIPTED.value,
+    model_adapter: str = "scripted",
+    model_id: str | None = None,
+    seed: int = 0,
+    use_docker: bool = False,
+    max_scenarios: int | None = None,
+) -> Task:
     """Inspect AI task for the ActionLineage Agent Validation Lab."""
 
     scenarios = load_scenarios(Path(scenario_path))
+    if max_scenarios is not None:
+        scenarios = scenarios[:max_scenarios]
     samples = [
         Sample(
             id=scenario.scenario_id,
             input=scenario.prompt,
             target="pass",
-            metadata={"scenario_id": scenario.scenario_id, "scenario_path": scenario_path},
+            metadata={
+                "artifact_root": artifact_root,
+                "mode": mode,
+                "model_adapter": model_adapter,
+                "model_id": model_id,
+                "scenario_id": scenario.scenario_id,
+                "scenario_path": scenario_path,
+                "seed": seed,
+                "use_docker": use_docker,
+            },
         )
         for scenario in scenarios
     ]
-    return Task(dataset=samples, solver=actionlineage_solver(), scorer=actionlineage_scorer())
+    return Task(
+        dataset=samples,
+        solver=actionlineage_solver(
+            artifact_root=artifact_root,
+            mode=mode,
+            model_adapter=model_adapter,
+            model_id=model_id,
+            seed=seed,
+            use_docker=use_docker,
+        ),
+        scorer=actionlineage_scorer(),
+    )

@@ -8,10 +8,12 @@ Current contents:
 
 - `CAPABILITY_COVERAGE.yaml`: lifecycle and capability coverage map.
 - `SCENARIO_SCHEMA.json`: JSON Schema for eval scenario manifests.
-- `scenarios/`: the first four executable scenario fixtures.
+- `scenarios/`: executable scenario fixtures.
 - `actionlineage_evals/`: dev-only runner, adapters, oracles, scorers, replay,
   minimization, and Inspect task glue.
 - `docker/`: disposable local receiver and Toxiproxy Compose environment.
+- `regressions/`: reviewed replay bundles promoted from meaningful dynamic
+  failures.
 
 Eval code may import ActionLineage public APIs. ActionLineage core code must not
 import from this directory.
@@ -27,8 +29,8 @@ import from this directory.
 - Every live run records enough provenance for replay.
 - Capability and lifecycle coverage matter more than line coverage.
 - Local and remote models use a common adapter interface.
-- Implementation remains narrow and scenario-driven even though the first four
-  scenarios are executable.
+- Implementation remains narrow and scenario-driven even as the executable
+  scenario set grows.
 
 ## Commands
 
@@ -44,6 +46,10 @@ PYTHONPATH=evals uv run --group eval python -m actionlineage_evals run \
   --model-adapter scripted
 PYTHONPATH=evals uv run --group eval python -m actionlineage_evals replay \
   build/evals/local/avl-001-scripted-seed-0/replay-bundle
+PYTHONPATH=evals uv run --group eval python -m actionlineage_evals replay-regressions \
+  --regression-dir evals/regressions \
+  --artifact-root build/evals/regression-replay \
+  --allow-empty
 PYTHONPATH=evals uv run --group eval python -m actionlineage_evals docker-smoke
 ```
 
@@ -53,11 +59,21 @@ model-specific `GH_MODELS_TOKEN` secret, then falls back to the workflow
 `GITHUB_TOKEN`. GitHub Actions rejects secret names beginning with `GITHUB_`, so
 `GH_MODELS_TOKEN` is the repository secret name. The secret is only passed to the
 scheduled or manually dispatched default-branch job; pull-request jobs remain
-no-model and secret-free. Local Ollama runs use `--model-adapter ollama`. Both
-stay bounded by scenario budgets.
+no-model and secret-free. Local Ollama runs use `--model-adapter ollama`. Local
+OpenAI-compatible chat-completions servers use `--model-adapter
+openai_compatible` with `OPENAI_COMPATIBLE_BASE_URL` or
+`OPENAI_COMPATIBLE_CHAT_COMPLETIONS_URL`. All live adapters stay bounded by
+scenario budgets.
+
+Every scenario run writes:
+
+- `scorecard.json`: machine-readable scorer results.
+- `triage.md`: human-readable failure summary and replay command.
+- `mutation-sequence.json`: deterministic mutation provenance.
+- `replay-bundle/`: transcript and journal material for no-model replay.
 
 ## Artifact Policy
 
 Generated eval outputs should go under `build/evals/<run-id>/` or `/tmp`.
-Committed fixtures under `evals/replay/` or `evals/regression/` must be small,
+Committed fixtures under `evals/replay/` or `evals/regressions/` must be small,
 synthetic, reviewed, redacted, and reproducible.
