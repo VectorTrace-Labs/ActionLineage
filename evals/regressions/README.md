@@ -14,6 +14,11 @@ Rules:
   replayed by CI.
 - Require reviewed bundles to include reviewer, review reason, source run,
   review timestamp, and failure-class metadata.
+- Require reviewed bundles to include replay, provenance, triage, oracle,
+  journal, transcript, tool-call, minimized-transcript, and minimization-report
+  artifacts.
+- Run artifact audit before reviewed promotion. Promotion must fail if canaries
+  or credential-shaped values are found.
 - Treat `evals/regressions/_candidates/` as local review staging only; do not
   rely on candidates in CI.
 - Replay the corpus without model calls:

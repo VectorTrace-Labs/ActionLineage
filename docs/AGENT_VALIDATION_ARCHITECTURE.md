@@ -76,6 +76,8 @@ Dependency rules:
   must not enter `[project.dependencies]` or the existing runtime extras.
 - Eval modules may depend on public imports documented in `docs/API_REFERENCE.md`.
 - Core modules must not import `evals` or `actionlineage_evals`.
+- `check-boundaries` parses ActionLineage core imports and fails PR CI if core
+  imports eval-only packages, Inspect, or model-provider libraries.
 - Generated eval artifacts belong under `build/evals/` or `/tmp`, not in source.
 
 ## Dev-Only Protocols
@@ -147,6 +149,11 @@ the published receiver and Toxiproxy ports in `environment.json`, and
 world-state oracles use those discovered URLs. This keeps local and CI Docker
 runs parallel-safe without relying on fixed host ports.
 
+The disposable Compose fixture is constrained for development safety: services
+drop Linux capabilities, use `no-new-privileges`, run with read-only root
+filesystems where possible, write scratch data to tmpfs, use explicit resource
+caps, and communicate through an explicit eval network.
+
 Toxiproxy sits between the agent/tool runtime and selected networked test
 services. Each toxic records name, target proxy, direction, parameters,
 toxicity, start time, removal time, and seed when randomness is used.
@@ -196,6 +203,9 @@ Required scorer families:
   source run and reports semantic mismatches as harness failures.
 - **Failure classifier**: assigns one of `product_failure`, `agent_failure`,
   `harness_failure`, `provider_failure`, or `inconclusive_budget_exhausted`.
+- **Scenario linter**: verifies semantic scenario quality that JSON Schema
+  cannot express, including authoritative oracles, replay artifacts, coverage
+  references, required scorers, and failure-control tagging.
 
 ## Replay And Minimization
 
@@ -219,12 +229,18 @@ case without a model provider:
 
 Failure minimization should first remove irrelevant transcript turns, then
 irrelevant tool calls, then irrelevant environment perturbations, while
-preserving the same failure classification. Promotion to `evals/regression/`
-requires human review and a stable minimized replay bundle.
+preserving the same failure classification. Promotion to `evals/regressions/`
+requires human review, a stable minimized replay bundle, provenance and triage
+artifacts, and a clean artifact audit.
 
 Generated artifacts can be scanned independently with `audit-artifacts`. The
 audit reports pattern names and file paths for redaction canaries and credential
 patterns, but it never echoes the matched sensitive value.
+
+Every suite run writes `suite-summary.json` for trend tracking. GitHub Actions
+job summaries render the same scorecard data as Markdown, including failure
+classes, replay-equivalence counts, first failing scorer, artifact paths, and
+exact replay commands.
 
 ## CI Lanes
 
@@ -234,7 +250,8 @@ Pull-request lane:
 - Permissions: `contents: read`.
 - Model requests: zero.
 - Runs schema validation, replay-only scenarios, deterministic fixture checks,
-  and optional no-network Docker smoke.
+  semantic scenario linting, import-boundary checks, and optional no-network
+  Docker smoke.
 - Must not use `pull_request_target` or repository model credentials.
 
 Scheduled lane:

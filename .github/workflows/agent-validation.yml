@@ -34,7 +34,9 @@ jobs:
           PYTHONPATH: evals
         run: |
           uv run --group eval python -m actionlineage_evals validate-scenarios
+          uv run --group eval python -m actionlineage_evals lint-scenarios
           uv run --group eval python -m actionlineage_evals coverage --strict
+          uv run --group eval python -m actionlineage_evals check-boundaries
       - name: Run no-model scripted eval suite
         env:
           PYTHONPATH: evals
@@ -72,9 +74,7 @@ jobs:
           {
             echo "### No-model Agent Validation Lab scorecards"
             echo
-            echo '```text'
-            uv run --group eval python -m actionlineage_evals summarize build/evals --format text || true
-            echo '```'
+            uv run --group eval python -m actionlineage_evals summarize build/evals --format markdown || true
           } >> "$GITHUB_STEP_SUMMARY"
       - name: Upload no-model eval artifacts
         if: always()
@@ -137,9 +137,7 @@ jobs:
           {
             echo "### Docker Agent Validation Lab scorecards"
             echo
-            echo '```text'
-            uv run --group eval python -m actionlineage_evals summarize build/evals --format text || true
-            echo '```'
+            uv run --group eval python -m actionlineage_evals summarize build/evals --format markdown || true
           } >> "$GITHUB_STEP_SUMMARY"
       - name: Upload Docker eval artifacts
         if: always()
@@ -201,9 +199,7 @@ jobs:
           {
             echo "### Scheduled Agent Validation Lab scorecards"
             echo
-            echo '```text'
-            uv run --group eval python -m actionlineage_evals summarize build/evals --format text || true
-            echo '```'
+            uv run --group eval python -m actionlineage_evals summarize build/evals --format markdown || true
           } >> "$GITHUB_STEP_SUMMARY"
       - name: Upload scheduled eval artifacts
         if: always()

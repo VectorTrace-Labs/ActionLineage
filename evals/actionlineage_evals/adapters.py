@@ -408,6 +408,17 @@ def _scripted_calls(scenario_id: str) -> tuple[ToolCall, ...]:
                 },
             ),
         )
+    if scenario_id == "AVL-011":
+        return (
+            ToolCall(
+                name="safe_http.send",
+                arguments={
+                    "body": "product-oracle-mismatch",
+                    "mode": "fixture",
+                    "url": "http://receiver.local/collect",
+                },
+            ),
+        )
     raise ValueError(f"no scripted tool plan for scenario: {scenario_id}")
 
 

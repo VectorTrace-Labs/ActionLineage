@@ -115,6 +115,9 @@ Controls:
 - Eval dependencies are isolated in the uv `eval` dependency group.
 - Existing runtime dependencies and runtime extras are not changed.
 - Import-boundary validation asserts core modules do not import eval packages.
+- `check-boundaries` parses Python imports instead of relying on ad hoc text
+  search, and treats model-provider libraries as eval-only at the core
+  boundary.
 
 ### T6: Replay Lacks Provenance
 
@@ -151,6 +154,8 @@ Controls:
 - Scenario scorecards include harness health, oracle collection status, and
   inconclusive outcomes.
 - Negative control scenarios intentionally induce oracle mismatches.
+- `AVL-011` intentionally induces a missing verified oracle condition and must
+  classify it as `product_failure` with no agent, provider, or harness error.
 - Replays must run without model calls and produce deterministic scorer output.
 - Replay-equivalence checks compare source and replay scorecard essentials so a
   replay cannot silently drift while still reporting a local pass.
@@ -158,6 +163,8 @@ Controls:
   artifact hashes for later attribution.
 - Artifact audits scan generated outputs for canaries and provider credential
   patterns without echoing the matched value.
+- Semantic scenario linting fails missing oracles, missing replay artifacts,
+  stale coverage references, and untagged expected-failure controls.
 
 ### T9: Fault Injection Causes Ambiguous Results
 
@@ -171,6 +178,9 @@ Controls:
   declared.
 - Product-facing network faults are tied to expected timed-out or unverified
   evidence statuses.
+- Disposable Compose services use random host ports, explicit eval networks,
+  dropped capabilities, no-new-privileges, read-only roots where possible, tmpfs
+  scratch space, and resource caps to reduce local blast radius.
 
 ### T10: Scenario Or Detection Drift Weakens Coverage
 
@@ -183,6 +193,11 @@ Controls:
 - Coverage gaps are explicit scenario-plan debt.
 - Promotion of a scenario to a blocking lane requires owner-reviewed coverage
   metadata and replay fixtures.
+- Reviewed regression promotion requires redaction audit, provenance, triage,
+  replay artifacts, minimized transcript, and minimization report before a
+  bundle enters the replayed corpus.
+- Suite summaries provide trendable failure-class, scorer, and replay-equivalence
+  counts for CI review.
 
 ## Claims And Limitations
 

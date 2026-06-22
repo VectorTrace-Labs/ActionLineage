@@ -38,7 +38,9 @@ Use the eval dependency group and keep `evals/` on `PYTHONPATH`:
 
 ```bash
 PYTHONPATH=evals uv run --group eval python -m actionlineage_evals validate-scenarios
+PYTHONPATH=evals uv run --group eval python -m actionlineage_evals lint-scenarios
 PYTHONPATH=evals uv run --group eval python -m actionlineage_evals coverage --strict
+PYTHONPATH=evals uv run --group eval python -m actionlineage_evals check-boundaries
 PYTHONPATH=evals uv run --group eval python -m actionlineage_evals run \
   --scenario-path evals/scenarios \
   --artifact-root build/evals/local \
@@ -57,7 +59,7 @@ PYTHONPATH=evals uv run --group eval python -m actionlineage_evals audit-artifac
   build/evals/local
 PYTHONPATH=evals uv run --group eval python -m actionlineage_evals summarize \
   build/evals/local \
-  --format text
+  --format markdown
 PYTHONPATH=evals uv run --group eval python -m actionlineage_evals docker-smoke
 ```
 
@@ -82,10 +84,16 @@ Every scenario run writes:
 - `mutation-sequence.json`: deterministic mutation provenance.
 - `replay-bundle/`: transcript and journal material for no-model replay.
 
+Every suite run also writes `suite-summary.json`, a compact trendable report
+with scenario status, failure-class counts, and scorer pass/fail counts.
+GitHub Actions job summaries render the same scorecards as Markdown with replay
+commands for quick triage.
+
 The scheduled GitHub Models lane runs the first six scenarios. `AVL-007` is a
 deterministic no-model provider-failure control, `AVL-008` is a budget
 exhaustion control, `AVL-009` is a harness-failure control, and `AVL-010` is an
-agent-failure control, so they run in the scripted and replay lanes rather than
+agent-failure control. `AVL-011` is a product-failure oracle-mismatch control.
+These deterministic controls run in scripted and replay lanes rather than
 calling a live provider.
 
 Replay runs include a `replay_equivalence` scorer. It compares semantic
@@ -97,7 +105,16 @@ Docker runs use per-run Compose project names and randomly published host
 ports. The environment controller records the published ports in
 `environment.json`, and the tool oracles use those discovered URLs for receiver
 and Toxiproxy calls. This avoids local fixed-port collisions when multiple
-Docker evals run at the same time.
+Docker evals run at the same time. Compose services also run with dropped Linux
+capabilities, `no-new-privileges`, read-only root filesystems, tmpfs scratch
+space, resource caps, and an explicit eval network.
+
+`lint-scenarios` performs semantic checks that JSON Schema cannot express:
+contiguous IDs, non-planned maturity for implemented fixtures, authoritative
+oracles, required scorers, replay artifacts, coverage-required oracles and
+scorers, and explicit `failure-classification` tagging for expected failure
+controls. `check-boundaries` parses ActionLineage core imports and fails if core
+imports eval-only packages or model-provider libraries.
 
 ## Artifact Policy
 
@@ -122,9 +139,15 @@ Reviewed promotion uses:
 
 ```bash
 PYTHONPATH=evals uv run --group eval python -m actionlineage_evals promote-regression \
-  build/evals/local/avl-007-scripted-seed-0/replay-bundle \
+  build/evals/local/avl-010-scripted-seed-0/replay-bundle \
   --reviewed \
   --reviewed-by security-platform \
-  --reason "synthetic provider-failure regression control" \
+  --reason "synthetic agent-failure minimized regression control" \
   --source-run local-development
 ```
+
+Reviewed promotion requires replay, provenance, triage, oracle, journal,
+transcript, tool-call, minimized-transcript, and minimization-report artifacts
+and runs an artifact audit before copying the bundle into the replayed corpus.
+Unminimized bundles can still be staged as candidates for review, but CI will
+not replay them as reviewed regressions.

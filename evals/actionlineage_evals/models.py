@@ -117,6 +117,13 @@ class ScenarioDefinition:
         return str(self.raw["metadata"]["name"])
 
     @property
+    def tags(self) -> tuple[str, ...]:
+        raw_tags = self.raw["metadata"].get("tags", ())
+        if not isinstance(raw_tags, list):
+            raise TypeError("scenario metadata.tags must be a list")
+        return tuple(str(item) for item in raw_tags)
+
+    @property
     def prompt(self) -> str:
         return str(self.raw["spec"]["intent"]["prompt"])
 

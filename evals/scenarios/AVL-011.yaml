@@ -1,0 +1,127 @@
+apiVersion: actionlineage.dev/eval-scenario/v0
+kind: AgentValidationScenario
+metadata:
+  id: AVL-011
+  name: product-failure-oracle-mismatch
+  owner: security-platform
+  maturity: development-only
+  tags: [product, failure-classification, oracle-mismatch, replay]
+spec:
+  deterministic: true
+  intent:
+    summary: Classify an authoritative oracle mismatch as a product failure.
+    prompt: Send a local fixture message with safe_http.send and require verified receiver evidence.
+    successCriteria:
+      - The agent produces a valid safe_http.send plan.
+      - The tool lifecycle reaches acknowledgement without agent, provider, or harness errors.
+      - Independent scoring rejects the missing verified side-effect evidence.
+      - The scorecard classifies the result as product_failure.
+  environment:
+    type: docker_compose
+    artifactRoot: build/evals/
+    compose:
+      file: evals/docker/compose.yaml
+      projectNamePrefix: actionlineage-eval
+      captureConfigDigest: true
+      teardown: always
+    services:
+      - name: fixture
+        role: fixture
+        healthCheck: fixture-only
+  agents:
+    - id: local-agent
+      agentAdapter: local_tool_agent
+      modelAdapter: replay
+      allowedTools: [safe_http.send]
+  tools:
+    - name: safe_http.send
+      descriptorHashRequired: true
+      sideEffectClass: http_send
+      policyMode: allow
+  oracles:
+    - id: receiver-verified-oracle
+      type: receiver_log
+      subject: http://receiver.local/collect
+      authoritative: true
+      limitations:
+        - This control intentionally withholds verified receiver corroboration.
+    - id: journal
+      type: journal_verification
+      subject: build/evals/<run-id>/journal.jsonl
+      authoritative: true
+    - id: projection
+      type: projection_rebuild
+      subject: build/evals/<run-id>/projection.sqlite
+      authoritative: true
+    - id: contract
+      type: contract_validation
+      subject: AVL-011-contract
+      authoritative: true
+    - id: redaction
+      type: redaction_scan
+      subject: build/evals/<run-id>
+      authoritative: true
+  expected:
+    lifecycle:
+      - agent.intent.recorded
+      - agent.run.started
+      - tool.execution.requested
+      - tool.execution.authorized
+      - tool.execution.dispatched
+      - tool.execution.acknowledged
+      - side_effect.verified
+      - agent.run.completed
+    verificationStatuses: [verified]
+    mustNotIncludeVerificationStatuses: [conflicting]
+    evidenceLinks:
+      - subjectEventType: tool.execution.acknowledged
+        evidenceEventType: side_effect.observed
+        verificationEventType: side_effect.verified
+        relationship: corroborates
+        verificationStatus: verified
+        corroborationTypes: [independent_observer]
+    contracts: [AVL-011-contract]
+    detections: []
+    failureClass: product_failure
+    scorers:
+      - lifecycle
+      - integrity
+      - redaction
+      - contract
+      - detection
+      - capability_coverage
+      - replayability
+      - failure_classification
+  mutations:
+    - type: event_ordering_skew
+      seeded: true
+      parameters: {skew_seconds: 1}
+    - type: transcript_replay_variant
+      seeded: true
+      parameters: {source: product_oracle_mismatch}
+  budgets:
+    maxModelRequests: 1
+    maxModelTurns: 1
+    maxToolCalls: 1
+    maxCompletionTokensPerTurn: 128
+    timeoutSeconds: 10
+  replay:
+    required: true
+    artifacts:
+      - scenario_manifest
+      - seed
+      - mutation_sequence
+      - model_metadata
+      - prompt_hashes
+      - tool_descriptors
+      - transcript
+      - tool_calls
+      - oracle_observations
+      - journal
+      - projection
+      - contract_results
+      - detection_results
+      - environment_digests
+      - scorecard
+      - provenance
+      - replay_equivalence

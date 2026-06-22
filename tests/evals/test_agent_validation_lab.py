@@ -19,6 +19,8 @@ from actionlineage_evals.adapters import (  # noqa: E402
     OpenAICompatibleAdapter,
 )
 from actionlineage_evals.artifact_audit import audit_artifacts  # noqa: E402
+from actionlineage_evals.boundary import check_eval_import_boundaries  # noqa: E402
+from actionlineage_evals.linting import lint_scenarios  # noqa: E402
 from actionlineage_evals.minimization import (  # noqa: E402
     minimize_tool_calls,
     tool_call_count,
@@ -71,6 +73,7 @@ def test_scenarios_and_capability_coverage_validate() -> None:
         "AVL-008",
         "AVL-009",
         "AVL-010",
+        "AVL-011",
     ]
     assert coverage["ok"] is True
     assert coverage["scenario_ids"] == [
@@ -84,20 +87,21 @@ def test_scenarios_and_capability_coverage_validate() -> None:
         "AVL-008",
         "AVL-009",
         "AVL-010",
+        "AVL-011",
     ]
     assert coverage["uncovered_capabilities"] == []
+    lint = lint_scenarios(
+        scenario_path=PROJECT_ROOT / "evals" / "scenarios",
+        coverage_path=PROJECT_ROOT / "evals" / "CAPABILITY_COVERAGE.yaml",
+    )
+    assert lint["ok"] is True
 
 
 def test_actionlineage_core_does_not_import_eval_package() -> None:
-    source_files = sorted((PROJECT_ROOT / "src" / "actionlineage").rglob("*.py"))
+    report = check_eval_import_boundaries(PROJECT_ROOT)
 
-    offenders = [
-        str(path.relative_to(PROJECT_ROOT))
-        for path in source_files
-        if "actionlineage_evals" in path.read_text(encoding="utf-8")
-    ]
-
-    assert offenders == []
+    assert report["ok"] is True
+    assert report["violations"] == []
 
 
 def test_github_models_adapter_prefers_model_specific_token(monkeypatch) -> None:
@@ -273,9 +277,11 @@ def test_scripted_suite_runs_all_scenarios_and_replay(tmp_path: Path) -> None:
         "AVL-008",
         "AVL-009",
         "AVL-010",
+        "AVL-011",
     ]
     for scenario_result in result.results:
         expected_failure = {
+            "AVL-011": FailureClass.PRODUCT,
             "AVL-007": FailureClass.PROVIDER,
             "AVL-008": FailureClass.BUDGET,
             "AVL-009": FailureClass.HARNESS,
@@ -368,6 +374,21 @@ def test_scripted_suite_runs_all_scenarios_and_replay(tmp_path: Path) -> None:
     assert avl010_minimization["original_tool_calls"] == 1
     assert avl010_minimization["minimized_tool_calls"] == 1
 
+    avl011_scorecard = json.loads(
+        (tmp_path / "evals" / "avl-011-scripted-seed-0" / "scorecard.json").read_text(
+            encoding="utf-8"
+        )
+    )
+    assert avl011_scorecard["passed"] is True
+    assert avl011_scorecard["failure_class"] == "product_failure"
+    assert avl011_scorecard["agent_error"] is None
+    assert avl011_scorecard["provider_error"] is None
+    assert any(score["ok"] is False for score in avl011_scorecard["scores"])
+
+    suite_summary = json.loads((tmp_path / "evals" / "suite-summary.json").read_text())
+    assert suite_summary["schema_version"] == "actionlineage.dev/eval-suite-summary/v0"
+    assert suite_summary["failure_class_counts"]["product_failure"] == 1
+
     avl001_oracles = [
         json.loads(line)
         for line in (tmp_path / "evals" / "avl-001-scripted-seed-0" / "oracle-observations.jsonl")
@@ -394,7 +415,7 @@ def test_scripted_suite_runs_all_scenarios_and_replay(tmp_path: Path) -> None:
         replay_artifact_root=tmp_path / "artifact-replay",
     )
     assert replayed_artifacts.passed is True
-    assert len(replayed_artifacts.results) == 10
+    assert len(replayed_artifacts.results) == 11
     avl010_replay_scorecard = json.loads(
         (
             tmp_path
@@ -427,28 +448,28 @@ def test_regression_corpus_replay_supports_empty_and_promoted_bundles(tmp_path: 
     assert empty.results == ()
 
     result = run_suite(
-        scenario_path=PROJECT_ROOT / "evals" / "scenarios" / "AVL-007.yaml",
+        scenario_path=PROJECT_ROOT / "evals" / "scenarios" / "AVL-010.yaml",
         artifact_root=tmp_path / "evals",
         mode=RunMode.SCRIPTED,
         model_adapter_name="scripted",
     )
     assert result.passed is True
     candidate = promote_regression_bundle(
-        tmp_path / "evals" / "avl-007-scripted-seed-0" / "replay-bundle",
+        tmp_path / "evals" / "avl-010-scripted-seed-0" / "replay-bundle",
         tmp_path / "regressions",
     )
     assert "_candidates" in candidate.parts
 
     reviewed = promote_regression_bundle(
-        tmp_path / "evals" / "avl-007-scripted-seed-0" / "replay-bundle",
+        tmp_path / "evals" / "avl-010-scripted-seed-0" / "replay-bundle",
         tmp_path / "regressions",
         reviewed=True,
         reviewed_by="security-platform",
-        reason="synthetic provider-failure regression control",
+        reason="synthetic agent-failure minimized regression control",
         source_run="local-test",
     )
     reviewed_manifest = json.loads((reviewed / "manifest.json").read_text(encoding="utf-8"))
-    assert reviewed_manifest["review"]["failure_class"] == "provider_failure"
+    assert reviewed_manifest["review"]["failure_class"] == "agent_failure"
     assert reviewed_manifest["review"]["reviewed_by"] == "security-platform"
 
     replayed = run_regression_corpus(
@@ -457,7 +478,7 @@ def test_regression_corpus_replay_supports_empty_and_promoted_bundles(tmp_path: 
     )
 
     assert replayed.passed is True
-    assert [item.scenario_id for item in replayed.results] == ["AVL-007"]
+    assert [item.scenario_id for item in replayed.results] == ["AVL-010"]
 
 
 def test_reviewed_regression_promotion_requires_review_metadata(tmp_path: Path) -> None:
@@ -475,6 +496,26 @@ def test_reviewed_regression_promotion_requires_review_metadata(tmp_path: Path) 
             tmp_path / "regressions",
             reviewed=True,
             reason="missing reviewer",
+            source_run="local-test",
+        )
+
+
+def test_reviewed_regression_promotion_requires_minimized_bundle(tmp_path: Path) -> None:
+    result = run_suite(
+        scenario_path=PROJECT_ROOT / "evals" / "scenarios" / "AVL-007.yaml",
+        artifact_root=tmp_path / "evals",
+        mode=RunMode.SCRIPTED,
+        model_adapter_name="scripted",
+    )
+    assert result.passed is True
+
+    with pytest.raises(ValueError, match="missing required artifacts"):
+        promote_regression_bundle(
+            tmp_path / "evals" / "avl-007-scripted-seed-0" / "replay-bundle",
+            tmp_path / "regressions",
+            reviewed=True,
+            reviewed_by="security-platform",
+            reason="provider control has no minimized transcript yet",
             source_run="local-test",
         )
 

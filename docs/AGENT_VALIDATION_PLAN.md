@@ -81,11 +81,36 @@ Current trust-hardening slice:
 8. Align the first executable scenarios' maturity labels with their current
    development-only implementation status.
 
+Current classification-and-operations slice:
+
+1. Add `AVL-011 product-failure-oracle-mismatch` to preserve
+   `product_failure` separately from agent, harness, provider, and budget
+   controls when authoritative lifecycle or contract evidence is missing.
+2. Add `lint-scenarios` for semantic scenario quality checks beyond JSON
+   Schema: contiguous IDs, non-planned maturity, authoritative oracles,
+   required scorers, replay artifacts, coverage-required oracles and scorers,
+   and failure-control tagging.
+3. Add `check-boundaries` so PR CI proves ActionLineage core does not import
+   eval-only packages, Inspect, or model-provider libraries.
+4. Harden reviewed regression promotion to require redaction audit, provenance,
+   triage, replay artifacts, minimized transcript, and minimization report
+   before a bundle enters the replayed corpus.
+5. Write `suite-summary.json` and Markdown job summaries with scenario status,
+   failure-class counts, scorer counts, replay-equivalence counts, artifact
+   paths, and replay commands.
+6. Execute deterministic `missing_optional_field` and `event_ordering_skew`
+   mutation provenance in addition to duplicate benign events.
+7. Harden the disposable Docker Compose environment with dropped capabilities,
+   no-new-privileges, read-only roots, tmpfs scratch space, resource caps, and
+   an explicit eval network.
+
 Acceptance commands for this phase:
 
 ```bash
 PYTHONPATH=evals uv run --group eval python -m actionlineage_evals validate-scenarios
+PYTHONPATH=evals uv run --group eval python -m actionlineage_evals lint-scenarios
 PYTHONPATH=evals uv run --group eval python -m actionlineage_evals coverage --strict
+PYTHONPATH=evals uv run --group eval python -m actionlineage_evals check-boundaries
 PYTHONPATH=evals uv run --group eval python -m actionlineage_evals run \
   --scenario-path evals/scenarios \
   --artifact-root build/evals/local \
@@ -160,6 +185,7 @@ Implemented artifacts:
 - `evals/scenarios/AVL-008.yaml`
 - `evals/scenarios/AVL-009.yaml`
 - `evals/scenarios/AVL-010.yaml`
+- `evals/scenarios/AVL-011.yaml`
 - `evals/regressions/README.md`
 - `evals/actionlineage_evals/`
 - `evals/docker/`
@@ -239,6 +265,11 @@ Every scenario run:
 - Collects oracle observations and ActionLineage evidence.
 - Tears down containers, networks, and volumes unless a debug flag preserves
   them locally.
+- Uses randomly published host ports, records those ports in `environment.json`,
+  and keeps receiver/Toxiproxy services on an explicit eval network.
+- Runs disposable services with dropped capabilities, `no-new-privileges`,
+  read-only root filesystems where possible, tmpfs scratch space, and resource
+  caps.
 
 No scenario may depend on a cloud account, real endpoint, or internet access for
 authoritative oracle state.
@@ -417,6 +448,8 @@ Implemented eval runner:
 - `AVL-008` passes as a deterministic expected budget-exhaustion scenario.
 - `AVL-009` passes as a deterministic expected harness-failure scenario.
 - `AVL-010` passes as a deterministic expected agent-failure scenario.
+- `AVL-011` passes as a deterministic expected product-failure oracle-mismatch
+  scenario.
 - `AVL-001` replay passes from a captured replay bundle.
 - Replay-artifact runs include replay-equivalence scorecards.
 - Run artifacts include provenance hashes and pass `audit-artifacts`.
@@ -425,6 +458,10 @@ Implemented eval runner:
   scenarios.
 - Failure classification preserves product, agent, harness, provider, and
   budget classes.
+- `lint-scenarios` and `check-boundaries` pass in PR CI.
+- Reviewed regression promotion rejects unminimized or unaudited bundles.
+- Suite runs write `suite-summary.json`, and GitHub job summaries include
+  replay commands.
 - Docker Compose lifecycle smoke passes when a Docker daemon is available.
 - `AVL-002` runs through Docker/Toxiproxy in the Docker eval lane when a Docker
   daemon is available.

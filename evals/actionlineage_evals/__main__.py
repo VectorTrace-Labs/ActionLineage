@@ -8,7 +8,9 @@ import sys
 from pathlib import Path
 
 from actionlineage_evals.artifact_audit import audit_artifacts
+from actionlineage_evals.boundary import check_eval_import_boundaries
 from actionlineage_evals.environment import DockerComposeEnvironmentController
+from actionlineage_evals.linting import lint_scenarios
 from actionlineage_evals.models import RunMode
 from actionlineage_evals.replay import promote_regression_bundle
 from actionlineage_evals.runner import (
@@ -23,7 +25,11 @@ from actionlineage_evals.scenarios import (
     load_scenarios,
     validate_capability_coverage,
 )
-from actionlineage_evals.summary import summarize_scorecards, summarize_scorecards_text
+from actionlineage_evals.summary import (
+    summarize_scorecards,
+    summarize_scorecards_markdown,
+    summarize_scorecards_text,
+)
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -32,6 +38,17 @@ def main(argv: list[str] | None = None) -> int:
 
     validate = subcommands.add_parser("validate-scenarios")
     validate.add_argument("--scenario-path", type=Path, default=SCENARIO_DIR)
+
+    lint = subcommands.add_parser("lint-scenarios")
+    lint.add_argument("--scenario-path", type=Path, default=SCENARIO_DIR)
+    lint.add_argument(
+        "--coverage-path",
+        type=Path,
+        default=Path("evals/CAPABILITY_COVERAGE.yaml"),
+    )
+
+    boundary = subcommands.add_parser("check-boundaries")
+    boundary.add_argument("--project-root", type=Path, default=Path("."))
 
     coverage = subcommands.add_parser("coverage")
     coverage.add_argument(
@@ -112,7 +129,7 @@ def main(argv: list[str] | None = None) -> int:
 
     summarize = subcommands.add_parser("summarize")
     summarize.add_argument("artifact_root", type=Path)
-    summarize.add_argument("--format", choices=["json", "text"], default="json")
+    summarize.add_argument("--format", choices=["json", "text", "markdown"], default="json")
 
     audit = subcommands.add_parser("audit-artifacts")
     audit.add_argument("artifact_root", type=Path)
@@ -129,6 +146,17 @@ def main(argv: list[str] | None = None) -> int:
             }
         )
         return 0
+    if args.command == "lint-scenarios":
+        lint_report = lint_scenarios(
+            scenario_path=args.scenario_path,
+            coverage_path=args.coverage_path,
+        )
+        _print(lint_report)
+        return 0 if lint_report["ok"] else 1
+    if args.command == "check-boundaries":
+        boundary_report = check_eval_import_boundaries(args.project_root)
+        _print(boundary_report)
+        return 0 if boundary_report["ok"] else 1
     if args.command == "coverage":
         report = validate_capability_coverage(args.coverage_path, strict=args.strict)
         _print(report)
@@ -190,6 +218,9 @@ def main(argv: list[str] | None = None) -> int:
     if args.command == "summarize":
         if args.format == "text":
             sys.stdout.write(summarize_scorecards_text(args.artifact_root))
+            return 0
+        if args.format == "markdown":
+            sys.stdout.write(summarize_scorecards_markdown(args.artifact_root))
             return 0
         summary = summarize_scorecards(args.artifact_root)
         _print(summary)

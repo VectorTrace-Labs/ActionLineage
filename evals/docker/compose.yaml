@@ -1,6 +1,13 @@
 services:
   receiver:
     image: python:3.13-alpine
+    read_only: true
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    pids_limit: 128
+    mem_limit: 128m
     command:
       - python
       - /app/receiver.py
@@ -12,6 +19,10 @@ services:
       - /artifacts/receiver/requests.jsonl
     ports:
       - "8080"
+    networks:
+      - eval-net
+    tmpfs:
+      - /tmp
     volumes:
       - ./receiver.py:/app/receiver.py:ro
       - receiver-artifacts:/artifacts
@@ -27,11 +38,26 @@ services:
 
   toxiproxy:
     image: ghcr.io/shopify/toxiproxy:latest
+    read_only: true
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    pids_limit: 128
+    mem_limit: 128m
     command:
       - -host=0.0.0.0
     ports:
       - "8474"
       - "8880"
+    networks:
+      - eval-net
+    tmpfs:
+      - /tmp
 
 volumes:
   receiver-artifacts:
+
+networks:
+  eval-net:
+    driver: bridge

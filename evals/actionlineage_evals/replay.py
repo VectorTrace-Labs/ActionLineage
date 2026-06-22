@@ -9,6 +9,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
+from actionlineage_evals.artifact_audit import audit_artifacts
 from actionlineage_evals.models import JsonMap, ModelTurn, RunPaths, ScenarioDefinition, ToolCall
 
 
@@ -247,6 +248,10 @@ def discover_regression_bundles(regression_dir: Path) -> tuple[Path, ...]:
 def _validate_reviewed_bundle(bundle_dir: Path, manifest: JsonMap) -> None:
     _reject_live_provider_metadata(manifest)
     _manifest_failure_class(manifest)
+    _require_reviewed_artifacts(bundle_dir, manifest)
+    audit = audit_artifacts(bundle_dir)
+    if audit["ok"] is not True:
+        raise ValueError("reviewed regression bundle failed artifact audit")
     forbidden = (
         re.compile(r"AVL_CANARY_[A-Za-z0-9_-]+"),
         re.compile(r"Bearer\s+[A-Za-z0-9._~+/=-]+"),
@@ -264,6 +269,30 @@ def _validate_reviewed_bundle(bundle_dir: Path, manifest: JsonMap) -> None:
         for pattern in forbidden:
             if pattern.search(text):
                 raise ValueError(f"reviewed regression bundle contains forbidden text: {path}")
+
+
+def _require_reviewed_artifacts(bundle_dir: Path, manifest: JsonMap) -> None:
+    required = (
+        "journal",
+        "minimized_transcript",
+        "minimization_report",
+        "mutation_sequence",
+        "oracle_observations",
+        "provenance",
+        "tool_calls",
+        "transcript",
+        "triage",
+    )
+    missing: list[str] = []
+    for key in required:
+        value = manifest.get(key)
+        if not isinstance(value, str) or not value:
+            missing.append(key)
+            continue
+        if not (bundle_dir / value).is_file():
+            missing.append(key)
+    if missing:
+        raise ValueError(f"reviewed regression bundle missing required artifacts: {missing}")
 
 
 def _validate_review_metadata(

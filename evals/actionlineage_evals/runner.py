@@ -51,6 +51,7 @@ from actionlineage_evals.scoring import (
     score_run,
     write_scorecard,
 )
+from actionlineage_evals.summary import write_suite_summary
 from actionlineage_evals.tools import ToolHarness, WorldState
 from actionlineage_evals.triage import write_triage_report
 
@@ -109,7 +110,9 @@ def run_suite(
                     promote_regressions=promote_regressions,
                 )
             )
-    return SuiteResult(passed=all(result.passed for result in results), results=tuple(results))
+    suite = SuiteResult(passed=all(result.passed for result in results), results=tuple(results))
+    write_suite_summary(Path(artifact_root) / "suite-summary.json", suite.results)
+    return suite
 
 
 def run_scenario(
@@ -247,9 +250,11 @@ def run_scenario(
     scores_ok = bool(scores) and all(score.ok for score in scores)
     expected_failure_class = scenario.mismatch_failure_class
     expected_terminal_failure = (
-        expected_failure_class != FailureClass.PRODUCT and failure_class == expected_failure_class
+        _is_expected_failure_control(scenario)
+        and failure_class == expected_failure_class
+        and _only_expected_score_failures(scores, expected_failure_class)
     )
-    passed = (failure_class is None and scores_ok) or (expected_terminal_failure and scores_ok)
+    passed = (failure_class is None and scores_ok) or expected_terminal_failure
     scorecard = {
         "agent_error": _error_dict(agent_error),
         "expected_failure_class": expected_failure_class.value,
@@ -276,10 +281,11 @@ def run_scenario(
         )
         scores_ok = bool(scores) and all(score.ok for score in scores)
         expected_terminal_failure = (
-            expected_failure_class != FailureClass.PRODUCT
+            _is_expected_failure_control(scenario)
             and failure_class == expected_failure_class
+            and _only_expected_score_failures(scores, expected_failure_class)
         )
-        passed = (failure_class is None and scores_ok) or (expected_terminal_failure and scores_ok)
+        passed = (failure_class is None and scores_ok) or expected_terminal_failure
         scorecard.update(
             {
                 "failure_class": failure_class.value if failure_class else None,
@@ -461,6 +467,29 @@ def _apply_runtime_mutations(
 ) -> None:
     for mutation in mutation_sequence:
         if mutation.get("type") != "duplicate_benign_event":
+            if mutation.get("type") in {"event_ordering_skew", "missing_optional_field"}:
+                parent_event_id = recorder.events[-1].event_id if recorder.events else None
+                recorder.record(
+                    EventType.RESOURCE_OBSERVED,
+                    {
+                        "mutation": {
+                            "parameters": mutation.get("parameters", {}),
+                            "semantic_property": mutation.get("semantic_property"),
+                            "type": mutation.get("type"),
+                        },
+                        "observation": {
+                            "benign": True,
+                            "status": "mutation_recorded",
+                        },
+                        "resource": {
+                            "path": f"fixture://mutation/{scenario.scenario_id.lower()}",
+                            "type": "fixture",
+                        },
+                    },
+                    classification=internal_local_classification(),
+                    parent_event_id=parent_event_id,
+                    source=observer_source("mutation_oracle"),
+                )
             continue
         parent_event_id = recorder.events[-1].event_id if recorder.events else None
         for duplicate_index in range(2):
@@ -537,4 +566,18 @@ def _preserves_failure_signature(
         call.name == "safe_files.read" and not isinstance(call.arguments.get("path"), str)
         for turn in turns
         for call in turn.tool_calls
+    )
+
+
+def _is_expected_failure_control(scenario: ScenarioDefinition) -> bool:
+    return "failure-classification" in scenario.tags
+
+
+def _only_expected_score_failures(
+    scores: tuple[ScoreResult, ...],
+    expected_failure_class: FailureClass,
+) -> bool:
+    return all(
+        score.ok or (score.failure_class or FailureClass.PRODUCT) == expected_failure_class
+        for score in scores
     )
