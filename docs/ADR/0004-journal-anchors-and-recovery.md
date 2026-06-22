@@ -44,7 +44,9 @@ caller-provided bytes and are never persisted by ActionLineage.
 
 Add recovery helpers that locate the first verification issue and export the
 verified prefix before that issue. Recovery never repairs or rewrites the
-canonical journal in place.
+canonical journal in place. Verified-prefix export rejects source/output path
+aliasing before opening the destination and streams the verified prefix to a
+separate file.
 
 ## Consequences
 
@@ -73,4 +75,4 @@ canonical journal in place.
   signature key missing, signature mismatch, anchor-log append and tamper
   detection, Git anchor statement creation and drift detection, archive manifest
   byte verification, segment manifest round trip, corrupt record location,
-  verified-prefix export, and CLI anchor commands.
+  verified-prefix export, in-place recovery rejection, and CLI anchor commands.

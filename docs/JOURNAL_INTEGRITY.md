@@ -161,7 +161,9 @@ uv run actionlineage journal export-verified-prefix evidence.jsonl verified-pref
 ```
 
 The command writes records verified before the first detected issue. It does not
-modify, repair, or delete the original journal.
+modify, repair, truncate, or delete the original journal. The output path must
+be different from the source journal path; in-place recovery is rejected before
+any output file is opened.
 
 ## Retention
 

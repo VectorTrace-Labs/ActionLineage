@@ -83,7 +83,7 @@ data, not universal performance guarantees.
 | 4 | Clean installation and first-time-user testing | Baseline public smoke completed; CI hardening remains |
 | 5 | Visible quality and security evidence | Baseline captured; workflow summary hardening remains |
 | 6 | Agent Validation Lab public evidence | In progress: deterministic no-model baseline report added; external/live lanes remain separate |
-| 7 | Reliability and adversarial hardening | In progress: SQLite projection handles close under warning-as-error coverage; static console context bounds and CSP added |
+| 7 | Reliability and adversarial hardening | In progress: SQLite projection handles close under warning-as-error coverage; static console context bounds and CSP added; verified-prefix recovery rejects in-place overwrite and streams output |
 | 8 | External review and community readiness | In progress: review guides, reproduction docs, and structured feedback templates added; real review remains external-validation |
 | 9 | Release-candidate audit | In progress: local candidate audit, draft notes, owner checklist, and generated manifest prepared; publication remains owner-gated |
 

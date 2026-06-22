@@ -771,12 +771,17 @@ def export_verified_prefix_command(
 ) -> None:
     """Export records verified before the first detected journal issue."""
 
-    result = export_verified_prefix(
-        journal_path,
-        output_path,
-        expected_record_count=expected_record_count,
-        expected_last_event_hash=expected_last_event_hash,
-    )
+    try:
+        result = export_verified_prefix(
+            journal_path,
+            output_path,
+            expected_record_count=expected_record_count,
+            expected_last_event_hash=expected_last_event_hash,
+        )
+    except JournalAnchorError as exc:
+        typer.echo(json.dumps({"ok": False, "error": str(exc)}, sort_keys=True))
+        raise typer.Exit(1) from None
+
     typer.echo(json.dumps(result.as_dict(), sort_keys=True))
 
 
