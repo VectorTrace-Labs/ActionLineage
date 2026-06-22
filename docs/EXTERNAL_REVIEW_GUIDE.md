@@ -118,8 +118,8 @@ For sensitive vulnerabilities, follow `SECURITY.md` and report privately.
 These are good first issue candidates for a maintainer to create manually when
 ready. They are not automatically opened by this document.
 
-- Add a minimized fixture for one ambiguous correlation case described in
-  `THREAT_MODEL.md`.
+- Extend the minimized ambiguous-correlation fixture with one additional
+  observer or adapter example.
 - Add one documentation link-check target that runs without network credentials.
 - Add a small compatibility fixture for a future-but-preserved event type.
 - Improve troubleshooting text for one failed quickstart prerequisite.

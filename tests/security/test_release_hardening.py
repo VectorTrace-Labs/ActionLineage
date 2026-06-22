@@ -365,6 +365,7 @@ def test_adversarial_fixture_categories_are_complete() -> None:
 
     assert categories == {
         "conflicting_observer",
+        "correlation_ambiguity",
         "descriptor_drift",
         "malformed_adapter_payload",
         "oversized_payload",

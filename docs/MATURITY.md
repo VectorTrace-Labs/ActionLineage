@@ -37,6 +37,8 @@ evidence and limitations.
 - Journal anchors, Git anchor statements, archive manifests, and recovery
   helpers under documented local trust assumptions; verified-prefix recovery
   writes separate files and rejects in-place journal overwrite.
+- HTTP fixture observers keep multiple plausible records unverified and expose
+  `ambiguous_candidate_count` rather than selecting one match without evidence.
 - Built-in sequence detections and Lineage Lab replay/mutation/minimization.
 - Agent Validation Lab scenario validation, no-model replay, provenance, and
   artifact audits as a development-only evaluation surface; the current
