@@ -16,11 +16,12 @@ validated yet.
 
 ## GHCR
 
-The release workflow publishes a container image for version tags:
+The release workflow publishes a container image for version tags after the
+GHCR workflow path lands on `main`:
 
 ```text
-ghcr.io/vectortrace-labs/actionlineage:v0.1.0a2
-ghcr.io/vectortrace-labs/actionlineage:0.1.0a2
+ghcr.io/vectortrace-labs/actionlineage:vX.Y.Z
+ghcr.io/vectortrace-labs/actionlineage:X.Y.Z
 ```
 
 Future tags use the same pattern. The image is built from
@@ -31,8 +32,8 @@ job succeeds.
 Use the image once the package is visible in GHCR:
 
 ```bash
-docker pull ghcr.io/vectortrace-labs/actionlineage:v0.1.0a2
-docker run --rm ghcr.io/vectortrace-labs/actionlineage:v0.1.0a2 version
+docker pull ghcr.io/vectortrace-labs/actionlineage:vX.Y.Z
+docker run --rm ghcr.io/vectortrace-labs/actionlineage:vX.Y.Z version
 ```
 
 For alpha releases, do not publish or document a `latest` tag. Versioned tags

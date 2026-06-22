@@ -38,22 +38,23 @@ workflow is dispatched against a tag whose ref starts with `refs/tags/v`.
 ## GHCR Container Images
 
 The release workflow publishes preview container images to GHCR on version tags
-after the release-candidate verification job succeeds. It uses the workflow
-`GITHUB_TOKEN` with job-level `packages: write`; no Docker Hub account or
-registry token is required.
+created after this workflow path is present on `main`. It runs after the
+release-candidate verification job succeeds and uses the workflow `GITHUB_TOKEN`
+with job-level `packages: write`; no Docker Hub account or registry token is
+required.
 
 Image tags use both the Git tag and the normalized version:
 
 ```text
-ghcr.io/vectortrace-labs/actionlineage:v0.1.0a2
-ghcr.io/vectortrace-labs/actionlineage:0.1.0a2
+ghcr.io/vectortrace-labs/actionlineage:vX.Y.Z
+ghcr.io/vectortrace-labs/actionlineage:X.Y.Z
 ```
 
 The workflow smoke-tests the image with:
 
 ```bash
-docker run --rm ghcr.io/vectortrace-labs/actionlineage:v0.1.0a2 version
-docker run --rm ghcr.io/vectortrace-labs/actionlineage:v0.1.0a2 doctor
+docker run --rm ghcr.io/vectortrace-labs/actionlineage:vX.Y.Z version
+docker run --rm ghcr.io/vectortrace-labs/actionlineage:vX.Y.Z doctor
 ```
 
 Do not publish a `latest` tag while ActionLineage remains alpha. Versioned tags
