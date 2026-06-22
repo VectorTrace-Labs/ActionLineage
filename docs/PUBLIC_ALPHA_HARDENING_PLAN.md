@@ -82,7 +82,7 @@ data, not universal performance guarantees.
 | 3 | README landing experience and visual proof | In progress: generated demo evidence map and freshness check added |
 | 4 | Clean installation and first-time-user testing | Baseline public smoke completed; CI hardening remains |
 | 5 | Visible quality and security evidence | Baseline captured; workflow summary hardening remains |
-| 6 | Agent Validation Lab public evidence | Baseline no-model evidence captured; committed deterministic report remains |
+| 6 | Agent Validation Lab public evidence | In progress: deterministic no-model baseline report added; external/live lanes remain separate |
 | 7 | Reliability and adversarial hardening | In progress: SQLite projection handles now close under warning-as-error regression coverage |
 | 8 | External review and community readiness | Not started |
 | 9 | Release-candidate audit | Not started |

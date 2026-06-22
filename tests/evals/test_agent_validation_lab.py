@@ -97,6 +97,28 @@ def test_scenarios_and_capability_coverage_validate() -> None:
     assert lint["ok"] is True
 
 
+def test_public_agent_validation_evidence_doc_matches_registry() -> None:
+    scenarios = load_scenarios(PROJECT_ROOT / "evals" / "scenarios")
+    coverage = validate_capability_coverage(
+        PROJECT_ROOT / "evals" / "CAPABILITY_COVERAGE.yaml",
+        strict=True,
+    )
+    doc = (PROJECT_ROOT / "docs" / "AGENT_VALIDATION_EVIDENCE.md").read_text(encoding="utf-8")
+    normalized_doc = " ".join(doc.split())
+
+    assert f"{len(scenarios)} scenarios" in doc
+    assert (
+        f"{coverage['covered_capability_count']}/{coverage['capability_count']} "
+        "declared capabilities covered"
+    ) in doc
+    for scenario in scenarios:
+        assert f"`{scenario.scenario_id}`" in doc
+    for gap in coverage["known_gaps"]:
+        assert f"`{gap['id']}`" in doc
+    assert "Model output is not authoritative product evidence" in normalized_doc
+    assert "Agent Validation Lab beyond `Local-proof` maturity" in doc
+
+
 def test_actionlineage_core_does_not_import_eval_package() -> None:
     report = check_eval_import_boundaries(PROJECT_ROOT)
 

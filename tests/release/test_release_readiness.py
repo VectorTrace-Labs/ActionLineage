@@ -68,6 +68,7 @@ def test_release_docs_are_present() -> None:
         "docs/REVIEW_PROCESS.md",
         ".github/copilot-instructions.md",
         "docs/QUALITY_SCORECARD.md",
+        "docs/AGENT_VALIDATION_EVIDENCE.md",
         "docs/PERFECTION_PLAN.md",
         "docs/MATURITY.md",
         "docs/DECISIONS_REQUIRED.md",

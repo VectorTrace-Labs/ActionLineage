@@ -200,6 +200,7 @@ PYTHONPATH=evals uv run --group eval python -m actionlineage_evals summarize \
 ```
 
 See [evals/README.md](evals/README.md),
+[docs/AGENT_VALIDATION_EVIDENCE.md](docs/AGENT_VALIDATION_EVIDENCE.md),
 [docs/AGENT_VALIDATION_ARCHITECTURE.md](docs/AGENT_VALIDATION_ARCHITECTURE.md),
 [docs/AGENT_VALIDATION_THREAT_MODEL.md](docs/AGENT_VALIDATION_THREAT_MODEL.md),
 and [docs/AGENT_VALIDATION_PLAN.md](docs/AGENT_VALIDATION_PLAN.md).
@@ -310,6 +311,8 @@ reference.
 - [Maturity model](docs/MATURITY.md): supported, preview, planned, and external
   validation labels.
 - [Quality scorecard](docs/QUALITY_SCORECARD.md): public claim-to-evidence map.
+- [Agent Validation evidence](docs/AGENT_VALIDATION_EVIDENCE.md): deterministic
+  no-model eval baseline and limitations.
 - [Architecture](ARCHITECTURE.md): component boundaries and runtime flow.
 - [Threat model](THREAT_MODEL.md): assets, adversaries, trust boundaries, and
   claim language.
