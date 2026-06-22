@@ -112,12 +112,14 @@ Required workflow properties:
 
 - release candidate verification runs before build.
 - build and publish are separate jobs.
-- attestation job has `attestations: write`, `artifact-metadata: write`,
-  `contents: read`, and `id-token: write`.
+- build job has `attestations: write`, `artifact-metadata: write`,
+  `contents: read`, and `id-token: write` so it can attest artifacts before
+  upload.
 - GHCR publishing job has `packages: write`, builds from
   `deploy/docker/Dockerfile`, smoke-tests the image, and pushes only versioned
   tags.
-- publishing jobs have only job-level `id-token: write`.
+- publishing jobs have only job-level `actions: read` and `id-token: write`;
+  they fetch the already-built artifact bundle with GitHub CLI.
 - publishing jobs require a manual workflow dispatch against `refs/tags/v*`.
 - no PyPI API token or username/password secret is required.
 - TestPyPI uses `repository-url: https://test.pypi.org/legacy/`.

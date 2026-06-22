@@ -20,8 +20,8 @@ Every run performs these stages:
    claim-language guard, secret scan, and dependency audit.
 2. Build the wheel and source distribution.
 3. Generate SBOM, local release provenance, and checksums.
-4. Upload the release artifact bundle.
-5. Generate GitHub artifact attestations for the uploaded artifacts.
+4. Generate GitHub artifact attestations for the built artifacts.
+5. Upload the release artifact bundle.
 6. Build, smoke-test, and publish a version-tagged GHCR container image.
 
 Manual runs can additionally choose `publish_target`:
@@ -30,7 +30,8 @@ Manual runs can additionally choose `publish_target`:
 - `testpypi`: publish distributions to TestPyPI
 - `pypi`: publish distributions to PyPI
 
-The publishing jobs use job-level `id-token: write` and do not use package
+The publishing jobs use job-level `actions: read` to fetch the already-built
+artifact bundle, `id-token: write` for Trusted Publishing, and no package
 registry API tokens. The TestPyPI and PyPI jobs run only when the manual
 workflow is dispatched against a tag whose ref starts with `refs/tags/v`.
 
