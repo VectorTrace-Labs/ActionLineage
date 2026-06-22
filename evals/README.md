@@ -48,8 +48,12 @@ PYTHONPATH=evals uv run --group eval python -m actionlineage_evals docker-smoke
 ```
 
 Scheduled GitHub Models runs use the same interface with `--mode live
---model-adapter github_models`. Local Ollama runs use `--model-adapter ollama`.
-Both stay bounded by scenario budgets.
+--model-adapter github_models`. In GitHub Actions, the adapter first reads a
+model-specific `GITHUB_MODELS_TOKEN` or `GH_MODELS_TOKEN` secret, then falls
+back to the workflow `GITHUB_TOKEN`. The secret is only passed to the scheduled
+or manually dispatched default-branch job; pull-request jobs remain no-model and
+secret-free. Local Ollama runs use `--model-adapter ollama`. Both stay bounded
+by scenario budgets.
 
 ## Artifact Policy
 

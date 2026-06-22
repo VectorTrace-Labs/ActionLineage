@@ -154,9 +154,9 @@ class GitHubModelsAdapter:
         budget: Budget,
         request_index: int,
     ) -> ModelTurn:
-        token = self.token or os.environ.get("GITHUB_TOKEN")
+        token = self.token or _github_models_token()
         if not token:
-            raise ProviderError("GITHUB_TOKEN is required for GitHub Models")
+            raise ProviderError("GITHUB_MODELS_TOKEN or GITHUB_TOKEN is required for GitHub Models")
         response = _post_openai_compatible(
             endpoint=self.endpoint,
             token=token,
@@ -234,6 +234,16 @@ def model_adapter_for(
     if adapter == "ollama":
         return OllamaAdapter(model_id=model_id or "llama3.1")
     raise ValueError(f"unsupported model adapter: {adapter}")
+
+
+def _github_models_token() -> str | None:
+    """Return the least-confusing token source for GitHub Models inference."""
+
+    return (
+        os.environ.get("GITHUB_MODELS_TOKEN")
+        or os.environ.get("GH_MODELS_TOKEN")
+        or os.environ.get("GITHUB_TOKEN")
+    )
 
 
 def _scripted_calls(scenario_id: str) -> tuple[ToolCall, ...]:

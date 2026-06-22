@@ -11,12 +11,21 @@ from hypothesis.stateful import RuleBasedStateMachine, invariant, rule
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(PROJECT_ROOT / "evals"))
 
+from actionlineage_evals import adapters as adapters_module  # noqa: E402
+from actionlineage_evals.adapters import GitHubModelsAdapter  # noqa: E402
 from actionlineage_evals.minimization import (  # noqa: E402
     minimize_tool_calls,
     tool_call_count,
     transcript_with_calls,
 )
-from actionlineage_evals.models import FailureClass, RunMode, ScoreResult, ToolCall  # noqa: E402
+from actionlineage_evals.models import (  # noqa: E402
+    Budget,
+    FailureClass,
+    JsonMap,
+    RunMode,
+    ScoreResult,
+    ToolCall,
+)
 from actionlineage_evals.runner import replay_bundle, run_suite  # noqa: E402
 from actionlineage_evals.scenarios import (  # noqa: E402
     load_scenarios,
@@ -50,6 +59,51 @@ def test_actionlineage_core_does_not_import_eval_package() -> None:
     ]
 
     assert offenders == []
+
+
+def test_github_models_adapter_prefers_model_specific_token(monkeypatch) -> None:
+    seen: dict[str, str] = {}
+
+    def fake_post_openai_compatible(
+        *,
+        endpoint: str,
+        token: str,
+        model_id: str,
+        prompt: str,
+        max_tokens: int,
+        timeout_seconds: int,
+    ) -> JsonMap:
+        del endpoint, model_id, prompt, max_tokens, timeout_seconds
+        seen["token"] = token
+        return {
+            "choices": [
+                {
+                    "message": {
+                        "content": json.dumps({"final": "ok", "tool_calls": []}, sort_keys=True),
+                    },
+                },
+            ],
+        }
+
+    monkeypatch.setenv("GITHUB_TOKEN", "actions-token")
+    monkeypatch.setenv("GITHUB_MODELS_TOKEN", "models-token")
+    monkeypatch.setattr(adapters_module, "_post_openai_compatible", fake_post_openai_compatible)
+
+    turn = GitHubModelsAdapter(model_id="openai/gpt-4.1-mini").generate(
+        prompt="return no tool calls",
+        tools=(),
+        budget=Budget(
+            max_model_requests=1,
+            max_model_turns=1,
+            max_tool_calls=1,
+            max_completion_tokens_per_turn=16,
+            timeout_seconds=10,
+        ),
+        request_index=0,
+    )
+
+    assert seen["token"] == "models-token"
+    assert turn.tool_calls == ()
 
 
 def test_scripted_suite_runs_all_scenarios_and_replay(tmp_path: Path) -> None:

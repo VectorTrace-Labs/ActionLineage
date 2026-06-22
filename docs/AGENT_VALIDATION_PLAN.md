@@ -230,6 +230,10 @@ Scheduled lane:
 - Trigger: default-branch `schedule` and `workflow_dispatch`.
 - Permissions: `contents: read`, `models: read`.
 - Uses GitHub Models through `ModelAdapter`.
+- Prefer a narrowly scoped `GITHUB_MODELS_TOKEN` or `GH_MODELS_TOKEN` Actions
+  secret when organization policy blocks repository `GITHUB_TOKEN` model
+  inference. Fall back to `GITHUB_TOKEN` when GitHub Models is enabled for the
+  organization/repository.
 - Uploads redacted artifacts with short retention.
 
 Local lane:

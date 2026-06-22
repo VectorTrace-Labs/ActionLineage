@@ -97,6 +97,7 @@ jobs:
         run: uv sync --locked --all-extras --group eval
       - name: Run bounded scheduled model evals
         env:
+          GITHUB_MODELS_TOKEN: ${{ secrets.GITHUB_MODELS_TOKEN || secrets.GH_MODELS_TOKEN }}
           GITHUB_TOKEN: ${{ github.token }}
           PYTHONPATH: evals
         run: |
