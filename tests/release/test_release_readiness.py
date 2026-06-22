@@ -213,7 +213,7 @@ def test_review_process_keeps_ai_review_advisory() -> None:
     readme = (PROJECT_ROOT / "README.md").read_text(encoding="utf-8")
 
     assert "AI review is advisory" in review_process
-    assert "automatically requests Copilot review" in review_process
+    assert "intended to request Copilot review" in review_process
     assert ".github/copilot-instructions.md" in review_process
     assert "does not" in review_process
     assert "count as an approving review" in review_process

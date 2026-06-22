@@ -27,7 +27,7 @@ missing tests, risky security assumptions, unclear documentation, and release
 claim drift.
 
 GitHub Copilot code review is configured with an active default-branch ruleset
-that automatically requests Copilot review for non-draft pull requests. The
+that is intended to request Copilot review for non-draft pull requests. The
 repository-level instructions in `.github/copilot-instructions.md` give Copilot
 ActionLineage-specific review priorities.
 
