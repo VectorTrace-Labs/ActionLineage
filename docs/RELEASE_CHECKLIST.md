@@ -112,8 +112,8 @@ Required workflow properties:
 
 - release candidate verification runs before build.
 - build and publish are separate jobs.
-- attestation job has `attestations: write`, `contents: read`, and
-  `id-token: write`.
+- attestation job has `attestations: write`, `artifact-metadata: write`,
+  `contents: read`, and `id-token: write`.
 - GHCR publishing job has `packages: write`, builds from
   `deploy/docker/Dockerfile`, smoke-tests the image, and pushes only versioned
   tags.
