@@ -394,10 +394,17 @@ def test_release_candidate_audit_prepares_without_publishing() -> None:
 
     assert "not a request to republish immutable package-index artifacts" in draft_notes
     assert "ambiguous HTTP correlation as unverified evidence" in draft_notes
+    assert "318 tests passed, 86.14 percent total coverage" in draft_notes
+    assert "9 artifact rows, 23 gate rows" in draft_notes
     assert "No external audit, external adoption, production use, independent review" in draft_notes
     assert "Codex must not perform these actions without explicit approval" in owner_checklist
     assert "build/release-candidate/REVIEW_INDEX.md" in owner_checklist
     assert "not as an attestation or external validation" in owner_checklist
+    assert "gh release create v0.1.0a3" in owner_checklist
+    assert "--verify-tag" in owner_checklist
+    assert "--draft" in owner_checklist
+    assert "--notes-file /tmp/actionlineage-v0.1.0a3-release-notes.md" in owner_checklist
+    assert "Review the draft in the GitHub UI before publishing" in owner_checklist
     assert (
         "Do not republish or attempt to overwrite existing PyPI/TestPyPI files" in owner_checklist
     )

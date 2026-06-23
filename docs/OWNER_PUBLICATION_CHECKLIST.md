@@ -34,6 +34,42 @@ access. Codex must not perform these actions without explicit approval.
 - Link `docs/DRAFT_RELEASE_NOTES_0.1.0a3.md` only after removing any text that
   is not intended for public release notes.
 
+Recommended owner-reviewed repair sequence:
+
+1. Rebuild or confirm `build/release-candidate/` from the exact commit being
+   reviewed.
+2. Verify local checksums:
+
+   ```bash
+   shasum -a 256 -c build/release-candidate/SHA256SUMS.txt
+   ```
+
+3. Prepare a public release-notes file from
+   `docs/DRAFT_RELEASE_NOTES_0.1.0a3.md`, removing the owner-review preface and
+   any wording not intended for the public GitHub Release body.
+4. Create a draft release, not a published release:
+
+   ```bash
+   gh release create v0.1.0a3 \
+     --repo VectorTrace-Labs/ActionLineage \
+     --verify-tag \
+     --draft \
+     --title "ActionLineage v0.1.0a3" \
+     --notes-file /tmp/actionlineage-v0.1.0a3-release-notes.md \
+     build/release-candidate/dist/actionlineage-0.1.0a3-py3-none-any.whl \
+     build/release-candidate/dist/actionlineage-0.1.0a3.tar.gz \
+     build/release-candidate/SHA256SUMS.txt \
+     build/release-candidate/manifest.json \
+     build/release-candidate/REVIEW_INDEX.md \
+     build/release-candidate/actionlineage-sbom.json \
+     build/release-candidate/actionlineage-license-report.json \
+     build/release-candidate/actionlineage-release-provenance.json
+   ```
+
+5. Review the draft in the GitHub UI before publishing. Do not mark the release
+   public until the asset list, release body, local-proof wording, and any
+   attestation links have been checked.
+
 ## Package Indexes
 
 - Do not republish or attempt to overwrite existing PyPI/TestPyPI files for
