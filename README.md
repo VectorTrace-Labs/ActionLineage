@@ -28,8 +28,8 @@ external-validation surfaces until they are externally validated.
 | Lineage Contracts, sequence detections, Lineage Lab | Local-proof | Contract, detection, and replay tests |
 | Agent Validation Lab | Local-proof | Development-only eval group, scenario fixtures, no-model CI lanes |
 | MCP, policy, OpenTelemetry, service, Postgres, cloud/Kubernetes fixtures | Preview | Optional extras and local fixture tests |
-| GitHub release artifacts and attestations | External-validation-required | `v0.1.0a3` tag exists; GitHub Release object is owner-gated |
-| PyPI/TestPyPI package publication | Alpha-supported | `v0.1.0a3` uses Trusted Publishing; fresh install/demo smoke passed |
+| GitHub release artifacts and attestations | External-validation-required | `v0.1.0a4` tag and GitHub Release object are owner-gated |
+| PyPI/TestPyPI package publication | Alpha-supported | `0.1.0a4` is the corrective release-prep version; `0.1.0a3` fresh install/demo smoke passed |
 | GHCR container publication | Preview | Tag-gated release workflow path |
 | Homebrew tap, external audits, production history | Planned or external-validation-required | See `docs/DECISIONS_REQUIRED.md` |
 
@@ -43,13 +43,14 @@ Prerequisites:
 - Python 3.12 or newer
 - `uv`
 
-Run the public-alpha package from PyPI. Because `0.1.0a3` is a prerelease,
-`uvx` needs an explicit prerelease flag:
+Run the public-alpha package from PyPI after the owner-approved `0.1.0a4`
+publication. Because `0.1.0a4` is a prerelease, `uvx` needs an explicit
+prerelease flag:
 
 ```bash
-uvx --prerelease allow --from actionlineage==0.1.0a3 actionlineage version
-uvx --prerelease allow --from actionlineage==0.1.0a3 actionlineage demo run --output-dir /tmp/actionlineage-demo
-uvx --prerelease allow --from actionlineage==0.1.0a3 actionlineage journal verify /tmp/actionlineage-demo/evidence.jsonl
+uvx --prerelease allow --from actionlineage==0.1.0a4 actionlineage version
+uvx --prerelease allow --from actionlineage==0.1.0a4 actionlineage demo run --output-dir /tmp/actionlineage-demo
+uvx --prerelease allow --from actionlineage==0.1.0a4 actionlineage journal verify /tmp/actionlineage-demo/evidence.jsonl
 ```
 
 The demo requires no model API key, cloud account, or external service. The
@@ -246,7 +247,7 @@ journal_path = Path("build/example/evidence.jsonl")
 journal = LocalJournal(journal_path)
 normalizer = EvidenceNormalizer(
     correlation=Correlation(trace_id="trace_example", run_id="run_example"),
-    source=Source(component="example_adapter", instance_id="local", version="0.1.0a3"),
+    source=Source(component="example_adapter", instance_id="local", version="0.1.0a4"),
     principal=Principal(principal_id="agent_example", principal_type=PrincipalType.AGENT),
     classification=Classification(sensitivity=Sensitivity.INTERNAL),
     clock=FixedClock(datetime(2026, 1, 1, tzinfo=UTC)),
@@ -382,12 +383,13 @@ Core dependencies are intentionally small: Pydantic and Typer. Optional extras
 hold MCP, OpenTelemetry, SQLAlchemy, FastAPI, JWT, and related integration
 dependencies.
 
-`actionlineage` `0.1.0a3` is published to PyPI and TestPyPI through Trusted
-Publishing. The `v0.1.0a3` Git tag exists, while the matching GitHub Release
-object and hosted release-artifact page remain owner-gated. The release workflow
-is prepared to publish preview GHCR images for version tags, while Homebrew and
-additional package-manager channels remain gated on external setup and
-validation. See [docs/PACKAGE_MANAGERS.md](docs/PACKAGE_MANAGERS.md).
+`actionlineage` `0.1.0a4` is the corrective public-alpha release-prep version
+for PyPI and TestPyPI Trusted Publishing. The `v0.1.0a4` tag, package upload,
+GitHub Release object, and hosted release-artifact page remain owner-gated until
+release. The release workflow is prepared to publish preview GHCR images for
+version tags, while Homebrew and additional package-manager channels remain
+gated on external setup and validation. See
+[docs/PACKAGE_MANAGERS.md](docs/PACKAGE_MANAGERS.md).
 
 ## Security Model In One Paragraph
 

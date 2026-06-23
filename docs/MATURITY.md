@@ -82,8 +82,8 @@ evidence and limitations.
 
 - PyPI/TestPyPI package ownership transfer to the organization account after
   package-index organization approval.
-- GitHub Release object and hosted release artifacts for `v0.1.0a3`; the tag
-  exists, but creating or repairing the release object is an owner action.
+- GitHub Release object and hosted release artifacts for `v0.1.0a4`; the tag,
+  package upload, and release object are owner actions after local gates pass.
 - Public package metadata project URLs for PyPI/TestPyPI after the next
   owner-approved release publishes corrected metadata.
 - Homebrew tap and formula publication.

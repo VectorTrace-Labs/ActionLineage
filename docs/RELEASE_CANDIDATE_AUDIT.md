@@ -10,11 +10,11 @@ settings.
 
 | Item | Result |
 | --- | --- |
-| Branch | `codex/public-alpha-hardening` |
+| Branch | `codex/release-0.1.0a4` |
 | Audited implementation commit | Recorded in generated manifest field `audited_implementation_commit`; rerun after any source or documentation commit before publication |
-| Version tag alignment | OWNER REVIEW REQUIRED; generated `build/release-candidate/REVIEW_INDEX.md` records the `v0.1.0a3` tag commit and whether it matches the audited implementation commit; do not attach local artifacts to a tag release when this field is `false` |
-| Candidate version | `0.1.0a3` |
-| Recommendation | Do not republish immutable PyPI/TestPyPI files for `0.1.0a3` or attach post-tag hardening proof to the `v0.1.0a3` release; use a new owner-approved `0.1.0a4` release for metadata and release-object repair unless rebuilding exactly from the `v0.1.0a3` tag. |
+| Version tag alignment | OWNER REVIEW REQUIRED; generated `build/release-candidate/REVIEW_INDEX.md` records the `v0.1.0a4` tag commit when the tag exists and whether it matches the audited implementation commit; do not attach local artifacts to a tag release when this field is `false` or `unknown` |
+| Candidate version | `0.1.0a4` |
+| Recommendation | Do not republish immutable PyPI/TestPyPI files for `0.1.0a3` or attach post-tag hardening proof to the `v0.1.0a3` release; use the new owner-approved `0.1.0a4` release for metadata and release-object repair after local gates pass. |
 | Generated local manifest | `build/release-candidate/manifest.json` |
 | Generated review index | `build/release-candidate/REVIEW_INDEX.md` |
 
@@ -31,8 +31,8 @@ commit changes the source archive.
 | Ruff lint | PASS | `uv run ruff check .` |
 | Ruff format check | PASS | `uv run ruff format --check .`, 135 files already formatted |
 | Strict mypy | PASS | `uv run mypy src`, 56 source files |
-| Full pytest after public-alpha hardening slices | PASS | `318 passed`; no warning summary |
-| Branch coverage with eval group | PASS | `318 passed`, 86.14 percent total coverage; no warning summary |
+| Full pytest after public-alpha hardening slices | PASS | `319 passed`; no warning summary |
+| Branch coverage with eval group | PASS | `319 passed`, 86.14 percent total coverage; no warning summary |
 | Compatibility tests | PASS | Included in full suite; golden journals and public API tests passed |
 | Property-based regression tests | PASS | Included in full suite through Hypothesis tests |
 | Claim-language scan | PASS | `uv run python scripts/check_claims_language.py .` |
@@ -42,8 +42,8 @@ commit changes the source archive.
 | Local Markdown link check | PASS | 45 links checked across 101 files; repository-relative links and heading fragments resolved |
 | Clean tracked snapshot | PASS | Fresh `git archive HEAD` snapshot passed `317 passed, 1 skipped` with `uv run --all-extras pytest`; the skip was the optional eval-only `inspect_ai` import check |
 | Wheel and sdist build | PASS | `uv build --out-dir build/release-candidate/dist` |
-| Built wheel metadata | PASS | Version `0.1.0a3`, `Requires-Python: >=3.12`, six project URLs |
-| Built sdist metadata | PASS | Version `0.1.0a3`, `Requires-Python: >=3.12`, six project URLs, no local cache entries |
+| Built wheel metadata | PASS | Version `0.1.0a4`, `Requires-Python: >=3.12`, six project URLs |
+| Built sdist metadata | PASS | Version `0.1.0a4`, `Requires-Python: >=3.12`, six project URLs, no local cache entries |
 | Built wheel smoke | PASS | `actionlineage version`, demo run, journal verify, contract validate, case export, and static console export succeeded from wheel |
 | Built sdist smoke | PASS | `actionlineage version`, demo run, journal verify, contract validate, case export, and static console export succeeded from sdist |
 | Deterministic demo | PASS | 18 events, last hash `sha256:c51f29aadf75d59dd69813e0348f6fbfe2a4297a31051bbdb362017aac01b981` |
@@ -59,12 +59,12 @@ commit changes the source archive.
 | Release-candidate manifest generation | PASS | `scripts/write_release_candidate_manifest.py` generated `build/release-candidate/manifest.json` with 8 artifacts, 23 gates, and no manifest issues |
 | Release proof review index | PASS | `build/release-candidate/REVIEW_INDEX.md` generated from the local manifest; 8 of 8 manifest-listed artifact hashes verified; release-consistency reports are summarized when present |
 | Release workflow artifact proof | PASS | `.github/workflows/release.yml` generates `build/release/release-consistency-offline.json`, `build/release/manifest.json`, and `build/release/REVIEW_INDEX.md`, includes them in checksums and attestations, and smoke-checks the bundle after artifact download |
-| Release consistency, offline | PASS | 0 failures, 0 unknowns |
-| Release consistency, online | FAIL / OWNER-GATED | `fail_count=5`, `unknown_count=0`; package and GitHub JSON checks and project URL HEAD checks fall back from Python `urllib` to bounded read-only `curl` after local URL/TLS failures; this detects known public package metadata drift and the missing GitHub Release object |
+| Release consistency, offline | PASS | 0 failures, 1 expected pre-tag unknown for local `v0.1.0a4` tag |
+| Release consistency, online | FAIL / OWNER-GATED | `fail_count=8`, `unknown_count=1`; package and GitHub JSON checks and project URL HEAD checks fall back from Python `urllib` to bounded read-only `curl` after local URL/TLS failures; this detects the expected pre-publication `0.1.0a4` gates: PyPI/TestPyPI still expose `0.1.0a3`, project URLs and descriptions still reflect older package metadata, the `v0.1.0a4` tag is absent, the GitHub Release object is absent, and the matching local version tag is unknown before tagging |
 | Project URL HEAD reachability | PASS | All six configured project URLs returned 2xx/3xx status through the bounded curl fallback in this local certificate-store constrained environment |
-| Public state via independent curl spot-checks | PASS / BLOCKED | PyPI/TestPyPI expose `0.1.0a3`; GitHub tag exists; GitHub Release object for `v0.1.0a3` is absent |
+| Public state via independent curl spot-checks | PASS / BLOCKED | PyPI/TestPyPI still expose `0.1.0a3` until `0.1.0a4` is published; `v0.1.0a4` tag and GitHub Release object remain owner-gated |
 | Container build | NOT_IN_RELEASE_SCOPE | Preview container gates run in GitHub Actions on hosted Ubuntu |
-| GitHub Release object for `v0.1.0a3` | BLOCKED_ON_OWNER | Creating or repairing release objects requires owner action |
+| GitHub Release object for `v0.1.0a4` | BLOCKED_ON_OWNER | Creating release objects requires owner action after tag-matched artifacts exist |
 | Repository security settings | PASS / AUTHENTICATED READ | Authenticated GitHub API read confirmed `main` branch protection with strict required checks (`CodeQL analysis`, `container`, `Dependency review`, `Python 3.12`, `Python 3.13`), required conversation resolution, force-push and deletion protection, Dependabot security updates, secret scanning, push protection, private vulnerability reporting enabled, and security policy enabled. Authenticated alert reads showed 0 Dependabot alerts, 0 secret-scanning alerts, 0 repository security advisories, and 10 CodeQL alerts with no open alerts (`8 fixed`, `2 dismissed`). Latest `main` CodeQL workflow and GitHub CodeQL dynamic analysis runs both completed successfully on 2026-06-22 for commit `0e500d65d90fbda691d13e63ab58091e85083525`. |
 | External security review | BLOCKED_ON_EXTERNAL_VALIDATION | No external review is claimed |
 | New package publication | BLOCKED_ON_OWNER | Do not publish or overwrite package-index artifacts without explicit owner approval |
@@ -78,8 +78,8 @@ verifies manifest-listed artifact hashes and reports gate status counts.
 
 | Artifact | Hash source |
 | --- | --- |
-| `build/release-candidate/dist/actionlineage-0.1.0a3-py3-none-any.whl` | `build/release-candidate/manifest.json` and `build/release-candidate/SHA256SUMS.txt` |
-| `build/release-candidate/dist/actionlineage-0.1.0a3.tar.gz` | `build/release-candidate/manifest.json` and `build/release-candidate/SHA256SUMS.txt` |
+| `build/release-candidate/dist/actionlineage-0.1.0a4-py3-none-any.whl` | `build/release-candidate/manifest.json` and `build/release-candidate/SHA256SUMS.txt` |
+| `build/release-candidate/dist/actionlineage-0.1.0a4.tar.gz` | `build/release-candidate/manifest.json` and `build/release-candidate/SHA256SUMS.txt` |
 | `build/release-candidate/actionlineage-sbom.json` | `build/release-candidate/manifest.json` and `build/release-candidate/SHA256SUMS.txt` |
 | `build/release-candidate/actionlineage-license-report.json` | `build/release-candidate/manifest.json` and `build/release-candidate/SHA256SUMS.txt` |
 | `build/release-candidate/actionlineage-release-provenance.json` | `build/release-candidate/manifest.json` and `build/release-candidate/SHA256SUMS.txt` |
@@ -108,15 +108,15 @@ Read-only `curl` checks showed:
 
 - PyPI version: `0.1.0a3`.
 - PyPI `Requires-Python`: `>=3.12`.
-- PyPI project URLs and corrected long description: absent until a future
-  owner-approved package release.
+- PyPI project URLs and corrected long description: absent until the
+  owner-approved `0.1.0a4` package release.
 - TestPyPI version: `0.1.0a3`.
 - TestPyPI `Requires-Python`: `>=3.12`.
-- TestPyPI project URLs and corrected long description: absent until a future
-  owner-approved package release.
-- GitHub tag: `refs/tags/v0.1.0a3`.
+- TestPyPI project URLs and corrected long description: absent until the
+  owner-approved `0.1.0a4` package release.
+- GitHub tag: `refs/tags/v0.1.0a3`; `v0.1.0a4` remains owner-gated.
 - GitHub releases listed: `v0.1.0a2`, `v0.1.0a1`.
-- GitHub Release object for `v0.1.0a3`: absent.
+- GitHub Release object for `v0.1.0a4`: not created before owner release.
 
 Authenticated read-only GitHub API checks showed:
 
@@ -145,30 +145,30 @@ Authenticated read-only GitHub API checks showed:
 Wheel:
 
 ```bash
-uvx --from build/release-candidate/dist/actionlineage-0.1.0a3-py3-none-any.whl actionlineage version
-uvx --from build/release-candidate/dist/actionlineage-0.1.0a3-py3-none-any.whl actionlineage demo run --output-dir build/release-candidate/wheel-smoke/demo
-uvx --from build/release-candidate/dist/actionlineage-0.1.0a3-py3-none-any.whl actionlineage journal verify build/release-candidate/wheel-smoke/demo/evidence.jsonl
-uvx --from build/release-candidate/dist/actionlineage-0.1.0a3-py3-none-any.whl actionlineage contract validate contracts/examples/outbound-http.json build/release-candidate/wheel-smoke/demo/evidence.jsonl
-uvx --from build/release-candidate/dist/actionlineage-0.1.0a3-py3-none-any.whl actionlineage projection export-case build/release-candidate/wheel-smoke/demo/projection.sqlite build/release-candidate/wheel-smoke/case --trace-id trace_demo_evidence_plane
-uvx --from build/release-candidate/dist/actionlineage-0.1.0a3-py3-none-any.whl actionlineage projection export-console build/release-candidate/wheel-smoke/demo/projection.sqlite build/release-candidate/wheel-smoke/console.html --trace-id trace_demo_evidence_plane
+uvx --from build/release-candidate/dist/actionlineage-0.1.0a4-py3-none-any.whl actionlineage version
+uvx --from build/release-candidate/dist/actionlineage-0.1.0a4-py3-none-any.whl actionlineage demo run --output-dir build/release-candidate/wheel-smoke/demo
+uvx --from build/release-candidate/dist/actionlineage-0.1.0a4-py3-none-any.whl actionlineage journal verify build/release-candidate/wheel-smoke/demo/evidence.jsonl
+uvx --from build/release-candidate/dist/actionlineage-0.1.0a4-py3-none-any.whl actionlineage contract validate contracts/examples/outbound-http.json build/release-candidate/wheel-smoke/demo/evidence.jsonl
+uvx --from build/release-candidate/dist/actionlineage-0.1.0a4-py3-none-any.whl actionlineage projection export-case build/release-candidate/wheel-smoke/demo/projection.sqlite build/release-candidate/wheel-smoke/case --trace-id trace_demo_evidence_plane
+uvx --from build/release-candidate/dist/actionlineage-0.1.0a4-py3-none-any.whl actionlineage projection export-console build/release-candidate/wheel-smoke/demo/projection.sqlite build/release-candidate/wheel-smoke/console.html --trace-id trace_demo_evidence_plane
 ```
 
 Source distribution:
 
 ```bash
-uvx --from build/release-candidate/dist/actionlineage-0.1.0a3.tar.gz actionlineage version
-uvx --from build/release-candidate/dist/actionlineage-0.1.0a3.tar.gz actionlineage demo run --output-dir build/release-candidate/sdist-smoke/demo
-uvx --from build/release-candidate/dist/actionlineage-0.1.0a3.tar.gz actionlineage journal verify build/release-candidate/sdist-smoke/demo/evidence.jsonl
-uvx --from build/release-candidate/dist/actionlineage-0.1.0a3.tar.gz actionlineage contract validate contracts/examples/outbound-http.json build/release-candidate/sdist-smoke/demo/evidence.jsonl
-uvx --from build/release-candidate/dist/actionlineage-0.1.0a3.tar.gz actionlineage projection export-case build/release-candidate/sdist-smoke/demo/projection.sqlite build/release-candidate/sdist-smoke/case --trace-id trace_demo_evidence_plane
-uvx --from build/release-candidate/dist/actionlineage-0.1.0a3.tar.gz actionlineage projection export-console build/release-candidate/sdist-smoke/demo/projection.sqlite build/release-candidate/sdist-smoke/console.html --trace-id trace_demo_evidence_plane
+uvx --from build/release-candidate/dist/actionlineage-0.1.0a4.tar.gz actionlineage version
+uvx --from build/release-candidate/dist/actionlineage-0.1.0a4.tar.gz actionlineage demo run --output-dir build/release-candidate/sdist-smoke/demo
+uvx --from build/release-candidate/dist/actionlineage-0.1.0a4.tar.gz actionlineage journal verify build/release-candidate/sdist-smoke/demo/evidence.jsonl
+uvx --from build/release-candidate/dist/actionlineage-0.1.0a4.tar.gz actionlineage contract validate contracts/examples/outbound-http.json build/release-candidate/sdist-smoke/demo/evidence.jsonl
+uvx --from build/release-candidate/dist/actionlineage-0.1.0a4.tar.gz actionlineage projection export-case build/release-candidate/sdist-smoke/demo/projection.sqlite build/release-candidate/sdist-smoke/case --trace-id trace_demo_evidence_plane
+uvx --from build/release-candidate/dist/actionlineage-0.1.0a4.tar.gz actionlineage projection export-console build/release-candidate/sdist-smoke/demo/projection.sqlite build/release-candidate/sdist-smoke/console.html --trace-id trace_demo_evidence_plane
 ```
 
 ## Remaining Risks
 
-- The GitHub Release object for `v0.1.0a3` remains the main release-integrity
-  blocker.
-- The recommended repair path is a new `0.1.0a4` alpha release built from a
+- The `v0.1.0a4` tag, GitHub Release object, TestPyPI upload, and PyPI upload
+  remain owner-gated release-integrity blockers.
+- The recommended repair path is the new `0.1.0a4` alpha release built from a
   reviewed hardening commit, with tag-matched workflow artifacts and package
   metadata, rather than editing `v0.1.0a3` with post-tag artifacts.
 - Existing public PyPI/TestPyPI metadata lacks project URLs and may retain stale
@@ -182,5 +182,5 @@ uvx --from build/release-candidate/dist/actionlineage-0.1.0a3.tar.gz actionlinea
 
 ## Related Owner Docs
 
-- Draft release notes: `docs/DRAFT_RELEASE_NOTES_0.1.0a3.md`.
+- Draft release notes: `docs/DRAFT_RELEASE_NOTES_0.1.0a4.md`.
 - Owner publication checklist: `docs/OWNER_PUBLICATION_CHECKLIST.md`.

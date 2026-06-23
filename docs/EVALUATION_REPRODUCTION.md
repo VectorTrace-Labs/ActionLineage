@@ -11,13 +11,17 @@ blocks these commands, see `docs/TROUBLESHOOTING.md`.
 
 ## Published Package Smoke
 
+After the owner-approved `0.1.0a4` publication, run:
+
 ```bash
-uvx --prerelease allow --from actionlineage==0.1.0a3 actionlineage version
-uvx --prerelease allow --from actionlineage==0.1.0a3 actionlineage demo run --output-dir actionlineage-pypi-demo
-uvx --prerelease allow --from actionlineage==0.1.0a3 actionlineage journal verify actionlineage-pypi-demo/evidence.jsonl
+uvx --prerelease allow --from actionlineage==0.1.0a4 actionlineage version
+uvx --prerelease allow --from actionlineage==0.1.0a4 actionlineage demo run --output-dir actionlineage-pypi-demo
+uvx --prerelease allow --from actionlineage==0.1.0a4 actionlineage journal verify actionlineage-pypi-demo/evidence.jsonl
 ```
 
-Expected package version: `0.1.0a3`.
+Expected package version after publication: `0.1.0a4`. Until that owner gate
+is complete, `0.1.0a3` remains the latest public package and the source checkout
+commands below are the deterministic evaluation path for this branch.
 
 ## Repository Demo And Visual Proof
 
