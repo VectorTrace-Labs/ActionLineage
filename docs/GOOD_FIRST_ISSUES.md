@@ -158,28 +158,28 @@ Out of scope:
 - Adding a new package manager support claim.
 - Adding screenshots or generated artifacts.
 
-## Candidate 5: Add Static-Console Selector Exclusivity Coverage
+## Candidate 5: Add Static-Console Invalid Context Coverage
 
 Suggested labels: `good first issue`, `tests`, `console`.
 
 Why it helps:
 
-The static console is an onboarding and review artifact. Successful trace-ID,
-run-ID, and empty-selector exports are covered; a failure-path fixture would
-keep selector mistakes easy to diagnose.
+The static console is an onboarding and review artifact. Selector success and
+exclusivity paths are covered; an invalid context-file fixture would keep
+annotation-loading failures easy to diagnose.
 
 Suggested scope:
 
 - Add a focused case to `tests/console/test_static_console.py`.
 - Run the deterministic demo and call the `projection export-console` CLI with
-  both `--trace-id` and `--run-id`.
+  `--case-context` pointing at malformed JSON.
 - Assert the command exits nonzero with a clear JSON error.
 
 Acceptance criteria:
 
-- The error names that exactly one selector is required.
-- No static console file is written for the invalid selector combination.
-- The test does not change projection selector semantics.
+- The error names that console context must be valid JSON.
+- No static console file is written for the invalid context file.
+- The test does not change context parsing semantics.
 - No new dependency or runtime surface is added.
 
 Suggested verification:

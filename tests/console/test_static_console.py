@@ -106,6 +106,32 @@ def test_console_cli_exports_static_html_by_run_id(tmp_path: Path) -> None:
     assert "proof " + "of absence" not in html.lower()
 
 
+def test_console_cli_rejects_ambiguous_selectors_without_writing_html(
+    tmp_path: Path,
+) -> None:
+    demo = run_demo(tmp_path / "demo")
+    output_path = tmp_path / "ambiguous-console.html"
+
+    result = runner.invoke(
+        app,
+        [
+            "projection",
+            "export-console",
+            str(demo.database_path),
+            str(output_path),
+            "--trace-id",
+            demo.trace_id,
+            "--run-id",
+            demo.run_id,
+        ],
+    )
+    payload = json.loads(result.stdout)
+
+    assert result.exit_code == 1
+    assert payload == {"error": "provide exactly one of trace_id or run_id", "ok": False}
+    assert not output_path.exists()
+
+
 def test_console_cli_exports_empty_selector_html_without_absence_claims(
     tmp_path: Path,
 ) -> None:
