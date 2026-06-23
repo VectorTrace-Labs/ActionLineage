@@ -306,21 +306,23 @@ def test_release_candidate_audit_prepares_without_publishing() -> None:
     normalized = combined.lower()
 
     assert "build/release-candidate/manifest.json" in audit
-    assert "c2dd2a95bb625f9274d5c0912b928c7d9c63bdf5" in audit
+    assert "fabe4888d5acb9fe8f932926b8b549cb39895ae0" in audit
     assert "Do not republish immutable PyPI/TestPyPI files" in audit
-    assert "295 passed" in audit
+    assert "296 passed" in audit
     assert "86.03 percent total coverage" in audit
-    assert "294 passed, 1 skipped" in audit
+    assert "295 passed, 1 skipped" in audit
+    assert "no warning summary" in audit
+    assert "23 package entries" in audit
     assert "contract validate, case export, and static console export" in audit
     assert "47/47 declared capabilities covered" in audit
     assert "236 files scanned, 0 leaks" in audit
     assert "docs/evidence/agent-validation-baseline.md" in audit
     assert "docs/evidence/agent-validation-baseline.json" in audit
     assert "GitHub Release object for `v0.1.0a3`: absent" in audit
-    assert "59425ec6fbdaf0593e9bfeef1fe55be28e0116c14b75e87d562c7f9f2be6cecb" in audit
-    assert "ca8e70ae4dfb4190140e4d0a7fecaa580c15c6c8f7d3d1a1edf7343423eebbb4" in audit
-    assert "3e506978f9e721781e69fe074f4c4f9d6b364a0024ae39348fed5c59cbb1cf3b" in audit
-    assert "2899733720ffb424ccb976a2807768737231ab7e48c880cd9ffc77eca81932f7" in audit
+    assert "e3460120c7d85cfe8fa46f3bf5e8dc66f7e3ecb899979967d662b0072f800cae" in audit
+    assert "3efc8ba6ba53b8a1e463a0aafb28dc313c410e2c9df2b0b449c17033f8211a8a" in audit
+    assert "10844f3b3c830eb0f6c60bf70879ff15fdcfd3c9b6c8bf99a3c1e7d2608f3f98" in audit
+    assert "74edac3ae7bcfa8c487ceb046574e72eaa5712fc6c0403788b78d7d6e890372f" in audit
 
     for status in (
         "PASS",

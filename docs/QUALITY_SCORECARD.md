@@ -1,6 +1,6 @@
 # Quality Scorecard
 
-Last reviewed: 2026-06-22.
+Last reviewed: 2026-06-23.
 
 This scorecard maps public claims to implementation, tests, demo evidence, and
 maturity. It is the release-truth source for README, roadmap, security policy,
@@ -53,6 +53,7 @@ and checklist wording.
 | YAML contract/rule examples are review aids | Optional PyYAML loader and docs | Detection YAML loader tests | YAML examples under `contracts`, `detections`, `scenarios` | Preview |
 | OpenTelemetry and SIEM/export integrations are non-canonical mirrors | `src/actionlineage/exporters` | `tests/exporters` | Local mapping tests | Preview |
 | Optional service mode exists | `src/actionlineage/service` | `tests/service` | Docker/Compose smoke in CI | Preview |
+| Service-mode test client stays outside runtime scope | `pyproject.toml`, `docs/DEPENDENCY_POLICY.md` | `tests/release/test_release_readiness.py`, `tests/service` | Dev-only `httpx2` backend removes Starlette/FastAPI test warnings without adding to the alpha runtime TCB | Local-proof |
 | Optional Postgres projection schema exists | `src/actionlineage/projection/postgres.py` | `tests/projection/test_postgres_projection.py` | Local statement fixtures | Preview |
 | Cloud/Kubernetes observers exist as fixture-backed observers | `src/actionlineage/observers/cloud.py` | `tests/observers/test_cloud_observers.py` | No live cloud required | Preview |
 | Public release metadata is alpha and supports Python 3.12+ | `pyproject.toml`, `src/actionlineage/__init__.py` | `tests/release/test_release_readiness.py`, CI/release workflow matrices | CLI `version` output | Alpha-supported |
@@ -87,6 +88,7 @@ and checklist wording.
 | Documentation links can drift during review preparation | Broken onboarding and reproduction paths | Repository-local Markdown link checker in CI and release checklist | Keep the checker local by default and treat external URL reachability as separate release/publication evidence |
 | Local hash chains can be overinterpreted | Integrity overclaim | Threat model and journal integrity docs | Continue using precise trust-limit wording |
 | GitHub Release object can drift from tags/package indexes | Broken release audit trail | Release-consistency checker and owner gate | Create/repair `v0.1.0a3` GitHub Release only with owner approval |
+| Test-only service dependencies can look like runtime scope | Inflated support or TCB claims | Dependency policy and release-readiness tests keep `httpx2` in the dev extra and out of service/runtime extras | Revisit if Starlette/FastAPI changes their test-client backend again |
 | Projection SQLite handle closure can regress | Reliability signal can be missed in noisy verification output | Projection API closes connection handles and has warning-as-error regression coverage | Keep warning-as-error projection test in release verification |
 | Recovery tooling could accidentally mutate canonical journals | Loss of original evidence during incident recovery | Verified-prefix export rejects in-place output and streams only verified records to a separate file; truncated final records stop verification at the prior verified prefix | Keep API and CLI in-place rejection tests |
 | Static console context can become an oversized or unsafe rendered artifact | Browser-side and review-bundle risk | Context file/item bounds, redaction/truncation markers, strict escaping, and CSP tests | Keep hostile context fixtures in console tests |

@@ -1,6 +1,6 @@
 # Draft Release Notes For `v0.1.0a3`
 
-Last reviewed: 2026-06-22.
+Last reviewed: 2026-06-23.
 
 These are draft notes for owner review. They are suitable for repairing or
 creating the existing `v0.1.0a3` GitHub Release object after owner approval.
@@ -31,9 +31,10 @@ exports.
 
 ## Verification Snapshot
 
-- Full eval-group coverage run: 295 tests passed, 86.03 percent total coverage.
-- Clean tracked snapshot: 294 tests passed, 1 eval-only inspection test skipped
-  under `--all-extras`.
+- Full eval-group coverage run: 296 tests passed, 86.03 percent total coverage,
+  with no warning summary.
+- Clean tracked snapshot: 295 tests passed, 1 eval-only inspection test skipped
+  under `--all-extras`, with no warning summary.
 - Built wheel and source distribution both ran `actionlineage version`, demo
   run, journal verification, contract validation, case export, and static
   console export successfully.
