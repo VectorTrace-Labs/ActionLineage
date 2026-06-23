@@ -208,6 +208,8 @@ def test_external_review_docs_prepare_review_without_claiming_validation() -> No
     assert "release-consistency-offline.json" in docs["reproduction"]
     assert "review index summarizes the report counts" in docs["reproduction"]
     assert "release-consistency-*.json" in docs["external"]
+    assert "Version tag matches audited commit" in docs["external"]
+    assert "post-tag hardening proof" in docs["external"]
     assert "docs/GOOD_FIRST_ISSUES.md" in docs["external"]
     assert "Good First Issue Candidates" in docs["good_first"]
     assert "Candidate 1: Extend Ambiguous HTTP Correlation Coverage" in docs["good_first"]
@@ -246,6 +248,7 @@ def test_external_review_docs_prepare_review_without_claiming_validation() -> No
         "scripts/check_release_consistency.py",
         "scripts/write_release_candidate_manifest.py",
         "build/release-candidate/REVIEW_INDEX.md",
+        "Version tag matches audited commit",
         "docs/GOOD_FIRST_ISSUES.md",
         "docs/REVIEW_OUTREACH_DRAFTS.md",
         "actionlineage doctor",

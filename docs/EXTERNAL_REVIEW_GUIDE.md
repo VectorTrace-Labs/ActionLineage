@@ -92,6 +92,12 @@ summaries, and it verifies listed artifact hashes. If the bundle includes
 counts and non-passing checks. It is still local proof rather than a hosted
 release, signed attestation, or independent review.
 
+Check the `Version tag matches audited commit` row before treating local
+artifacts as release-tag evidence. If it is `false`, the bundle is useful
+post-tag hardening proof, but the artifacts must not be attached to that tag's
+GitHub Release without rebuilding from the tag or cutting a new owner-approved
+version.
+
 Use `docs/AGENT_VALIDATION_EVIDENCE.md` plus
 `docs/evidence/agent-validation-baseline.md` and
 `docs/evidence/agent-validation-baseline.json` for the current generated
