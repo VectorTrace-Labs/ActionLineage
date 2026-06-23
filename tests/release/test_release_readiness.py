@@ -365,8 +365,8 @@ def test_release_candidate_audit_prepares_without_publishing() -> None:
     assert "build/release/manifest.json" in audit
     assert "build/release/REVIEW_INDEX.md" in audit
     assert "bounded read-only `curl`" in audit
-    assert "`fail_count=5`, `unknown_count=6`" in audit
-    assert "Lower-priority URL HEAD checks" in audit
+    assert "`fail_count=5`, `unknown_count=0`" in audit
+    assert "Project URL HEAD reachability | PASS" in audit
     assert "PARTIAL PASS / AUTHENTICATED READ" in audit
     assert "CodeQL analysis" in audit
     assert "secret scanning, and push protection" in audit

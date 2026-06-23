@@ -59,8 +59,8 @@ commit changes the source archive.
 | Release proof review index | PASS | `build/release-candidate/REVIEW_INDEX.md` generated from the local manifest; 9 of 9 manifest-listed artifact hashes verified; release-consistency reports are summarized when present |
 | Release workflow artifact proof | PASS | `.github/workflows/release.yml` generates `build/release/release-consistency-offline.json`, `build/release/manifest.json`, and `build/release/REVIEW_INDEX.md`, includes them in checksums and attestations, and smoke-checks the bundle after artifact download |
 | Release consistency, offline | PASS | 0 failures, 0 unknowns |
-| Release consistency, online JSON metadata | FAIL / OWNER-GATED | `fail_count=5`, `unknown_count=6`; package and GitHub JSON checks fall back from Python `urllib` to bounded read-only `curl` after local URL/TLS failures; this detects known public package metadata drift and the missing GitHub Release object |
-| Project URL HEAD reachability | UNKNOWN in local TLS-constrained environments | Lower-priority URL HEAD checks still use Python `urllib` and may remain environment-sensitive |
+| Release consistency, online | FAIL / OWNER-GATED | `fail_count=5`, `unknown_count=0`; package and GitHub JSON checks and project URL HEAD checks fall back from Python `urllib` to bounded read-only `curl` after local URL/TLS failures; this detects known public package metadata drift and the missing GitHub Release object |
+| Project URL HEAD reachability | PASS | All six configured project URLs returned 2xx/3xx status through the bounded curl fallback in this local certificate-store constrained environment |
 | Public state via independent curl spot-checks | PASS / BLOCKED | PyPI/TestPyPI expose `0.1.0a3`; GitHub tag exists; GitHub Release object for `v0.1.0a3` is absent |
 | Container build | NOT_IN_RELEASE_SCOPE | Preview container gates run in GitHub Actions on hosted Ubuntu |
 | GitHub Release object for `v0.1.0a3` | BLOCKED_ON_OWNER | Creating or repairing release objects requires owner action |
@@ -163,9 +163,7 @@ uvx --from build/release-candidate/dist/actionlineage-0.1.0a3.tar.gz actionlinea
 - Existing public PyPI/TestPyPI metadata lacks project URLs and may retain stale
   long-description wording until a later owner-approved package upload.
 - Python `urllib` URL/TLS failures are mitigated for package and GitHub JSON
-  metadata by a bounded read-only `curl` fallback. Lower-priority project URL
-  HEAD checks can still remain UNKNOWN in local certificate-store constrained
-  environments.
+  metadata and project URL HEAD checks by bounded read-only `curl` fallbacks.
 - Some external repository security settings were confirmed through
   authenticated read-only GitHub API responses, but alert-list status, private
   vulnerability reporting, latest public CodeQL status, and third-party review

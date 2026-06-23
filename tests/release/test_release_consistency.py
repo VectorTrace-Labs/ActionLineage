@@ -162,6 +162,93 @@ def test_fetch_json_reports_urllib_and_curl_fallback_failures(
     assert "SSL certificate problem" in error
 
 
+def test_project_url_head_falls_back_to_bounded_curl_after_url_error(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    checker = _load_checker()
+    url = "https://example.test/project"
+    observed_args: list[str] = []
+
+    def fail_urlopen(*_args: object, **_kwargs: object) -> object:
+        raise checker.urllib.error.URLError("certificate verify failed")
+
+    def fake_run(
+        args: list[str], *, check: bool, capture_output: bool, text: bool, timeout: float
+    ) -> object:
+        observed_args[:] = args
+        assert check is False
+        assert capture_output is True
+        assert text is True
+        assert timeout == 4.5
+        return checker.subprocess.CompletedProcess(args, 0, stdout="200", stderr="")
+
+    monkeypatch.setattr(checker.urllib.request, "urlopen", fail_urlopen)
+    monkeypatch.setattr(checker.subprocess, "run", fake_run)
+
+    checks = checker._check_url_heads({"Homepage": url}, 3.5)
+
+    assert len(checks) == 1
+    assert checks[0].id == "online.project_url.homepage"
+    assert checks[0].status == "PASS"
+    assert checks[0].actual == "200"
+    assert checks[0].details == {
+        "url": url,
+        "fallback": "curl",
+        "original_error": "<urlopen error certificate verify failed>",
+    }
+    assert observed_args == [
+        "curl",
+        "--head",
+        "--silent",
+        "--show-error",
+        "--location",
+        "--max-time",
+        "3.5",
+        "--output",
+        "/dev/null",
+        "--write-out",
+        "%{http_code}",
+        "--user-agent",
+        "actionlineage-release-consistency/0",
+        url,
+    ]
+
+
+def test_project_url_head_reports_urllib_and_curl_fallback_failures(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    checker = _load_checker()
+
+    def fail_urlopen(*_args: object, **_kwargs: object) -> object:
+        raise checker.urllib.error.URLError("certificate verify failed")
+
+    def fake_run(
+        args: list[str], *, check: bool, capture_output: bool, text: bool, timeout: float
+    ) -> object:
+        assert check is False
+        assert capture_output is True
+        assert text is True
+        assert timeout == 4.5
+        return checker.subprocess.CompletedProcess(
+            args,
+            60,
+            stdout="000",
+            stderr="curl: (60) SSL certificate problem",
+        )
+
+    monkeypatch.setattr(checker.urllib.request, "urlopen", fail_urlopen)
+    monkeypatch.setattr(checker.subprocess, "run", fake_run)
+
+    checks = checker._check_url_heads({"Homepage": "https://example.test/project"}, 3.5)
+
+    assert len(checks) == 1
+    assert checks[0].status == "UNKNOWN"
+    assert checks[0].actual is not None
+    assert "certificate verify failed" in checks[0].actual
+    assert "curl HEAD fallback failed (60)" in checks[0].actual
+    assert "SSL certificate problem" in checks[0].actual
+
+
 def test_github_release_404_from_curl_fallback_is_a_failure(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:

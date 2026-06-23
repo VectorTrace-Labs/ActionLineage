@@ -600,6 +600,7 @@ def _is_not_found_error(error: str) -> bool:
 def _check_url_heads(project_urls: dict[str, str], timeout_seconds: float) -> list[Check]:
     checks: list[Check] = []
     for name, url in sorted(project_urls.items()):
+        details: dict[str, Any] = {"url": url}
         request = urllib.request.Request(
             url,
             method="HEAD",
@@ -611,17 +612,24 @@ def _check_url_heads(project_urls: dict[str, str], timeout_seconds: float) -> li
         except urllib.error.HTTPError as exc:
             status_code = exc.code
         except (OSError, urllib.error.URLError) as exc:
-            checks.append(
-                Check(
-                    id=f"online.project_url.{_slug(name)}",
-                    status=UNKNOWN,
-                    summary=f"project URL could not be checked: {name}",
-                    actual=str(exc),
-                    severity="P2",
-                    details={"url": url},
-                )
+            status_code, fallback_error = _fetch_head_status_with_curl(
+                url, timeout_seconds, str(exc)
             )
-            continue
+            if fallback_error is not None:
+                checks.append(
+                    Check(
+                        id=f"online.project_url.{_slug(name)}",
+                        status=UNKNOWN,
+                        summary=f"project URL could not be checked: {name}",
+                        actual=fallback_error,
+                        severity="P2",
+                        details=details,
+                    )
+                )
+                continue
+            assert status_code is not None
+            details["fallback"] = "curl"
+            details["original_error"] = str(exc)
         checks.append(
             Check(
                 id=f"online.project_url.{_slug(name)}",
@@ -630,7 +638,7 @@ def _check_url_heads(project_urls: dict[str, str], timeout_seconds: float) -> li
                 expected="2xx or 3xx",
                 actual=str(status_code),
                 severity="P1",
-                details={"url": url},
+                details=details,
             )
         )
     return checks
@@ -686,6 +694,53 @@ def _fetch_json_with_curl(
         return json.loads(result.stdout), None
     except json.JSONDecodeError as exc:
         return None, f"{original_error}; curl fallback returned invalid JSON: {exc}"
+
+
+def _fetch_head_status_with_curl(
+    url: str, timeout_seconds: float, original_error: str
+) -> tuple[int | None, str | None]:
+    curl_timeout = max(1.0, timeout_seconds)
+    command = [
+        "curl",
+        "--head",
+        "--silent",
+        "--show-error",
+        "--location",
+        "--max-time",
+        str(curl_timeout),
+        "--output",
+        "/dev/null",
+        "--write-out",
+        "%{http_code}",
+        "--user-agent",
+        "actionlineage-release-consistency/0",
+        url,
+    ]
+    try:
+        result = subprocess.run(
+            command,
+            check=False,
+            capture_output=True,
+            text=True,
+            timeout=curl_timeout + 1.0,
+        )
+    except FileNotFoundError as exc:
+        return None, f"{original_error}; curl HEAD fallback unavailable: {exc}"
+    except subprocess.TimeoutExpired:
+        return None, f"{original_error}; curl HEAD fallback timed out after {curl_timeout} seconds"
+    status_text = result.stdout.strip()
+    if result.returncode != 0:
+        diagnostic = result.stderr.strip() or status_text or "no diagnostic"
+        return (
+            None,
+            f"{original_error}; curl HEAD fallback failed ({result.returncode}): {diagnostic}",
+        )
+    if not status_text.isdecimal():
+        return None, f"{original_error}; curl HEAD fallback returned invalid status: {status_text}"
+    status_code = int(status_text)
+    if status_code == 0:
+        return None, f"{original_error}; curl HEAD fallback returned no HTTP status"
+    return status_code, None
 
 
 def _compare(

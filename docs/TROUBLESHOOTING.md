@@ -200,9 +200,10 @@ If an online release-consistency report fails:
 - missing GitHub Release objects and stale PyPI/TestPyPI long descriptions are
   release/publication gates, not a reason to republish immutable artifacts from
   a local troubleshooting run;
-- local project URL `HEAD` checks can be `UNKNOWN` in certificate-store
-  constrained environments even when JSON metadata checks succeed through the
-  bounded read-only `curl` fallback.
+- package-index JSON, GitHub JSON, and project URL `HEAD` checks use a bounded
+  read-only `curl` fallback when local Python `urllib` cannot validate TLS, so
+  remaining failures should be treated as public-state drift unless the report
+  still marks the check `UNKNOWN`.
 
 If `scripts/write_release_review_index.py` reports `HASH_MISMATCH`, `MISSING`,
 or `malformed_release_consistency_report`:

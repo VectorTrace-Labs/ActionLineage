@@ -70,7 +70,7 @@ data, not universal performance guarantees.
 | PALPHA-004 | P1 | Baseline sdist included `.hypothesis/` local state, increasing artifact noise and review burden. | FIXED_IN_SLICE |
 | PALPHA-005 | P1 | Coverage run emitted many `ResourceWarning: unclosed database` warnings in console, projection, contract, and service tests. | FIXED_IN_RELIABILITY_SLICE |
 | PALPHA-006 | P1 | Public package metadata on PyPI/TestPyPI has no project URLs until a later owner-approved release uploads corrected metadata. | BLOCKED_ON_RELEASE |
-| PALPHA-007 | P2 | Local Python `urllib` could not verify PyPI TLS due to local certificate-store configuration, while browser/curl checks succeeded. Online release-consistency JSON metadata checks now fall back to bounded read-only `curl` after `urllib` URL/TLS failures. | MITIGATED_WITH_CURL_FALLBACK |
+| PALPHA-007 | P2 | Local Python `urllib` could not verify public TLS due to local certificate-store configuration, while browser/curl checks succeeded. Online release-consistency JSON metadata and project URL HEAD checks now fall back to bounded read-only `curl` after `urllib` URL/TLS failures. | MITIGATED_WITH_CURL_FALLBACK |
 | PALPHA-008 | P2 | Service-mode verification emitted Starlette/FastAPI test-client deprecation warnings unless the dev-only `httpx2` backend was installed. | FIXED_IN_TEST_CLIENT_SLICE |
 | PALPHA-009 | P2 | Local release proof documented license review expectations but lacked an executable dependency license report gate. | FIXED_IN_LICENSE_GATE_SLICE |
 | PALPHA-010 | P2 | Local release-candidate artifacts had hashes and a manifest, but lacked a generated reviewer index that verifies artifact bytes and collects owner/external gates in one place. | FIXED_IN_REVIEW_INDEX_SLICE |
