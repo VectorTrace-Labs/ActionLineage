@@ -312,15 +312,18 @@ def test_release_candidate_audit_prepares_without_publishing() -> None:
     assert "Release-candidate manifest generation" in audit
     assert "build/release-candidate/REVIEW_INDEX.md" in audit
     assert "Release proof review index" in audit
-    assert "4bf6246fcfbfd1ff497842c68f4214d3efc6bb67" in audit
+    assert "ee49f8136536f692edd480d456eaf370631891bd" in audit
     assert "Do not republish immutable PyPI/TestPyPI files" in audit
     assert "298 passed" in audit
     assert "86.03 percent total coverage" in audit
-    assert "297 passed, 1 skipped" in audit
+    assert "302 passed" in audit
     assert "no warning summary" in audit
     assert "23 package entries" in audit
     assert "23 direct dependencies checked, 0 issues" in audit
     assert "actionlineage-license-report.json" in audit
+    assert "Release workflow artifact proof" in audit
+    assert "build/release/manifest.json" in audit
+    assert "build/release/REVIEW_INDEX.md" in audit
     assert "contract validate, case export, and static console export" in audit
     assert "47/47 declared capabilities covered" in audit
     assert "236 files scanned, 0 leaks" in audit

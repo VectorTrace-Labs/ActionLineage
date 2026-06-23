@@ -11,7 +11,7 @@ settings.
 | Item | Result |
 | --- | --- |
 | Branch | `codex/public-alpha-hardening` |
-| Audited implementation commit | `4bf6246fcfbfd1ff497842c68f4214d3efc6bb67` before this audit-doc refresh |
+| Audited implementation commit | `ee49f8136536f692edd480d456eaf370631891bd` before this audit-doc refresh |
 | Candidate version | `0.1.0a3` |
 | Recommendation | Do not republish immutable PyPI/TestPyPI files for `0.1.0a3`; create or repair the GitHub Release object only after owner review. |
 | Generated local manifest | `build/release-candidate/manifest.json` |
@@ -28,7 +28,7 @@ are not committed source files.
 | Ruff lint | PASS | `uv run ruff check .` |
 | Ruff format check | PASS | `uv run ruff format --check .` |
 | Strict mypy | PASS | `uv run mypy src`, 56 source files |
-| Full pytest after all-extras sync | PASS | `297 passed, 1 skipped`; skipped eval-only inspection path is covered by eval-group run; no warning summary |
+| Full pytest after release-proof workflow slice | PASS | `302 passed`; no warning summary |
 | Branch coverage with eval group | PASS | `298 passed`, 86.03 percent total coverage; no warning summary |
 | Compatibility tests | PASS | Included in full suite; golden journals and public API tests passed |
 | Property-based regression tests | PASS | Included in full suite through Hypothesis tests |
@@ -37,7 +37,7 @@ are not committed source files.
 | Dependency license check | PASS | 23 direct dependencies checked, 0 issues |
 | Dependency audit | PASS | `uv run pip-audit`, no known vulnerabilities |
 | Local Markdown link check | PASS | Repository-relative Markdown links resolved |
-| Clean tracked snapshot | PASS | `297 passed, 1 skipped` from `git archive HEAD` snapshot with `uv run --all-extras pytest`; no warning summary |
+| Clean tracked snapshot from prior candidate bundle | PASS | Earlier `git archive HEAD` snapshot passed `297 passed, 1 skipped` with `uv run --all-extras pytest`; current full-suite result is recorded above |
 | Wheel and sdist build | PASS | `uv build --out-dir build/release-candidate/dist` |
 | Built wheel metadata | PASS | Version `0.1.0a3`, `Requires-Python: >=3.12`, six project URLs |
 | Built sdist metadata | PASS | Version `0.1.0a3`, `Requires-Python: >=3.12`, six project URLs, no local cache entries |
@@ -55,6 +55,7 @@ are not committed source files.
 | SHA256 checksums | PASS | `build/release-candidate/SHA256SUMS.txt` |
 | Release-candidate manifest generation | PASS | `scripts/write_release_candidate_manifest.py` generates `build/release-candidate/manifest.json` from local artifact bytes and evidence summaries |
 | Release proof review index | PASS | `build/release-candidate/REVIEW_INDEX.md` generated from the local manifest; manifest-listed artifact hashes verified |
+| Release workflow artifact proof | PASS | `.github/workflows/release.yml` generates `build/release/manifest.json` and `build/release/REVIEW_INDEX.md`, includes both in checksums and attestations, and smoke-checks both after artifact download |
 | Release consistency, offline | PASS | 0 failures, 0 unknowns |
 | Release consistency, online via Python urllib | PASS with UNKNOWNs | 0 failures, 10 unknowns due local Python certificate-store failure |
 | Public state via curl | PASS / BLOCKED | PyPI/TestPyPI expose `0.1.0a3`; GitHub tag exists; GitHub Release object for `v0.1.0a3` is absent |
