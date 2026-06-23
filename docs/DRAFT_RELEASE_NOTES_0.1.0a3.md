@@ -49,6 +49,8 @@ exports.
 ## Known Limitations
 
 - GitHub Release object creation or repair is owner-gated.
+- Release assets must be built from the same commit resolved by the release tag;
+  post-tag hardening proof is reviewer evidence, not tag-matched release proof.
 - Public PyPI/TestPyPI project URLs are absent, and package descriptions may
   retain stale GitHub Release artifact wording until a future owner-approved
   package release refreshes metadata.

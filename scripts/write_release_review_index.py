@@ -236,6 +236,7 @@ def _render_markdown(
     release = _string_value(manifest, "release") or "unknown"
     commit = _string_value(manifest, "audited_implementation_commit") or "unknown"
     generated_at = _string_value(manifest, "generated_at") or "unknown"
+    version_tag = _version_tag_rows(manifest)
     gate_rows = _gate_rows(manifest)
     gate_counts = Counter(row["status"] for row in gate_rows)
     passing_artifacts = sum(1 for check in checks if check.status == "PASS")
@@ -252,6 +253,7 @@ def _render_markdown(
         "| --- | --- |",
         f"| Release | `{_md_cell(release)}` |",
         f"| Audited implementation commit | `{_md_cell(commit)}` |",
+        *version_tag,
         f"| Manifest | `{_md_cell(str(manifest_path))}` |",
         f"| Manifest generated at | `{_md_cell(generated_at)}` |",
         f"| Artifacts verified locally | `{passing_artifacts}/{len(checks)}` |",
@@ -303,6 +305,21 @@ def _render_markdown(
         ]
     )
     return "\n".join(lines)
+
+
+def _version_tag_rows(manifest: Mapping[str, Any]) -> list[str]:
+    version_tag = manifest.get("version_tag")
+    if not isinstance(version_tag, dict):
+        return []
+    name = _string_value(version_tag, "name") or "unknown"
+    resolved_commit = _string_value(version_tag, "resolved_commit") or "missing"
+    matches = version_tag.get("matches_audited_implementation")
+    matches_value = str(matches).lower() if isinstance(matches, bool) else "unknown"
+    return [
+        f"| Version tag | `{_md_cell(name)}` |",
+        f"| Version tag commit | `{_md_cell(resolved_commit)}` |",
+        f"| Version tag matches audited commit | `{_md_cell(matches_value)}` |",
+    ]
 
 
 def _release_consistency_reports(

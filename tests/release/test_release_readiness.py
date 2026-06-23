@@ -350,6 +350,8 @@ def test_release_candidate_audit_prepares_without_publishing() -> None:
     assert "build/release-candidate/REVIEW_INDEX.md" in audit
     assert "Release proof review index" in audit
     assert "Recorded in generated manifest field `audited_implementation_commit`" in audit
+    assert "Version tag alignment" in audit
+    assert "do not attach local artifacts to a tag release when this field is `false`" in audit
     assert "rerun after any source or documentation commit before publication" in audit
     assert "Do not republish immutable PyPI/TestPyPI files" in audit
     assert "135 files already formatted" in audit
@@ -399,8 +401,12 @@ def test_release_candidate_audit_prepares_without_publishing() -> None:
     assert "318 tests passed, 86.14 percent total coverage" in draft_notes
     assert "8 artifact rows, 23 gate rows" in draft_notes
     assert "No external audit, external adoption, production use, independent review" in draft_notes
+    assert "Release assets must be built from the same commit resolved by the release tag" in (
+        draft_notes
+    )
     assert "Codex must not perform these actions without explicit approval" in owner_checklist
     assert "build/release-candidate/REVIEW_INDEX.md" in owner_checklist
+    assert "Version tag matches audited commit" in owner_checklist
     assert "not as an attestation or external validation" in owner_checklist
     assert "gh release create v0.1.0a3" in owner_checklist
     assert "--verify-tag" in owner_checklist

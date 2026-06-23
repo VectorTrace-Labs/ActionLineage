@@ -509,6 +509,11 @@ def test_release_candidate_manifest_summarizes_local_proof_artifacts(tmp_path: P
     assert manifest["release"] == "0.1.0a3"
     assert manifest["artifact_root"] == "build/release-candidate"
     assert manifest["audited_implementation_commit"] == "abc123"
+    assert manifest["version_tag"] == {
+        "matches_audited_implementation": None,
+        "name": "v0.1.0a3",
+        "resolved_commit": None,
+    }
     assert manifest["sbom_package_count"] == 2
     assert manifest["license_report"] == {
         "allowed_licenses": ["Apache-2.0", "MIT"],
@@ -532,6 +537,7 @@ def test_release_candidate_manifest_summarizes_local_proof_artifacts(tmp_path: P
     )
     assert artifacts["dist/actionlineage-0.1.0a3.tar.gz"]["size_bytes"] == 5
     assert "build/release-candidate/coverage.xml" in artifacts
+    assert "build/release-candidate/SHA256SUMS.txt" not in artifacts
     assert manifest["gates"] == [
         {
             "name": "ruff_check",
@@ -626,6 +632,11 @@ def test_release_review_index_verifies_manifest_artifacts(tmp_path: Path) -> Non
                 "release": "0.1.0a3",
                 "artifact_root": "build/release-candidate",
                 "audited_implementation_commit": "abc123",
+                "version_tag": {
+                    "matches_audited_implementation": False,
+                    "name": "v0.1.0a3",
+                    "resolved_commit": "def456",
+                },
                 "generated_at": "2026-06-23T00:00:00Z",
                 "artifacts": [
                     {
@@ -696,6 +707,9 @@ def test_release_review_index_verifies_manifest_artifacts(tmp_path: Path) -> Non
     assert result.issues == ()
     assert "ActionLineage Release Proof Review Index" in result.markdown
     assert "not publication evidence" in result.markdown
+    assert "| Version tag | `v0.1.0a3` |" in result.markdown
+    assert "| Version tag commit | `def456` |" in result.markdown
+    assert "| Version tag matches audited commit | `false` |" in result.markdown
     assert "Artifacts verified locally | `4/4`" in result.markdown
     assert "| `build/release-candidate/dist/actionlineage-0.1.0a3-py3-none-any.whl` | `PASS`" in (
         result.markdown

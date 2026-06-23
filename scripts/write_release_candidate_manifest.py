@@ -23,7 +23,6 @@ REQUIRED_ARTIFACT_PATTERNS = (
 )
 REQUIRED_DIST_PATTERNS = ("*.whl", "*.tar.gz")
 OPTIONAL_ARTIFACT_PATTERNS = (
-    "SHA256SUMS.txt",
     "coverage.xml",
     "release-consistency-offline.json",
     "release-consistency-online.json",
@@ -81,6 +80,11 @@ def build_release_candidate_manifest(
         "release": release,
         "artifact_root": _display_path(artifact_root, repository_root=repository_root),
         "audited_implementation_commit": commit,
+        "version_tag": _version_tag_summary(
+            repository_root,
+            release=release,
+            audited_implementation_commit=commit,
+        ),
         "artifacts": artifacts,
         "gates": [_gate_row(gate) for gate in gates],
     }
@@ -300,8 +304,27 @@ def _load_json_if_present(path: Path) -> Any | None:
 
 
 def _git_head(repository_root: Path) -> str | None:
+    return _git_rev_parse(repository_root, "HEAD")
+
+
+def _version_tag_summary(
+    repository_root: Path, *, release: str, audited_implementation_commit: str
+) -> dict[str, Any]:
+    tag = f"v{release}"
+    resolved_commit = _git_rev_parse(repository_root, f"{tag}^{{}}")
+    matches = (
+        resolved_commit == audited_implementation_commit if resolved_commit is not None else None
+    )
+    return {
+        "name": tag,
+        "resolved_commit": resolved_commit,
+        "matches_audited_implementation": matches,
+    }
+
+
+def _git_rev_parse(repository_root: Path, ref: str) -> str | None:
     result = subprocess.run(
-        ["git", "rev-parse", "HEAD"],
+        ["git", "rev-parse", ref],
         cwd=repository_root,
         check=False,
         capture_output=True,

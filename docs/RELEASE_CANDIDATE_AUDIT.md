@@ -12,6 +12,7 @@ settings.
 | --- | --- |
 | Branch | `codex/public-alpha-hardening` |
 | Audited implementation commit | Recorded in generated manifest field `audited_implementation_commit`; rerun after any source or documentation commit before publication |
+| Version tag alignment | OWNER REVIEW REQUIRED; generated `build/release-candidate/REVIEW_INDEX.md` records the `v0.1.0a3` tag commit and whether it matches the audited implementation commit; do not attach local artifacts to a tag release when this field is `false` |
 | Candidate version | `0.1.0a3` |
 | Recommendation | Do not republish immutable PyPI/TestPyPI files for `0.1.0a3`; create or repair the GitHub Release object only after owner review. |
 | Generated local manifest | `build/release-candidate/manifest.json` |
