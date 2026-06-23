@@ -66,21 +66,21 @@ def test_release_consistency_rejects_sdist_local_state(tmp_path: Path) -> None:
     checker = _load_checker()
     dist_dir = tmp_path / "dist"
     dist_dir.mkdir()
-    metadata = _metadata("0.1.0a4", ">=3.12")
-    _write_wheel(dist_dir / "actionlineage-0.1.0a4-py3-none-any.whl", metadata)
+    metadata = _metadata("0.1.0a5", ">=3.12")
+    _write_wheel(dist_dir / "actionlineage-0.1.0a5-py3-none-any.whl", metadata)
     _write_sdist(
-        dist_dir / "actionlineage-0.1.0a4.tar.gz",
+        dist_dir / "actionlineage-0.1.0a5.tar.gz",
         metadata,
-        extra_name="actionlineage-0.1.0a4/.hypothesis/constants/example",
+        extra_name="actionlineage-0.1.0a5/.hypothesis/constants/example",
     )
 
     report = checker.build_report(PROJECT_ROOT, dist_dir=dist_dir)
 
     checks = {check["id"]: check for check in report["checks"]}
     assert report["ok"] is False
-    assert checks["dist.sdist.actionlineage-0.1.0a4.tar.gz.local_state"]["status"] == "FAIL"
-    assert checks["dist.wheel.actionlineage-0.1.0a4-py3-none-any.whl.version"]["status"] == "PASS"
-    assert checks["dist.sdist.actionlineage-0.1.0a4.tar.gz.version"]["status"] == "PASS"
+    assert checks["dist.sdist.actionlineage-0.1.0a5.tar.gz.local_state"]["status"] == "FAIL"
+    assert checks["dist.wheel.actionlineage-0.1.0a5-py3-none-any.whl.version"]["status"] == "PASS"
+    assert checks["dist.sdist.actionlineage-0.1.0a5.tar.gz.version"]["status"] == "PASS"
 
 
 def test_release_consistency_flags_stale_public_description_claims() -> None:

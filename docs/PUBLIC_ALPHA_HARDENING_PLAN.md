@@ -101,8 +101,8 @@ verifiable evidence.
 | Phase | Scope | Repo-controlled status | Remaining gate or reason not fully done | ETA class |
 | --- | --- | --- | --- | --- |
 | 0 | Baseline and public-claim audit | Local complete for current branch: baseline measurements, public-claim scans, secret scan, SBOM, dependency audit, package smoke, and evaluation baseline were captured. | Refresh before final announcement or release-candidate cut. | Done locally; refresh-only |
-| 1 | Release and version consistency | Local complete except public release object: checker added; release workflow now prepares bounded post-publication package-index verification after owner-approved publishing. | GitHub Release object for `v0.1.0a4` remains owner-gated until tag-matched artifacts exist. | Blocked on owner action |
-| 2 | Package metadata and discoverability | Local complete: metadata and sdist hygiene were improved in source. | PyPI/TestPyPI pages keep old `0.1.0a3` metadata until the next owner-approved `0.1.0a4` package release. | Blocked on owner release |
+| 1 | Release and version consistency | Local complete except public release object: checker added; release workflow now prepares bounded post-publication package-index verification after owner-approved publishing. | GitHub Release object for `v0.1.0a5` remains owner-gated until tag-matched artifacts exist. | Blocked on owner action |
+| 2 | Package metadata and discoverability | Local complete: metadata and sdist hygiene were improved in source. | PyPI/TestPyPI pages keep old `0.1.0a3` metadata until the next owner-approved `0.1.0a5` package release. | Blocked on owner release |
 | 3 | README landing experience and visual proof | Local complete: generated demo evidence map and freshness check added; static console trace-ID, run-ID, empty-selector, and ambiguous-selector CLI paths now have coverage. | Optional outside evaluator feedback may still improve onboarding language. | Done locally |
 | 4 | Clean installation and first-time-user testing | Local complete: baseline public package smoke was captured; built wheel and sdist first-time-user smoke gate added to CI; evaluator troubleshooting guide added. | Post-publication smoke must run again after any new owner-approved package upload. | Done locally; rerun after release |
 | 5 | Visible quality and security evidence | Local complete: CI now runs repository-local Markdown link and heading-fragment checking, dependency license reporting, an 85 percent branch-enabled total coverage floor, dependency audit, and concise quality/security evidence summaries. Authenticated GitHub read confirmed main branch protection, strict required checks, Dependabot security updates, secret scanning, push protection, private vulnerability reporting, security policy, latest `main` CodeQL success, and current alert counts. | Recheck before public announcement if repository settings or default-branch state change. | Done locally; authenticated external evidence recorded |
@@ -113,7 +113,7 @@ verifiable evidence.
 
 ## Owner Gates
 
-- Create a GitHub Release for `v0.1.0a4`.
+- Create a GitHub Release for `v0.1.0a5`.
 - Publish any new package, container, release artifact, tag, or registry object.
 - Change public version posture, schema namespace, production/stable claims, or
   external-review claims.

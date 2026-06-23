@@ -1,18 +1,19 @@
-# Draft Release Notes For `v0.1.0a4`
+# Draft Release Notes For `v0.1.0a5`
 
 Last reviewed: 2026-06-23.
 
 These are draft notes for owner review of the recommended corrective alpha
 release. They are not a publication request, release tag, or package upload.
 Use them only after the repository version, changelog, tag, release workflow
-artifacts, and package-index uploads all agree on `0.1.0a4`.
+artifacts, and package-index uploads all agree on `0.1.0a5`.
 
 ## Summary
 
-ActionLineage `0.1.0a4` is the recommended next public-alpha repair release for
-the `0.1.0a3` metadata and GitHub Release drift. It should preserve the existing
-alpha product scope while making the release evidence tag-aligned, package
-metadata discoverable, and public claims consistent with the source docs.
+ActionLineage `0.1.0a5` is the recommended next public-alpha repair release for
+the `0.1.0a3` metadata and GitHub Release drift, superseding the failed
+`v0.1.0a4` artifact workflow attempt. It should preserve the existing alpha
+product scope while making the release evidence tag-aligned, package metadata
+discoverable, and public claims consistent with the source docs.
 
 ## Why A New Alpha Is Recommended
 
@@ -23,7 +24,11 @@ metadata discoverable, and public claims consistent with the source docs.
 - The current hardening proof was generated after the `v0.1.0a3` tag, so those
   local artifacts must not be attached to the `v0.1.0a3` GitHub Release as
   tag-matched release proof.
-- A new `v0.1.0a4` tag from the reviewed hardening commit gives reviewers one
+- `v0.1.0a4` was tagged, and its release workflow verify jobs passed, but the
+  artifact build failed before upload, attestations, package publication, or
+  GitHub Release creation because the tagged workflow used a non-canonical
+  provenance filename.
+- A new `v0.1.0a5` tag from the reviewed hardening commit gives reviewers one
   coherent commit, artifact set, package version, release object, and
   attestation trail.
 
@@ -39,7 +44,7 @@ metadata discoverable, and public claims consistent with the source docs.
 
 ## Required Before Publication
 
-1. Bump source metadata and docs from `0.1.0a3` to `0.1.0a4` in a dedicated
+1. Bump source metadata and docs from `0.1.0a3` to `0.1.0a5` in a dedicated
    release-prep commit.
 2. Regenerate local release-candidate proof from that exact commit.
 3. Confirm `build/release-candidate/REVIEW_INDEX.md` shows
@@ -48,7 +53,7 @@ metadata discoverable, and public claims consistent with the source docs.
    checksums, artifact attestations, manifest, and review-index proof.
 5. Publish to TestPyPI and PyPI only through the configured Trusted Publishing
    environments.
-6. Create a draft GitHub Release for `v0.1.0a4` from workflow-built artifacts
+6. Create a draft GitHub Release for `v0.1.0a5` from workflow-built artifacts
    and attestation links, then review the draft before publishing it.
 7. Run online release consistency after publication and keep any remaining
    owner or external gates visible.

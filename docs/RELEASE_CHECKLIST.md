@@ -27,10 +27,10 @@ uv run python scripts/check_dependency_licenses.py \
 uv run pip-audit
 uv build --out-dir dist
 uv run python scripts/smoke_public_quickstart.py \
-  --package-spec dist/actionlineage-0.1.0a4-py3-none-any.whl \
+  --package-spec dist/actionlineage-0.1.0a5-py3-none-any.whl \
   --output-dir build/wheel-quickstart-smoke
 uv run python scripts/smoke_public_quickstart.py \
-  --package-spec dist/actionlineage-0.1.0a4.tar.gz \
+  --package-spec dist/actionlineage-0.1.0a5.tar.gz \
   --output-dir build/sdist-quickstart-smoke
 uv run python scripts/generate_release_provenance.py \
   --dist-dir dist \
@@ -231,9 +231,9 @@ Required workflow properties:
 Verify downloaded release artifacts after the workflow runs:
 
 ```bash
-gh attestation verify actionlineage-0.1.0a4-py3-none-any.whl \
+gh attestation verify actionlineage-0.1.0a5-py3-none-any.whl \
   --repo VectorTrace-Labs/ActionLineage
-gh attestation verify actionlineage-0.1.0a4.tar.gz \
+gh attestation verify actionlineage-0.1.0a5.tar.gz \
   --repo VectorTrace-Labs/ActionLineage
 shasum -a 256 -c SHA256SUMS.txt
 ```
@@ -243,9 +243,9 @@ See `docs/PUBLISHING.md` for the Trusted Publisher setup values.
 After package publication, verify the current public package from PyPI:
 
 ```bash
-uvx --prerelease allow --from actionlineage==0.1.0a4 actionlineage version
-uvx --prerelease allow --from actionlineage==0.1.0a4 actionlineage demo run --output-dir /tmp/actionlineage-demo
-uvx --prerelease allow --from actionlineage==0.1.0a4 actionlineage journal verify /tmp/actionlineage-demo/evidence.jsonl
+uvx --prerelease allow --from actionlineage==0.1.0a5 actionlineage version
+uvx --prerelease allow --from actionlineage==0.1.0a5 actionlineage demo run --output-dir /tmp/actionlineage-demo
+uvx --prerelease allow --from actionlineage==0.1.0a5 actionlineage journal verify /tmp/actionlineage-demo/evidence.jsonl
 ```
 
 ## Package Manager Channels

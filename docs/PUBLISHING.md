@@ -80,10 +80,10 @@ avoid implying production stability and make release evidence easier to audit.
 ## Trusted Publisher Setup
 
 Package publishing uses Trusted Publisher records in TestPyPI and PyPI. Version
-`0.1.0a4` is the corrective release-prep version for the next owner-approved
+`0.1.0a5` is the corrective release-prep version for the next owner-approved
 Trusted Publishing run. Version `0.1.0a3` was published from
 `.github/workflows/release.yml` with no registry API token and remains the
-latest public package until `0.1.0a4` is published.
+latest public package until `0.1.0a5` is published.
 
 For TestPyPI:
 
@@ -128,9 +128,9 @@ After a successful release workflow run, verify downloaded artifacts with GitHub
 CLI:
 
 ```bash
-gh attestation verify actionlineage-0.1.0a4-py3-none-any.whl \
+gh attestation verify actionlineage-0.1.0a5-py3-none-any.whl \
   --repo VectorTrace-Labs/ActionLineage
-gh attestation verify actionlineage-0.1.0a4.tar.gz \
+gh attestation verify actionlineage-0.1.0a5.tar.gz \
   --repo VectorTrace-Labs/ActionLineage
 ```
 
@@ -146,14 +146,14 @@ Current public package publication proof:
 
 - TestPyPI: `https://test.pypi.org/project/actionlineage/`
 - PyPI: `https://pypi.org/project/actionlineage/`
-- Version: `0.1.0a4` after the corrective publication; `0.1.0a3` remains the latest public package until then
+- Version: `0.1.0a5` after the corrective publication; `0.1.0a3` remains the latest public package until then
 - TestPyPI workflow run: `27973522992`
 - PyPI workflow run: `27973832210`
 
 Fresh `uvx` install, deterministic demo, and journal verification previously
-passed from both indexes for `0.1.0a3` on Python 3.12. The `0.1.0a4`
+passed from both indexes for `0.1.0a3` on Python 3.12. The `0.1.0a5`
 post-publication lane must repeat that proof on Python 3.12 and 3.13. Because
-`0.1.0a4` is a prerelease, `uvx` smoke tests use `--prerelease allow`.
+`0.1.0a5` is a prerelease, `uvx` smoke tests use `--prerelease allow`.
 Organization ownership transfer remains an external follow-up.
 
 See `docs/PACKAGE_MANAGERS.md` for GHCR, Homebrew, conda-forge, and deferred

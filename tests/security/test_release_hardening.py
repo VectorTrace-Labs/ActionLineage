@@ -205,7 +205,7 @@ def test_public_quickstart_smoke_builds_uvx_package_prefix() -> None:
     args = smoker._parse_args(
         (
             "--package-spec",
-            "actionlineage==0.1.0a4",
+            "actionlineage==0.1.0a5",
             "--uvx-prerelease",
             "allow",
         )
@@ -216,7 +216,7 @@ def test_public_quickstart_smoke_builds_uvx_package_prefix() -> None:
         "--prerelease",
         "allow",
         "--from",
-        "actionlineage==0.1.0a4",
+        "actionlineage==0.1.0a5",
         "actionlineage",
     )
 
@@ -233,7 +233,7 @@ def test_public_quickstart_smoke_fails_when_expected_artifacts_are_missing(
             name=name,
             command=command,
             exit_code=0,
-            stdout="0.1.0a4\n" if name == "version" else "{}\n",
+            stdout="0.1.0a5\n" if name == "version" else "{}\n",
             stderr="",
         )
 
