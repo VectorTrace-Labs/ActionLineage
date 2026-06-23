@@ -670,6 +670,7 @@ def test_agent_validation_workflow_schedules_no_model_and_secret_gates_live_mode
     assert "if: github.event_name != 'schedule' || github.ref == 'refs/heads/main'" in workflow
     assert "--artifact-root build/evals/no-model" in workflow
     assert "actionlineage_evals public-report" in workflow
+    assert "actionlineage_evals check-public-baseline" in workflow
     assert "--json-output build/evals/reports/agent-validation-baseline.json" in workflow
     assert "--markdown-output build/evals/reports/agent-validation-baseline.md" in workflow
     assert "id: live-secret" in workflow
@@ -679,8 +680,10 @@ def test_agent_validation_workflow_schedules_no_model_and_secret_gates_live_mode
     assert "GITHUB_TOKEN: ${{ github.token }}" not in workflow
     assert "failure_fingerprint" in docs
     assert "Scheduled no-model lane" in docs
+    assert "check-public-baseline" in docs
     assert "explicit `GH_MODELS_TOKEN`" in docs
     assert "Scheduled no-model lane" in evidence
+    assert "Baseline freshness gate" in evidence
     assert "Scheduled live-model lane" in evidence
 
 

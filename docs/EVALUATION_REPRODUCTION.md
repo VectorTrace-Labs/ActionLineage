@@ -65,6 +65,8 @@ PYTHONPATH=evals uv run --group eval python -m actionlineage_evals public-report
   build/evals/public-alpha \
   --json-output docs/evidence/agent-validation-baseline.json \
   --markdown-output docs/evidence/agent-validation-baseline.md
+PYTHONPATH=evals uv run --group eval python -m actionlineage_evals check-public-baseline \
+  build/evals/public-alpha
 ```
 
 Expected current baseline:
@@ -73,7 +75,9 @@ Expected current baseline:
 - 47 of 47 declared capabilities covered;
 - 11 scripted scorecards;
 - 0 failed scorecards;
-- 0 audited leaks.
+- 0 audited leaks;
+- committed baseline check passes with either exact match or provenance-only
+  drift.
 
 See `docs/AGENT_VALIDATION_EVIDENCE.md` for the current scenario index,
 failure-class counts, and known gaps. The generated committed baseline is in

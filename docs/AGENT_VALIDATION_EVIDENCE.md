@@ -36,6 +36,8 @@ PYTHONPATH=evals uv run --group eval python -m actionlineage_evals public-report
   build/evals/public-alpha \
   --json-output docs/evidence/agent-validation-baseline.json \
   --markdown-output docs/evidence/agent-validation-baseline.md
+PYTHONPATH=evals uv run --group eval python -m actionlineage_evals check-public-baseline \
+  build/evals/public-alpha
 ```
 
 ## Current No-Model Baseline
@@ -48,6 +50,7 @@ PYTHONPATH=evals uv run --group eval python -m actionlineage_evals public-report
 | Eval import boundary | No ActionLineage core imports from eval-only packages |
 | Scripted no-model suite | 11 scorecards, 0 failed |
 | Artifact audit | 236 files scanned, 0 leaks |
+| Baseline freshness gate | Committed baseline is checked against regenerated no-model artifacts; provenance-only drift is allowed, input or semantic drift fails |
 | Scheduled no-model lane | Trusted default-branch workflow generates deterministic artifacts and public-report outputs without model credentials |
 | Scheduled live-model lane | Optional and skipped unless maintainers configure `GH_MODELS_TOKEN`; provider instability remains non-blocking |
 | Replay equivalence in the scripted baseline | 0/0 because replay is a separate command path |

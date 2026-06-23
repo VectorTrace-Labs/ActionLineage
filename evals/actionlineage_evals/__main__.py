@@ -8,6 +8,7 @@ import sys
 from pathlib import Path
 
 from actionlineage_evals.artifact_audit import audit_artifacts
+from actionlineage_evals.baseline import check_public_baseline
 from actionlineage_evals.boundary import check_eval_import_boundaries
 from actionlineage_evals.environment import DockerComposeEnvironmentController
 from actionlineage_evals.linting import lint_scenarios
@@ -151,6 +152,25 @@ def main(argv: list[str] | None = None) -> int:
         default=Path("evals/CAPABILITY_COVERAGE.yaml"),
     )
 
+    check_baseline = subcommands.add_parser("check-public-baseline")
+    check_baseline.add_argument("artifact_root", type=Path)
+    check_baseline.add_argument(
+        "--committed-report",
+        type=Path,
+        default=Path("docs/evidence/agent-validation-baseline.json"),
+    )
+    check_baseline.add_argument("--scenario-path", type=Path, default=SCENARIO_DIR)
+    check_baseline.add_argument(
+        "--coverage-path",
+        type=Path,
+        default=Path("evals/CAPABILITY_COVERAGE.yaml"),
+    )
+    check_baseline.add_argument(
+        "--schema-path",
+        type=Path,
+        default=Path("evals/SCENARIO_SCHEMA.json"),
+    )
+
     audit = subcommands.add_parser("audit-artifacts")
     audit.add_argument("artifact_root", type=Path)
     audit.add_argument("--canary", action="append", default=[])
@@ -262,6 +282,16 @@ def main(argv: list[str] | None = None) -> int:
                 "scorecards": report["suite"]["scorecard_count"],
             }
         )
+        return 0 if report["ok"] else 1
+    if args.command == "check-public-baseline":
+        report = check_public_baseline(
+            args.artifact_root,
+            committed_report_path=args.committed_report,
+            scenario_path=args.scenario_path,
+            coverage_path=args.coverage_path,
+            schema_path=args.schema_path,
+        )
+        _print(report)
         return 0 if report["ok"] else 1
     if args.command == "audit-artifacts":
         audit_result = audit_artifacts(

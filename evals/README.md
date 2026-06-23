@@ -61,6 +61,8 @@ PYTHONPATH=evals uv run --group eval python -m actionlineage_evals summarize \
   build/evals/local \
   --format markdown
 PYTHONPATH=evals uv run --group eval python -m actionlineage_evals docker-smoke
+PYTHONPATH=evals uv run --group eval python -m actionlineage_evals check-public-baseline \
+  build/evals/local
 ```
 
 Scheduled no-model runs execute on the trusted default branch and generate a
@@ -88,6 +90,13 @@ Every suite run also writes `suite-summary.json`, a compact trendable report
 with scenario status, failure-class counts, stable failure fingerprints, and
 scorer pass/fail counts. GitHub Actions job summaries render the same
 scorecards as Markdown with replay commands for quick triage.
+
+`check-public-baseline` regenerates the deterministic public baseline report
+from a no-model artifact root and compares it with
+`docs/evidence/agent-validation-baseline.json`. It ignores expected
+provenance-only changes such as commit SHA and artifact root, but fails on
+semantic evidence drift or changes to the eval-relevant input digest unless the
+committed baseline is refreshed.
 
 The scheduled GitHub Models lane runs the first six scenarios. `AVL-007` is a
 deterministic no-model provider-failure control, `AVL-008` is a budget

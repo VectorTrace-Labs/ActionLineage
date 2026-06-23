@@ -20,6 +20,7 @@ from actionlineage_evals.adapters import (  # noqa: E402
     ProviderError,
 )
 from actionlineage_evals.artifact_audit import audit_artifacts  # noqa: E402
+from actionlineage_evals.baseline import check_public_baseline  # noqa: E402
 from actionlineage_evals.boundary import check_eval_import_boundaries  # noqa: E402
 from actionlineage_evals.linting import lint_scenarios  # noqa: E402
 from actionlineage_evals.minimization import (  # noqa: E402
@@ -131,6 +132,8 @@ def test_public_agent_validation_evidence_doc_matches_registry() -> None:
     assert "Agent Validation Lab beyond `Local-proof` maturity" in doc
     assert public_report["schema_version"] == "actionlineage.dev/agent-validation-public-report-v0"
     assert public_report["scenario_ids"] == [scenario.scenario_id for scenario in scenarios]
+    assert public_report["baseline_inputs"]["digest"].startswith("sha256:")
+    assert public_report["baseline_inputs"]["file_count"] > 0
     assert public_report["suite"]["scorecard_count"] == len(scenarios)
     assert (
         public_report["capability_coverage"]["covered_capability_count"]
@@ -701,6 +704,11 @@ def test_public_baseline_report_is_generated_from_eval_artifacts(tmp_path: Path)
 
     assert report["ok"] is True
     assert report["schema_version"] == "actionlineage.dev/agent-validation-public-report-v0"
+    assert report["baseline_inputs"]["schema_version"] == (
+        "actionlineage.dev/agent-validation-baseline-inputs-v0"
+    )
+    assert report["baseline_inputs"]["digest"].startswith("sha256:")
+    assert report["baseline_inputs"]["file_count"] > 0
     assert report["suite"]["scorecard_count"] == 1
     assert report["scenario_ids"][0] == "AVL-001"
     assert report["seeds"] == [0]
@@ -720,7 +728,89 @@ def test_public_baseline_report_is_generated_from_eval_artifacts(tmp_path: Path)
     assert json.loads(json_output.read_text(encoding="utf-8")) == report
     assert markdown_output.read_text(encoding="utf-8") == markdown
     assert "Source commit under evaluation" in markdown
+    assert "Baseline input digest" in markdown
     assert "PYTHONPATH=evals uv run --group eval python -m actionlineage_evals run" in markdown
+
+
+def test_public_baseline_check_allows_provenance_only_drift(tmp_path: Path) -> None:
+    result = run_suite(
+        scenario_path=PROJECT_ROOT / "evals" / "scenarios" / "AVL-001.yaml",
+        artifact_root=tmp_path / "evals",
+        mode=RunMode.SCRIPTED,
+        model_adapter_name="scripted",
+    )
+    assert result.passed is True
+    committed = build_public_baseline_report(tmp_path / "evals")
+    committed["artifact_root"] = "build/evals/public-alpha"
+    committed["commit_sha"] = "previous-commit"
+    committed["source_commits"] = ["previous-commit"]
+    committed["reproduction_commands"] = ["stale command"]
+    committed_path = tmp_path / "committed-baseline.json"
+    committed_path.write_text(json.dumps(committed, indent=2, sort_keys=True), encoding="utf-8")
+
+    check = check_public_baseline(
+        tmp_path / "evals",
+        committed_report_path=committed_path,
+    )
+
+    assert check["ok"] is True
+    assert check["status"] == "provenance_only_drift"
+    assert check["semantic_differences"] == []
+    assert check["input_differences"] == {}
+    assert set(check["provenance_differences"]) == {
+        "artifact_root",
+        "commit_sha",
+        "reproduction_commands",
+        "source_commits",
+    }
+
+
+def test_public_baseline_check_fails_on_semantic_drift(tmp_path: Path) -> None:
+    result = run_suite(
+        scenario_path=PROJECT_ROOT / "evals" / "scenarios" / "AVL-001.yaml",
+        artifact_root=tmp_path / "evals",
+        mode=RunMode.SCRIPTED,
+        model_adapter_name="scripted",
+    )
+    assert result.passed is True
+    committed = build_public_baseline_report(tmp_path / "evals")
+    committed["suite"]["failed_count"] = 1
+    committed_path = tmp_path / "committed-baseline.json"
+    committed_path.write_text(json.dumps(committed, indent=2, sort_keys=True), encoding="utf-8")
+
+    check = check_public_baseline(
+        tmp_path / "evals",
+        committed_report_path=committed_path,
+    )
+
+    assert check["ok"] is False
+    assert check["status"] == "semantic_drift"
+    assert check["semantic_differences"]
+    assert check["semantic_differences"][0]["path"] == "$.suite.failed_count"
+
+
+def test_public_baseline_check_fails_on_input_drift(tmp_path: Path) -> None:
+    result = run_suite(
+        scenario_path=PROJECT_ROOT / "evals" / "scenarios" / "AVL-001.yaml",
+        artifact_root=tmp_path / "evals",
+        mode=RunMode.SCRIPTED,
+        model_adapter_name="scripted",
+    )
+    assert result.passed is True
+    committed = build_public_baseline_report(tmp_path / "evals")
+    committed["baseline_inputs"]["digest"] = "sha256:stale"
+    committed_path = tmp_path / "committed-baseline.json"
+    committed_path.write_text(json.dumps(committed, indent=2, sort_keys=True), encoding="utf-8")
+
+    check = check_public_baseline(
+        tmp_path / "evals",
+        committed_report_path=committed_path,
+    )
+
+    assert check["ok"] is False
+    assert check["status"] == "input_drift"
+    assert check["semantic_differences"] == []
+    assert check["input_differences"]["committed_digest"] == "sha256:stale"
 
 
 def test_inspect_task_accepts_live_configuration_metadata() -> None:

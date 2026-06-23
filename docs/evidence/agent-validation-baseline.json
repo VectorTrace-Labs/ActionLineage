@@ -1,5 +1,337 @@
 {
   "artifact_root": "build/evals/public-alpha",
+  "baseline_inputs": {
+    "digest": "sha256:af62d9ea7671d99b7a5be4cffae00e978c47d2064d0a287a1e071181925e88f0",
+    "file_count": 76,
+    "files": [
+      {
+        "path": ".github/uv-version.txt",
+        "sha256": "sha256:a3d48e39696e72af600fdf80b4018da1a208bdc3ddd5e3dfb909dce76cb83682"
+      },
+      {
+        "path": ".github/workflows/agent-validation.yml",
+        "sha256": "sha256:edb3c94e4083af2d248d853dd25fc64e77e6bf48058d676a34b135da786c7abf"
+      },
+      {
+        "path": "contracts/examples/cloud-object-write.json",
+        "sha256": "sha256:d29cf355dccf9737d350692f172272e09ce1c1d040039210e11dbb41b49b656d"
+      },
+      {
+        "path": "contracts/examples/filesystem-observation.json",
+        "sha256": "sha256:10cb23e0d010b44a1082525054a25ed888bbd44ed5207a260a1c886b588e89d5"
+      },
+      {
+        "path": "contracts/examples/mcp-tool-call.json",
+        "sha256": "sha256:85e229b1b0380d1cec02d4b7da4b7941aec8c2096bceac775684a86604a7aa7e"
+      },
+      {
+        "path": "contracts/examples/outbound-http.json",
+        "sha256": "sha256:aed05422646f8d02f8d501b1b3eb144833fdc9efea10a9515291458d65e87156"
+      },
+      {
+        "path": "contracts/examples/outbound-http.yaml",
+        "sha256": "sha256:920b4b55cd7b3da29a49abcfecd078b07a96612cc9558c3dc102c737d579d0ea"
+      },
+      {
+        "path": "contracts/examples/restricted-exfiltration.json",
+        "sha256": "sha256:f3eed56bb4da8e3240f59fc220273b487d9e5a8475f29d839d9396f509b5e8ec"
+      },
+      {
+        "path": "detections/examples/restricted-read-to-untrusted-send.yaml",
+        "sha256": "sha256:67a3ffddeae78b6bd53f954e8840d1f4395d52eeddd0505503e7b2ef9d28f883"
+      },
+      {
+        "path": "evals/CAPABILITY_COVERAGE.yaml",
+        "sha256": "sha256:d9a38c86e2d8bec56dd49dee5fe3bf92108f858f9244896864f4861b1e3f0968"
+      },
+      {
+        "path": "evals/SCENARIO_SCHEMA.json",
+        "sha256": "sha256:8412920d4bd39c24cdd1d555b695d1377df2c742086d1c1673714e75773b6103"
+      },
+      {
+        "path": "evals/actionlineage_evals/__init__.py",
+        "sha256": "sha256:04e806d2e5a6b04be9468bb324d116668331506e7883fb10eef8e7e080aaecfc"
+      },
+      {
+        "path": "evals/actionlineage_evals/__main__.py",
+        "sha256": "sha256:ab35de71ca451fb177de2e9d1faa048efdf999c6dfe18606bc3b233ac8694936"
+      },
+      {
+        "path": "evals/actionlineage_evals/adapters.py",
+        "sha256": "sha256:d1b22ebd1665bd263f9ea8edf723cd087d81e3b41d979af7a40b09c031186497"
+      },
+      {
+        "path": "evals/actionlineage_evals/artifact_audit.py",
+        "sha256": "sha256:2b11eabfe5ac704188815adc7e175d0f658988b4e8a1cd3aa44a7477e4427134"
+      },
+      {
+        "path": "evals/actionlineage_evals/baseline.py",
+        "sha256": "sha256:8f47c24600705aafc72fc83480c56826edf12550051ed01456eb95ea16d170e1"
+      },
+      {
+        "path": "evals/actionlineage_evals/boundary.py",
+        "sha256": "sha256:209947018eabefbec48a100fff95f6529d1aeeea689bf70a380060699e1af003"
+      },
+      {
+        "path": "evals/actionlineage_evals/environment.py",
+        "sha256": "sha256:d1e5b292c9be68287f0829b7a28ff5901e669c7e974c5c7faaaa49d4664ac4cf"
+      },
+      {
+        "path": "evals/actionlineage_evals/eventing.py",
+        "sha256": "sha256:3e1998571321f1d66ecad9a51704b62d5033d09a22298d4de09c561f31983a49"
+      },
+      {
+        "path": "evals/actionlineage_evals/inspect_tasks.py",
+        "sha256": "sha256:4f5f7da65103d00458cba955461d1421076c3fea1902a990f3ab1d47073f866a"
+      },
+      {
+        "path": "evals/actionlineage_evals/linting.py",
+        "sha256": "sha256:42183e424130cd025685fc590256004519d80ca0dc4d8138c628aa948a1767b0"
+      },
+      {
+        "path": "evals/actionlineage_evals/minimization.py",
+        "sha256": "sha256:92d1eeb7460e5b029c90e56d901f8e476abf72ee275bcea4a122d5b820e2a0e1"
+      },
+      {
+        "path": "evals/actionlineage_evals/models.py",
+        "sha256": "sha256:49872d38eacd69c66e180bb2ad0413fa8cfaa90cded04fb73dec0ab39d05d764"
+      },
+      {
+        "path": "evals/actionlineage_evals/provenance.py",
+        "sha256": "sha256:cad818a3ee2828ea4e455e1901da991e7cfd40d97283883478619a41f11e6bb9"
+      },
+      {
+        "path": "evals/actionlineage_evals/replay.py",
+        "sha256": "sha256:373da699aa27971c5f431c2350a6537bb4686a52c1a15793d2de485d9cf0230d"
+      },
+      {
+        "path": "evals/actionlineage_evals/runner.py",
+        "sha256": "sha256:6f164c5dccc875a6c591ba319091ae8417942d62a4782294ddf258d6e121f6ba"
+      },
+      {
+        "path": "evals/actionlineage_evals/scenarios.py",
+        "sha256": "sha256:fd4f1b21e6fe88256d99f3cfd371fc9ca28ad6bb6fea506357da65c7cc3e1961"
+      },
+      {
+        "path": "evals/actionlineage_evals/scoring.py",
+        "sha256": "sha256:bb52536b271fed8e72eb2b8c5b1435801cfe86eb3e5be46862b17acbe691e8bc"
+      },
+      {
+        "path": "evals/actionlineage_evals/stateful.py",
+        "sha256": "sha256:362717df9e3d91bf28d00113ffa70b5c543ef9e54a853dc6ef1f3684742a7f8a"
+      },
+      {
+        "path": "evals/actionlineage_evals/summary.py",
+        "sha256": "sha256:c285aee1ee410c2edcde5538346f454fc9330684144ea584748c76cb680f2287"
+      },
+      {
+        "path": "evals/actionlineage_evals/tools.py",
+        "sha256": "sha256:763c343f54dc4591fcc895cd8f95106408e6a47820a639fdac2a7a638b88217f"
+      },
+      {
+        "path": "evals/actionlineage_evals/triage.py",
+        "sha256": "sha256:0afdc6548247409d1fc14d7f5fa35db9bbbd71d5a96b0065e4bc63fa2f5f0b94"
+      },
+      {
+        "path": "evals/docker/compose.yaml",
+        "sha256": "sha256:6e40ef728ecf96cb54808d1f9ad88d55f8f64cbc03d044d9f193d7f9afb0e6ef"
+      },
+      {
+        "path": "evals/docker/receiver.py",
+        "sha256": "sha256:e681f6d817a8297ee91f1bdcd94512f00b86b9f2cfd327fd5a3dd60d99b5a63a"
+      },
+      {
+        "path": "evals/regressions/README.md",
+        "sha256": "sha256:4e27122e1907df72802732814cadea564e92f92bb88e02b3246907b118ffa442"
+      },
+      {
+        "path": "evals/scenarios/AVL-001.yaml",
+        "sha256": "sha256:a37e34b6462677ef3cbcfa72995c8db66751076dbf556956a2513d80042e6f09"
+      },
+      {
+        "path": "evals/scenarios/AVL-002.yaml",
+        "sha256": "sha256:fd8e3586d122c62b6da69bed7c87ef61b35958c025d19770727a6b307065e129"
+      },
+      {
+        "path": "evals/scenarios/AVL-003.yaml",
+        "sha256": "sha256:9995f808d7dab7eb673036c087574849764c49c2c7be4b862bbbce50805159fd"
+      },
+      {
+        "path": "evals/scenarios/AVL-004.yaml",
+        "sha256": "sha256:15bcfac1116fe226923fbbafaaf602696dffa23ab628e1738bf5a66702964581"
+      },
+      {
+        "path": "evals/scenarios/AVL-005.yaml",
+        "sha256": "sha256:66e36601aafadd9978ddf29b4eda684ca7185caac1a2c43f9a74da52e5c4f8b3"
+      },
+      {
+        "path": "evals/scenarios/AVL-006.yaml",
+        "sha256": "sha256:974bb2a2fb53ae26fc88c8352bcc154dbba6f2c80c531e1b0932ea978e1d7b15"
+      },
+      {
+        "path": "evals/scenarios/AVL-007.yaml",
+        "sha256": "sha256:0e93eb8b23c7733a080801e606cc6e004291cffe34921a659ba499b5a5632219"
+      },
+      {
+        "path": "evals/scenarios/AVL-008.yaml",
+        "sha256": "sha256:2eb9184815e0e35a562c46347621497638f37569a40127652c378796be21a16d"
+      },
+      {
+        "path": "evals/scenarios/AVL-009.yaml",
+        "sha256": "sha256:a0bdc1d87df4aedab5630e3b326e903b45911ecb17bebcef170b214d81d79488"
+      },
+      {
+        "path": "evals/scenarios/AVL-010.yaml",
+        "sha256": "sha256:ff1b9677bf610f533ac54a3a71520cb562b48528d2963a40b72785327c52a672"
+      },
+      {
+        "path": "evals/scenarios/AVL-011.yaml",
+        "sha256": "sha256:8795165dc24c7e8870c5a79e0852510989e135552154857b1e35f7f0e6c61d06"
+      },
+      {
+        "path": "pyproject.toml",
+        "sha256": "sha256:51c602baf9b420f886f93acc5ed9e25843ac2f22b809ddb3e2fd8dcfa2757427"
+      },
+      {
+        "path": "schemas/actionlineage-event-v1alpha1.schema.json",
+        "sha256": "sha256:cf9ef07b65bd565ee7438b8a05cd5e9f04e0bfba4eb6f770dbcc3d701b34f3f2"
+      },
+      {
+        "path": "src/actionlineage/contracts/__init__.py",
+        "sha256": "sha256:8a5e8f4c5852f141ce6ddaa1b721df37fb36225c6b15eac2403cfcdd86f69fff"
+      },
+      {
+        "path": "src/actionlineage/contracts/validation.py",
+        "sha256": "sha256:f6b63270840495d5e73b6d549df6d2afb6c6d8da046d374b617f50651e43a536"
+      },
+      {
+        "path": "src/actionlineage/detection/__init__.py",
+        "sha256": "sha256:6572e88818a36baea79cb76d59d42e4cde290f11d536ede86450a51c5d158dd7"
+      },
+      {
+        "path": "src/actionlineage/detection/rules.py",
+        "sha256": "sha256:bc02d89516e4df53b630ddf53884e657e0a543386cfd312da37cced9a7752638"
+      },
+      {
+        "path": "src/actionlineage/detection/sequence.py",
+        "sha256": "sha256:ed9d9238bacd6959e720eb42f3cf0b662591791464ce1b57c7e875fdbdf14801"
+      },
+      {
+        "path": "src/actionlineage/domain/__init__.py",
+        "sha256": "sha256:76c9ab78cc67d131f5c48373f0a46eb97b291900533cec15df3a5ff61736fde0"
+      },
+      {
+        "path": "src/actionlineage/domain/events.py",
+        "sha256": "sha256:955c6dd406cb4f2467a820c2c5276f37d5685e90c635c6f937d8aea49e7715cf"
+      },
+      {
+        "path": "src/actionlineage/domain/ids.py",
+        "sha256": "sha256:7eac3883e5d176c5a7da35b4b2835b4f4d237bb1ebd21af5f5df28362ae0f4b9"
+      },
+      {
+        "path": "src/actionlineage/domain/redaction.py",
+        "sha256": "sha256:9e81373341c5d73e5d520c57f47693f9483168cc2f5558584bec56e87c654076"
+      },
+      {
+        "path": "src/actionlineage/domain/serialization.py",
+        "sha256": "sha256:52936f460462b84bf44b20eae68b22db6e966f09d59bc8823a312f242a9c888d"
+      },
+      {
+        "path": "src/actionlineage/domain/time.py",
+        "sha256": "sha256:6a4bc39c13ae66d235a06486b43086312c90d046cb3d1d3bbf3897cb93e79362"
+      },
+      {
+        "path": "src/actionlineage/journal/__init__.py",
+        "sha256": "sha256:2bc9171ffb32d21e2a990066438f1a42d954cf5471f8f174d2190bcac449029a"
+      },
+      {
+        "path": "src/actionlineage/journal/anchors.py",
+        "sha256": "sha256:6cbfc52fda47cfa2266f07e33ba6ce5ade23e2d7442d464569e227a62080b61b"
+      },
+      {
+        "path": "src/actionlineage/journal/archive.py",
+        "sha256": "sha256:2142717c615fe25d9a84cc81f3a88c29f816a4a11b4378fae4084869394dedea"
+      },
+      {
+        "path": "src/actionlineage/journal/attestation.py",
+        "sha256": "sha256:6375051976d563151f4299a1440b8043b0c5784e4e40f3abb39bfafded51757e"
+      },
+      {
+        "path": "src/actionlineage/journal/git_anchor.py",
+        "sha256": "sha256:f1f8dc0aade0b498aeafc38c25cf821552d3a401eb8bcaf10cb0e06ddd566dbf"
+      },
+      {
+        "path": "src/actionlineage/journal/hashing.py",
+        "sha256": "sha256:9510a6ab64cd43adb514947df399d86374f7e86da777fa0be9bb62ccddd17b16"
+      },
+      {
+        "path": "src/actionlineage/journal/local.py",
+        "sha256": "sha256:1d26435add99842ff7c278f8bb9529675f27d0beedc2b7f225ac70cc9a602f24"
+      },
+      {
+        "path": "src/actionlineage/journal/verify.py",
+        "sha256": "sha256:03299b324c52e117b46bbeae55b2f29ac48b03ceaddd88d312804a0607ffec8a"
+      },
+      {
+        "path": "src/actionlineage/observers/__init__.py",
+        "sha256": "sha256:c2931749a792f44ddb93d0acebe760c5a1e16d59349e47e0bba01df38353c01d"
+      },
+      {
+        "path": "src/actionlineage/observers/cloud.py",
+        "sha256": "sha256:de3d8c53bb4bfb9e88a462e68b8c5130ff3f35b32d0525a56ed518922a406088"
+      },
+      {
+        "path": "src/actionlineage/observers/external.py",
+        "sha256": "sha256:e62f359f033d2c4dc3f3de0a796d329a39910f4e29434da3dca54d0adb6efa7e"
+      },
+      {
+        "path": "src/actionlineage/observers/local.py",
+        "sha256": "sha256:ee76cf178b19969300443a3935c6bbaf8a222b2d365bb84b9d050bc3f9105ba4"
+      },
+      {
+        "path": "src/actionlineage/observers/verification.py",
+        "sha256": "sha256:522c05b76f21da85cb94f833f7247cb3aa379535401cf18faa817a1e8568c5f3"
+      },
+      {
+        "path": "src/actionlineage/projection/__init__.py",
+        "sha256": "sha256:99afd2e093444a8b893dd129d6d78a5f57bc1256f6ff7141a0c057948372aa18"
+      },
+      {
+        "path": "src/actionlineage/projection/postgres.py",
+        "sha256": "sha256:fd85689bc5b977c6677f3e5a87b38c03b8d3fab77f71a45df4f2037ebeebb8c7"
+      },
+      {
+        "path": "src/actionlineage/projection/sqlite.py",
+        "sha256": "sha256:b83440ca7e83c99cc84bdb7b07a4d89b35190e34ec0eeb048beed4f9a0c1d743"
+      },
+      {
+        "path": "uv.lock",
+        "sha256": "sha256:7cde940981155eec14d18edfb48e75508ba542fb964fa007aab83081c7d43d56"
+      }
+    ],
+    "input_roots": [
+      ".github/uv-version.txt",
+      ".github/workflows/agent-validation.yml",
+      "contracts/examples",
+      "detections/examples",
+      "evals/CAPABILITY_COVERAGE.yaml",
+      "evals/SCENARIO_SCHEMA.json",
+      "evals/actionlineage_evals",
+      "evals/docker",
+      "evals/regressions/README.md",
+      "evals/scenarios",
+      "pyproject.toml",
+      "schemas/actionlineage-event-v1alpha1.schema.json",
+      "src/actionlineage/contracts",
+      "src/actionlineage/detection",
+      "src/actionlineage/domain",
+      "src/actionlineage/journal",
+      "src/actionlineage/observers",
+      "src/actionlineage/projection",
+      "uv.lock"
+    ],
+    "schema_version": "actionlineage.dev/agent-validation-baseline-inputs-v0"
+  },
   "capability_coverage": {
     "capability_count": 47,
     "covered_capability_count": 47,
@@ -37,7 +369,7 @@
     "strict": true,
     "uncovered_capabilities": []
   },
-  "commit_sha": "c12ea20294441e13c83019ae710a10bf67909a7d",
+  "commit_sha": "a95e034f903ec959bd02722e1ffe804b1a222196",
   "coverage": {
     "contract_coverage": {
       "failed": 1,
@@ -866,7 +1198,7 @@
     0
   ],
   "source_commits": [
-    "c12ea20294441e13c83019ae710a10bf67909a7d"
+    "a95e034f903ec959bd02722e1ffe804b1a222196"
   ],
   "suite": {
     "failed_count": 0,

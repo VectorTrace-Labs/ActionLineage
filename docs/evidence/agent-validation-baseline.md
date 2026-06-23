@@ -7,8 +7,9 @@ This deterministic report is generated from the development-only no-model Agent 
 | Field | Value |
 | --- | --- |
 | Schema | `actionlineage.dev/agent-validation-public-report-v0` |
-| Source commit under evaluation | `c12ea20294441e13c83019ae710a10bf67909a7d` |
+| Source commit under evaluation | `a95e034f903ec959bd02722e1ffe804b1a222196` |
 | Artifact root | `build/evals/public-alpha` |
+| Baseline input digest | `sha256:af62d9ea7671d99b7a5be4cffae00e978c47d2064d0a287a1e071181925e88f0` (76 files) |
 | Scenarios | 11 scorecards for 11 registered scenarios |
 | Failed scorecards | 0 |
 | Seeds | `[0]` |

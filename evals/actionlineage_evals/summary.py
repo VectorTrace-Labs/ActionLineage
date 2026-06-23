@@ -23,6 +23,45 @@ from actionlineage_evals.scenarios import (
 )
 
 PUBLIC_REPORT_SCHEMA_VERSION = "actionlineage.dev/agent-validation-public-report-v0"
+BASELINE_INPUTS_SCHEMA_VERSION = "actionlineage.dev/agent-validation-baseline-inputs-v0"
+
+BASELINE_INPUT_PATHS = (
+    Path(".github/uv-version.txt"),
+    Path(".github/workflows/agent-validation.yml"),
+    Path("contracts/examples"),
+    Path("detections/examples"),
+    Path("evals/CAPABILITY_COVERAGE.yaml"),
+    Path("evals/SCENARIO_SCHEMA.json"),
+    Path("evals/actionlineage_evals"),
+    Path("evals/docker"),
+    Path("evals/regressions/README.md"),
+    Path("evals/scenarios"),
+    Path("pyproject.toml"),
+    Path("schemas/actionlineage-event-v1alpha1.schema.json"),
+    Path("src/actionlineage/contracts"),
+    Path("src/actionlineage/detection"),
+    Path("src/actionlineage/domain"),
+    Path("src/actionlineage/journal"),
+    Path("src/actionlineage/observers"),
+    Path("src/actionlineage/projection"),
+    Path("uv.lock"),
+)
+BASELINE_INPUT_SUFFIXES = {
+    ".json",
+    ".lock",
+    ".md",
+    ".py",
+    ".toml",
+    ".txt",
+    ".yaml",
+    ".yml",
+}
+BASELINE_INPUT_EXCLUDED_PARTS = {
+    "__pycache__",
+    ".mypy_cache",
+    ".pytest_cache",
+    ".ruff_cache",
+}
 
 
 def summarize_scorecards(root: Path) -> JsonMap:
@@ -295,6 +334,7 @@ def build_public_baseline_report(
     scenario_api_versions = sorted({str(scenario.raw.get("apiVersion")) for scenario in scenarios})
     report: JsonMap = {
         "artifact_root": str(artifact_root),
+        "baseline_inputs": baseline_input_fingerprint(),
         "capability_coverage": capability_coverage,
         "commit_sha": sorted(source_commits)[0] if len(source_commits) == 1 else None,
         "coverage": {
@@ -355,6 +395,34 @@ def build_public_baseline_report(
     return report
 
 
+def baseline_input_fingerprint(project_root: Path = Path(".")) -> JsonMap:
+    """Return the deterministic input fingerprint for public eval evidence."""
+
+    root = Path(project_root)
+    file_records: list[JsonMap] = []
+    for path in _iter_baseline_input_files(root):
+        relative_path = path.relative_to(root)
+        file_records.append(
+            {
+                "path": relative_path.as_posix(),
+                "sha256": _hash_file(path),
+            }
+        )
+    digest = hashlib.sha256()
+    for record in file_records:
+        digest.update(str(record["path"]).encode("utf-8"))
+        digest.update(b"\0")
+        digest.update(str(record["sha256"]).encode("utf-8"))
+        digest.update(b"\n")
+    return {
+        "digest": f"sha256:{digest.hexdigest()}",
+        "file_count": len(file_records),
+        "files": file_records,
+        "input_roots": [path.as_posix() for path in BASELINE_INPUT_PATHS],
+        "schema_version": BASELINE_INPUTS_SCHEMA_VERSION,
+    }
+
+
 def render_public_baseline_report_markdown(report: JsonMap) -> str:
     """Render a public baseline report as deterministic Markdown."""
 
@@ -379,6 +447,11 @@ def render_public_baseline_report_markdown(report: JsonMap) -> str:
         f"| Schema | `{report['schema_version']}` |",
         f"| Source commit under evaluation | `{report.get('commit_sha') or 'mixed'}` |",
         f"| Artifact root | `{report['artifact_root']}` |",
+        (
+            "| Baseline input digest | "
+            f"`{report['baseline_inputs']['digest']}` "
+            f"({report['baseline_inputs']['file_count']} files) |"
+        ),
         (
             f"| Scenarios | {suite['scorecard_count']} scorecards for "
             f"{suite['scenario_count']} registered scenarios |"
@@ -534,6 +607,25 @@ def _load_json(path: Path) -> JsonMap:
     return raw
 
 
+def _iter_baseline_input_files(project_root: Path) -> tuple[Path, ...]:
+    files: set[Path] = set()
+    for input_path in BASELINE_INPUT_PATHS:
+        path = project_root / input_path
+        if path.is_file() and _is_baseline_input_file(path):
+            files.add(path)
+        elif path.is_dir():
+            for candidate in path.rglob("*"):
+                if candidate.is_file() and _is_baseline_input_file(candidate):
+                    files.add(candidate)
+    return tuple(sorted(files, key=lambda item: item.relative_to(project_root).as_posix()))
+
+
+def _is_baseline_input_file(path: Path) -> bool:
+    if any(part in BASELINE_INPUT_EXCLUDED_PARTS for part in path.parts):
+        return False
+    return path.suffix in BASELINE_INPUT_SUFFIXES
+
+
 def _load_optional_json(path: Path) -> JsonMap:
     if not path.exists():
         return {}
@@ -682,3 +774,7 @@ def _scenario_result_failure_fingerprint(result: ScenarioResult) -> str | None:
 def _sha256_json(value: JsonMap) -> str:
     payload = json.dumps(value, sort_keys=True, separators=(",", ":")).encode("utf-8")
     return f"sha256:{hashlib.sha256(payload).hexdigest()}"
+
+
+def _hash_file(path: Path) -> str:
+    return f"sha256:{hashlib.sha256(path.read_bytes()).hexdigest()}"

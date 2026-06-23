@@ -104,6 +104,16 @@ Current classification-and-operations slice:
    no-new-privileges, read-only roots, tmpfs scratch space, resource caps, and
    an explicit eval network.
 
+Current baseline-freshness slice:
+
+1. Add a deterministic baseline input fingerprint to public no-model evidence.
+2. Add `check-public-baseline` so CI compares regenerated no-model evidence
+   with `docs/evidence/agent-validation-baseline.json`.
+3. Treat commit SHA, artifact root, and reproduction-command differences as
+   provenance-only drift when semantic evidence and input fingerprints match.
+4. Fail on semantic evidence drift or eval-relevant input drift unless the
+   committed baseline is refreshed in the same change.
+
 Acceptance commands for this phase:
 
 ```bash
@@ -127,6 +137,8 @@ PYTHONPATH=evals uv run --group eval python -m actionlineage_evals replay-artifa
 PYTHONPATH=evals uv run --group eval python -m actionlineage_evals audit-artifacts \
   build/evals/local
 PYTHONPATH=evals uv run --group eval python -m actionlineage_evals summarize \
+  build/evals/local
+PYTHONPATH=evals uv run --group eval python -m actionlineage_evals check-public-baseline \
   build/evals/local
 PYTHONPATH=evals uv run --group eval python -m actionlineage_evals docker-smoke
 PYTHONPATH=evals uv run --group eval python -m actionlineage_evals run \

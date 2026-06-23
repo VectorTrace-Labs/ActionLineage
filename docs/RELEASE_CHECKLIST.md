@@ -72,6 +72,8 @@ PYTHONPATH=evals uv run --group eval python -m actionlineage_evals public-report
   build/evals/public-alpha \
   --json-output docs/evidence/agent-validation-baseline.json \
   --markdown-output docs/evidence/agent-validation-baseline.md
+PYTHONPATH=evals uv run --group eval python -m actionlineage_evals check-public-baseline \
+  build/evals/public-alpha
 ```
 
 ## Clean Snapshot Gate

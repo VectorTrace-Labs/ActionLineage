@@ -261,7 +261,8 @@ Scheduled no-model lane:
 - Permissions: `contents: read`.
 - Model requests: zero.
 - Runs the deterministic scripted suite, replay path, regression corpus, artifact
-  audit, and public-report generation from trusted default-branch code.
+  audit, public-report generation, and `check-public-baseline` freshness checks
+  from trusted default-branch code.
 - Uploads generated artifacts for maintainer review.
 
 Scheduled live-model lane:
