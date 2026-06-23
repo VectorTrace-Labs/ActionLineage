@@ -158,26 +158,28 @@ Out of scope:
 - Adding a new package manager support claim.
 - Adding screenshots or generated artifacts.
 
-## Candidate 5: Add An Empty Static-Console Timeline Fixture
+## Candidate 5: Add An Empty Static-Console CLI Export Fixture
 
 Suggested labels: `good first issue`, `tests`, `console`.
 
 Why it helps:
 
-The static console is an onboarding and review artifact. A focused empty
-timeline fixture can keep zero-result selectors clear without implying that no
-action occurred.
+The static console is an onboarding and review artifact. The renderer now has
+direct empty-timeline coverage; a CLI-path fixture would keep the projection
+export command equally clear for first-time evaluators.
 
 Suggested scope:
 
 - Add a focused case to `tests/console/test_static_console.py`.
-- Build a `TimelineResult` with no events and render it with
-  `render_console_html`.
-- Keep the fixture independent of the demo database.
+- Run the deterministic demo and call the `projection export-console` CLI with
+  a trace ID that is not present in the projection.
+- Assert the generated HTML includes the same empty-state wording as the direct
+  renderer test.
 
 Acceptance criteria:
 
-- The rendered HTML clearly shows an empty timeline, graph, and evidence-link
+- The CLI exits successfully and writes the requested static HTML file.
+- The generated HTML clearly shows an empty timeline, graph, and evidence-link
   state.
 - Status counts remain zero.
 - Wording does not treat an empty timeline as evidence that no action occurred.

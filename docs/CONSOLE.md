@@ -75,6 +75,7 @@ reviewed input for future native shells and remains a rendered view.
 ## Included Views
 
 - Timeline rows ordered by the projection's deterministic incident order.
+- Explicit empty-state rows when a selector has no projected events.
 - Evidence graph showing causal parent-to-child edges and evidence-link
   subject-to-evidence edges.
 - Event details with escaped JSON payloads.
@@ -90,6 +91,8 @@ reviewed input for future native shells and remains a rendered view.
 - The console does not persist new evidence.
 - The console does not replace journal verification.
 - Missing observations are displayed as missing observations only.
+- A selector with no projected events means no matching events were in the
+  projection output; it is not evidence that no action occurred.
 - Case notes and saved views are rendered annotations, not journal evidence.
 - Console context text is passed through the redaction policy before rendering.
 - Hostile-looking filenames, HTML-like text, and link-like strings in context

@@ -214,7 +214,7 @@ def test_external_review_docs_prepare_review_without_claiming_validation() -> No
     assert "Candidate 2: Add Reference-Style Fragment Link Coverage" in docs["good_first"]
     assert "Candidate 3: Add A Future Event Compatibility Fixture" in docs["good_first"]
     assert "Candidate 4: Add One Failed-Prerequisite Troubleshooting Example" in docs["good_first"]
-    assert "Candidate 5: Add An Empty Static-Console Timeline Fixture" in docs["good_first"]
+    assert "Candidate 5: Add An Empty Static-Console CLI Export Fixture" in docs["good_first"]
     assert "Acceptance criteria" in docs["good_first"]
     assert "Suggested verification" in docs["good_first"]
     assert "Out of scope" in docs["good_first"]

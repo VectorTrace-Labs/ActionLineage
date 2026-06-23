@@ -240,6 +240,12 @@ def render_console_html(
     evidence_rows = "\n".join(
         row for row in (_evidence_link_row(event) for event in timeline.events) if row
     )
+    timeline_rows = rows or _empty_row(5, "No events matched this selector")
+    verification_table_rows = verification_rows or _empty_row(
+        4,
+        "No verification states in this timeline",
+    )
+    detail_rows = details or '<p class="note">No event details matched this selector.</p>'
     status_counts = _status_counts(timeline.events)
     return f"""<!doctype html>
 <html lang="en">
@@ -399,14 +405,14 @@ def render_console_html(
           <h2 class="panel-title">Timeline</h2>
           <table aria-label="Timeline">
             <thead><tr><th>Seq</th><th>Time</th><th>Type</th><th>Event</th><th>Parent</th></tr></thead>
-            <tbody>{rows}</tbody>
+            <tbody>{timeline_rows}</tbody>
           </table>
         </div>
         <div>
           <h2 class="panel-title">Verification Matrix</h2>
           <table aria-label="Verification Matrix">
             <thead><tr><th>Event</th><th>Status</th><th>Evidence</th><th>Subject</th></tr></thead>
-            <tbody>{verification_rows}</tbody>
+            <tbody>{verification_table_rows}</tbody>
           </table>
         </div>
       </div>
@@ -418,7 +424,7 @@ def render_console_html(
         <tbody>{evidence_rows or _empty_row(5, "No evidence links in this timeline")}</tbody>
       </table>
       <h2 class="panel-title">Event Details</h2>
-      {details}
+      {detail_rows}
     </section>
   </main>
 </body>

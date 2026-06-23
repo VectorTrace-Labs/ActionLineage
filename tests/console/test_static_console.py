@@ -203,6 +203,28 @@ def test_write_console_escapes_hostile_context_fields_and_redacts_canaries(
     assert "api_key=[REDACTED:secret]" in html
 
 
+def test_render_console_html_shows_empty_timeline_without_absence_claims() -> None:
+    timeline = TimelineResult(
+        selector_type="trace_id",
+        selector_value="trace_empty",
+        events=(),
+    )
+
+    html = render_console_html(timeline)
+
+    assert "ActionLineage Investigation Console" in html
+    assert "Events<strong>0</strong>" in html
+    assert "No events matched this selector" in html
+    assert "No verification states in this timeline" in html
+    assert "No events in this timeline" in html
+    assert "No evidence links in this timeline" in html
+    assert "No event details matched this selector." in html
+    assert html.count("<strong>0</strong>") == 5
+    assert "Missing observation means no observation was recorded" in html
+    assert "proof " + "of absence" not in html.lower()
+    assert "Content-Security-Policy" in html
+
+
 def test_console_cli_loads_case_context_file(tmp_path: Path) -> None:
     demo = run_demo(tmp_path / "demo")
     output_path = tmp_path / "console.html"
