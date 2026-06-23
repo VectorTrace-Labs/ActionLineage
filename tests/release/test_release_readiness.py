@@ -436,6 +436,9 @@ def test_release_checklist_covers_required_gates() -> None:
         "gh workflow run release.yml -f publish_target=pypi",
         "gh attestation verify",
         "repository-url: https://test.pypi.org/legacy/",
+        "Post-publication verification",
+        "scripts/smoke_public_quickstart.py",
+        "actionlineage-post-publication-*",
         "GHCR preview container images remain version-tagged",
         "packages: write",
         "deploy/docker/Dockerfile",
@@ -530,6 +533,25 @@ def test_release_workflow_builds_attests_and_uses_trusted_publishing() -> None:
     assert """name '*.tar.gz'""" in workflow
     assert "repository-url: https://test.pypi.org/legacy/" in workflow
     assert "packages-dir: release-artifacts/dist" in workflow
+    assert "name: Post-publication verification" in workflow
+    assert "needs: [publish-testpypi, publish-pypi]" in workflow
+    assert "needs['publish-testpypi'].result == 'success'" in workflow
+    assert "needs['publish-pypi'].result == 'success'" in workflow
+    assert "timeout-minutes: 20" in workflow
+    assert "https://test.pypi.org/pypi/actionlineage/json" in workflow
+    assert "https://pypi.org/pypi/actionlineage/json" in workflow
+    assert "python -m venv .venv-post-publication" in workflow
+    assert (
+        'python -m pip install --pre ${PIP_INDEX_ARGS} "actionlineage==${ACTIONLINEAGE_VERSION}"'
+        in workflow
+    )
+    assert "installed-metadata.json" in workflow
+    assert "public-smoke.json" in workflow
+    assert '--expected-version "${ACTIONLINEAGE_VERSION}"' in workflow
+    assert (
+        "actionlineage-post-publication-${{ inputs.publish_target }}-py${{ matrix.python-version }}"
+    ) in workflow
+    assert "retention-days: 14" in workflow
     assert "startsWith(github.ref, 'refs/tags/v')" in workflow
     assert "environment:" in workflow
     assert "name: testpypi" in workflow
@@ -549,7 +571,7 @@ def test_artifact_upload_action_is_node24_pin_and_download_action_is_not_used() 
 
     assert upload_artifact_v7_0_1 in release
     assert upload_artifact_v7_0_1 in agent_validation
-    assert combined.count(f"actions/upload-artifact@{upload_artifact_v7_0_1}") == 4
+    assert combined.count(f"actions/upload-artifact@{upload_artifact_v7_0_1}") == 5
     assert "actions/download-artifact@" not in combined
     assert 'python-version: ["3.12", "3.13"]' in agent_validation
     assert (
@@ -614,6 +636,10 @@ def test_publishing_docs_record_package_publication_and_remaining_gates() -> Non
     assert "https://test.pypi.org/project/actionlineage/" in publishing
     assert "27973522992" in publishing
     assert "27973832210" in publishing
+    assert "post-publication verification job runs only after the selected publishing" in publishing
+    assert "index-propagation.json" in publishing
+    assert "installed-metadata.json" in publishing
+    assert "public-smoke.json" in publishing
     assert "Organization ownership transfer remains an external follow-up" in publishing
     assert "ghcr.io/vectortrace-labs/actionlineage" in package_managers
     assert "PyPI/TestPyPI | Alpha-supported" in package_managers
@@ -645,6 +671,8 @@ def test_public_claim_audit_tracks_package_description_drift() -> None:
     assert "scripts/check_release_consistency.py" in audit
     assert "PALPHA-013" in hardening_plan
     assert "PALPHA-014" in hardening_plan
+    assert "PALPHA-015" in hardening_plan
+    assert "FIXED_IN_POST_PUBLICATION_VERIFY_SLICE" in hardening_plan
     assert "MITIGATED_WITH_CURL_FALLBACK" in hardening_plan
     assert "3ff4185b199fc74474f65dfa86d72441728a010d" in hardening_plan
     assert "Public package long descriptions can lag" in hardening_plan

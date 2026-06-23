@@ -56,8 +56,9 @@ evidence and limitations.
   first-time-user artifact smoke, SBOM, dependency license checks, dependency
   audit, unsigned local provenance generation, and concise GitHub job-summary
   evidence.
-- Release workflow for CI-built artifacts, GitHub artifact attestations, and
-  manual Trusted Publishing jobs.
+- Release workflow for CI-built artifacts, GitHub artifact attestations, manual
+  Trusted Publishing jobs, and owner-gated post-publication smoke verification
+  reports.
 - External review guides, reproduction commands, and feedback templates that
   make review easier without claiming review has happened.
 - Release-candidate audit artifacts and owner publication checklist that prepare

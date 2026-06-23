@@ -28,6 +28,10 @@ Every run performs these stages:
 7. Download the artifact bundle with GitHub CLI and verify checksums plus wheel,
    source distribution, manifest, and review-index presence.
 8. Build, smoke-test, and publish a version-tagged GHCR container image.
+9. After an owner-approved TestPyPI or PyPI publication succeeds, wait boundedly
+   for public package-index propagation on Python 3.12 and 3.13, install the
+   exact tag version from that index, verify installed metadata, run the public
+   quickstart smoke path, and upload the verification report.
 
 Manual runs can additionally choose `publish_target`:
 
@@ -40,6 +44,13 @@ the already-built artifact bundle with GitHub CLI. Publishing jobs also use
 `id-token: write` for Trusted Publishing and no package registry API tokens.
 The TestPyPI and PyPI jobs run only when the manual workflow is dispatched
 against a tag whose ref starts with `refs/tags/v`.
+
+The post-publication verification job runs only after the selected publishing
+job succeeds. It does not publish or mutate package indexes; it reads package
+index JSON, installs the exact published version into clean Python 3.12 and
+3.13 environments, checks `importlib.metadata` version information, runs
+`scripts/smoke_public_quickstart.py`, and uploads `index-propagation.json`,
+`installed-metadata.json`, and `public-smoke.json` as workflow artifacts.
 
 ## GHCR Container Images
 

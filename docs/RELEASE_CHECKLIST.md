@@ -219,6 +219,12 @@ Required workflow properties:
   they depend on the artifact smoke job and fetch the already-built artifact
   bundle with GitHub CLI.
 - publishing jobs require a manual workflow dispatch against `refs/tags/v*`.
+- Post-publication verification runs only after the selected TestPyPI or PyPI
+  publishing job succeeds; it waits boundedly for package-index propagation,
+  installs the exact tag version in clean Python 3.12 and 3.13 environments,
+  verifies installed package metadata, runs
+  `scripts/smoke_public_quickstart.py`, and uploads
+  `actionlineage-post-publication-*` reports.
 - no PyPI API token or username/password secret is required.
 - TestPyPI uses `repository-url: https://test.pypi.org/legacy/`.
 

@@ -78,13 +78,14 @@ data, not universal performance guarantees.
 | PALPHA-012 | P2 | The GitHub release artifact bundle did not yet generate or smoke-check the release-candidate manifest and review index produced by the local proof scripts. | FIXED_IN_RELEASE_WORKFLOW_PROOF_SLICE |
 | PALPHA-013 | P1 | Public package long descriptions can lag the corrected source README and still contain stale owner-gated GitHub Release wording until the next owner-approved package upload. | BLOCKED_ON_RELEASE |
 | PALPHA-014 | P2 | Local release-proof reproduction docs mixed `/tmp` distribution artifacts with `build/release-candidate` manifest inputs, making copy-paste verification harder. | FIXED_IN_RELEASE_PROOF_DOCS_SLICE |
+| PALPHA-015 | P1 | Owner-approved TestPyPI/PyPI publication jobs did not yet have a bounded, clean-environment post-publication verification lane for the exact published tag version. | FIXED_IN_POST_PUBLICATION_VERIFY_SLICE |
 
 ## Phase Plan
 
 | Phase | Scope | Current status |
 | --- | --- | --- |
 | 0 | Baseline and public-claim audit | In progress |
-| 1 | Release and version consistency | In progress: checker added; GitHub Release object remains owner-gated |
+| 1 | Release and version consistency | In progress: checker added; release workflow now prepares bounded post-publication package-index verification after owner-approved publishing; GitHub Release object remains owner-gated |
 | 2 | Package metadata and discoverability | In progress: local metadata improved; public metadata waits for next release |
 | 3 | README landing experience and visual proof | In progress: generated demo evidence map and freshness check added |
 | 4 | Clean installation and first-time-user testing | In progress: baseline public smoke completed; built wheel and sdist first-time-user smoke gate added to CI; first-time evaluator troubleshooting guide added for install, demo, path/browser, extras, offline/online, and release proof/review-index failures |
@@ -92,7 +93,7 @@ data, not universal performance guarantees.
 | 6 | Agent Validation Lab public evidence | In progress: deterministic no-model baseline report is generated into `docs/evidence/agent-validation-baseline.*` from 11 scorecards; scheduled no-model artifacts run on trusted default-branch code; optional live-model execution is gated on `GH_MODELS_TOKEN` and remains separate |
 | 7 | Reliability and adversarial hardening | In progress: SQLite projection handles close under warning-as-error coverage; static console context bounds and CSP added; verified-prefix recovery rejects in-place overwrite and streams output; journal verification rejects newline-less truncated final records; ambiguous HTTP observer matches remain unverified with fixture coverage; service-mode tests use a dev-only `httpx2` test-client backend so release proof remains warning-free without adding runtime TCB |
 | 8 | External review and community readiness | In progress: review guides, reproduction docs, structured feedback templates, generated manifest command, and generated release-proof review index command added; real review remains external-validation |
-| 9 | Release-candidate audit | In progress: local candidate audit refreshed against implementation commit `3ff4185b199fc74474f65dfa86d72441728a010d`; draft notes, owner checklist, generated manifest script, review index with release-consistency summaries, release-workflow artifact smoke, dependency license report, online release-consistency evidence, and external gates are documented; publication remains owner-gated |
+| 9 | Release-candidate audit | In progress: local candidate audit refreshed against implementation commit `3ff4185b199fc74474f65dfa86d72441728a010d`; draft notes, owner checklist, generated manifest script, review index with release-consistency summaries, release-workflow artifact smoke and post-publication verification lane, dependency license report, online release-consistency evidence, and external gates are documented; publication remains owner-gated |
 
 ## Owner Gates
 
