@@ -11,14 +11,16 @@ settings.
 | Item | Result |
 | --- | --- |
 | Branch | `codex/public-alpha-hardening` |
-| Audited implementation commit | `3ff4185b199fc74474f65dfa86d72441728a010d` before this audit-doc refresh |
+| Audited implementation commit | Recorded in generated manifest field `audited_implementation_commit`; rerun after any source or documentation commit before publication |
 | Candidate version | `0.1.0a3` |
 | Recommendation | Do not republish immutable PyPI/TestPyPI files for `0.1.0a3`; create or repair the GitHub Release object only after owner review. |
 | Generated local manifest | `build/release-candidate/manifest.json` |
 | Generated review index | `build/release-candidate/REVIEW_INDEX.md` |
 
 Generated artifacts under `build/release-candidate/` are local release proof and
-are not committed source files.
+are not committed source files. The generated manifest and review index are the
+authoritative source for exact local artifact hashes because a documentation
+commit changes the source archive.
 
 ## Gate Summary
 
@@ -28,16 +30,16 @@ are not committed source files.
 | Ruff lint | PASS | `uv run ruff check .` |
 | Ruff format check | PASS | `uv run ruff format --check .`, 135 files already formatted |
 | Strict mypy | PASS | `uv run mypy src`, 56 source files |
-| Full pytest after release proof index consistency-summary slice | PASS | `308 passed`; no warning summary |
-| Branch coverage with eval group | PASS | `298 passed`, 86.03 percent total coverage; no warning summary |
+| Full pytest after Phase 7 journal I/O hardening slice | PASS | `316 passed`; no warning summary |
+| Branch coverage with eval group | PASS | `316 passed`, 86.14 percent total coverage; no warning summary |
 | Compatibility tests | PASS | Included in full suite; golden journals and public API tests passed |
 | Property-based regression tests | PASS | Included in full suite through Hypothesis tests |
 | Claim-language scan | PASS | `uv run python scripts/check_claims_language.py .` |
 | Secret scan | PASS | `uv run python scripts/secret_scan.py .` |
 | Dependency license check | PASS | 23 direct dependencies checked, 0 issues |
 | Dependency audit | PASS | `uv run pip-audit`, no known vulnerabilities |
-| Local Markdown link check | PASS | Repository-relative Markdown links resolved |
-| Clean tracked snapshot from prior candidate bundle | PASS | Earlier `git archive HEAD` snapshot passed `297 passed, 1 skipped` with `uv run --all-extras pytest`; current full-suite result is recorded above |
+| Local Markdown link check | PASS | 45 links checked across 101 files; repository-relative links and heading fragments resolved |
+| Clean tracked snapshot from prior candidate bundle | PASS | Earlier `git archive HEAD` snapshot passed `297 passed, 1 skipped` with `uv run --all-extras pytest`; current full-suite and artifact-smoke results are recorded above |
 | Wheel and sdist build | PASS | `uv build --out-dir build/release-candidate/dist` |
 | Built wheel metadata | PASS | Version `0.1.0a3`, `Requires-Python: >=3.12`, six project URLs |
 | Built sdist metadata | PASS | Version `0.1.0a3`, `Requires-Python: >=3.12`, six project URLs, no local cache entries |
@@ -53,28 +55,35 @@ are not committed source files.
 | Dependency license report | PASS | `build/release-candidate/actionlineage-license-report.json` |
 | Release provenance generation | PASS | 2 artifact subjects |
 | SHA256 checksums | PASS | `build/release-candidate/SHA256SUMS.txt` |
-| Release-candidate manifest generation | PASS | `scripts/write_release_candidate_manifest.py` generates `build/release-candidate/manifest.json` from local artifact bytes and evidence summaries |
-| Release proof review index | PASS | `build/release-candidate/REVIEW_INDEX.md` generated from the local manifest; manifest-listed artifact hashes verified; release-consistency reports are summarized when present |
+| Release-candidate manifest generation | PASS | `scripts/write_release_candidate_manifest.py` generated `build/release-candidate/manifest.json` with 9 artifacts, 21 gates, and no manifest issues |
+| Release proof review index | PASS | `build/release-candidate/REVIEW_INDEX.md` generated from the local manifest; 9 of 9 manifest-listed artifact hashes verified; release-consistency reports are summarized when present |
 | Release workflow artifact proof | PASS | `.github/workflows/release.yml` generates `build/release/release-consistency-offline.json`, `build/release/manifest.json`, and `build/release/REVIEW_INDEX.md`, includes them in checksums and attestations, and smoke-checks the bundle after artifact download |
 | Release consistency, offline | PASS | 0 failures, 0 unknowns |
-| Release consistency, online JSON metadata | FAIL / OWNER-GATED | `fail_count=5`, `unknown_count=7`; package and GitHub JSON checks fall back from Python `urllib` to bounded read-only `curl` after local URL/TLS failures; this detects known public package metadata drift and the missing GitHub Release object |
+| Release consistency, online JSON metadata | FAIL / OWNER-GATED | `fail_count=5`, `unknown_count=6`; package and GitHub JSON checks fall back from Python `urllib` to bounded read-only `curl` after local URL/TLS failures; this detects known public package metadata drift and the missing GitHub Release object |
 | Project URL HEAD reachability | UNKNOWN in local TLS-constrained environments | Lower-priority URL HEAD checks still use Python `urllib` and may remain environment-sensitive |
 | Public state via independent curl spot-checks | PASS / BLOCKED | PyPI/TestPyPI expose `0.1.0a3`; GitHub tag exists; GitHub Release object for `v0.1.0a3` is absent |
 | Container build | NOT_IN_RELEASE_SCOPE | Preview container gates run in GitHub Actions on hosted Ubuntu |
 | GitHub Release object for `v0.1.0a3` | BLOCKED_ON_OWNER | Creating or repairing release objects requires owner action |
-| Repository security settings | BLOCKED_ON_EXTERNAL_VALIDATION | Branch protection, secret scanning, push protection, private vulnerability reporting, Dependabot alert status, and latest CodeQL status require external validation |
+| Repository security settings | PARTIAL PASS / AUTHENTICATED READ | Authenticated GitHub API read confirmed `main` branch protection with strict required checks (`CodeQL analysis`, `container`, `Dependency review`, `Python 3.12`, `Python 3.13`), required conversation resolution, force-push and deletion protection, Dependabot security updates, secret scanning, and push protection. Alert-list endpoints and private vulnerability reporting still need UI/API confirmation before public claims. |
 | External security review | BLOCKED_ON_EXTERNAL_VALIDATION | No external review is claimed |
 | New package publication | BLOCKED_ON_OWNER | Do not publish or overwrite package-index artifacts without explicit owner approval |
 
 ## Built Artifacts
 
-| Artifact | SHA256 |
+Exact hashes for a local proof run are generated into
+`build/release-candidate/manifest.json`, `build/release-candidate/REVIEW_INDEX.md`,
+and `build/release-candidate/SHA256SUMS.txt`. The generated review index
+verifies manifest-listed artifact hashes and reports gate status counts.
+
+| Artifact | Hash source |
 | --- | --- |
-| `build/release-candidate/dist/actionlineage-0.1.0a3-py3-none-any.whl` | `e3460120c7d85cfe8fa46f3bf5e8dc66f7e3ecb899979967d662b0072f800cae` |
-| `build/release-candidate/dist/actionlineage-0.1.0a3.tar.gz` | `488ff0ebf8bee34426ec9787d8aaacf829f2f5efc146073a0ba4eaa2b73bcbb6` |
-| `build/release-candidate/actionlineage-sbom.json` | `3c69f5f1bec06abd9c260cc748a010cebfa22a1cea9a6b7ed8e7c0555cfb072a` |
-| `build/release-candidate/actionlineage-license-report.json` | `8aaaaaa19f63c34ba9a164daff8c63d43315e35450b9cea912a40b0514698e7e` |
-| `build/release-candidate/actionlineage-release-provenance.json` | `6c8003b10261b38e501ca1c0cfe645828a0ae59436c258ac147e69ff6db93d50` |
+| `build/release-candidate/dist/actionlineage-0.1.0a3-py3-none-any.whl` | `build/release-candidate/manifest.json` and `build/release-candidate/SHA256SUMS.txt` |
+| `build/release-candidate/dist/actionlineage-0.1.0a3.tar.gz` | `build/release-candidate/manifest.json` and `build/release-candidate/SHA256SUMS.txt` |
+| `build/release-candidate/actionlineage-sbom.json` | `build/release-candidate/manifest.json` and `build/release-candidate/SHA256SUMS.txt` |
+| `build/release-candidate/actionlineage-license-report.json` | `build/release-candidate/manifest.json` and `build/release-candidate/SHA256SUMS.txt` |
+| `build/release-candidate/actionlineage-release-provenance.json` | `build/release-candidate/manifest.json` and `build/release-candidate/SHA256SUMS.txt` |
+| `build/release-candidate/release-consistency-offline.json` | `build/release-candidate/manifest.json` and `build/release-candidate/SHA256SUMS.txt` |
+| `build/release-candidate/release-consistency-online.json` | `build/release-candidate/manifest.json` and `build/release-candidate/SHA256SUMS.txt` |
 
 ## Agent Validation Baseline
 
@@ -107,6 +116,21 @@ Read-only `curl` checks showed:
 - GitHub tag: `refs/tags/v0.1.0a3`.
 - GitHub releases listed: `v0.1.0a2`, `v0.1.0a1`.
 - GitHub Release object for `v0.1.0a3`: absent.
+
+Authenticated read-only GitHub API checks showed:
+
+- Repository visibility: public.
+- Default branch: `main`.
+- `main` branch protection: enabled.
+- Strict required checks: `CodeQL analysis`, `container`,
+  `Dependency review`, `Python 3.12`, and `Python 3.13`.
+- Required conversation resolution: enabled.
+- Force pushes and branch deletion: disabled.
+- Dependabot security updates: enabled.
+- Secret scanning and push protection: enabled.
+
+Current alert-list status, private vulnerability reporting, and latest public
+CodeQL run status still need UI/API confirmation before public claims.
 
 ## Exact Clean-Install Commands
 
@@ -142,8 +166,10 @@ uvx --from build/release-candidate/dist/actionlineage-0.1.0a3.tar.gz actionlinea
   metadata by a bounded read-only `curl` fallback. Lower-priority project URL
   HEAD checks can still remain UNKNOWN in local certificate-store constrained
   environments.
-- External repository security settings and third-party review cannot be
-  verified from local source alone.
+- Some external repository security settings were confirmed through
+  authenticated read-only GitHub API responses, but alert-list status, private
+  vulnerability reporting, latest public CodeQL status, and third-party review
+  still require external/UI validation before public claims.
 - Container publication remains preview and externally gated.
 
 ## Related Owner Docs

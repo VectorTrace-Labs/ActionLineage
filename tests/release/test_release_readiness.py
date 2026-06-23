@@ -349,12 +349,12 @@ def test_release_candidate_audit_prepares_without_publishing() -> None:
     assert "Release-candidate manifest generation" in audit
     assert "build/release-candidate/REVIEW_INDEX.md" in audit
     assert "Release proof review index" in audit
-    assert "3ff4185b199fc74474f65dfa86d72441728a010d" in audit
+    assert "Recorded in generated manifest field `audited_implementation_commit`" in audit
+    assert "rerun after any source or documentation commit before publication" in audit
     assert "Do not republish immutable PyPI/TestPyPI files" in audit
     assert "135 files already formatted" in audit
-    assert "298 passed" in audit
-    assert "86.03 percent total coverage" in audit
-    assert "308 passed" in audit
+    assert "316 passed" in audit
+    assert "86.14 percent total coverage" in audit
     assert "no warning summary" in audit
     assert "23 package entries" in audit
     assert "23 direct dependencies checked, 0 issues" in audit
@@ -365,8 +365,11 @@ def test_release_candidate_audit_prepares_without_publishing() -> None:
     assert "build/release/manifest.json" in audit
     assert "build/release/REVIEW_INDEX.md" in audit
     assert "bounded read-only `curl`" in audit
-    assert "`fail_count=5`, `unknown_count=7`" in audit
+    assert "`fail_count=5`, `unknown_count=6`" in audit
     assert "Lower-priority URL HEAD checks" in audit
+    assert "PARTIAL PASS / AUTHENTICATED READ" in audit
+    assert "CodeQL analysis" in audit
+    assert "secret scanning, and push protection" in audit
     assert "contract validate, case export, and static console export" in audit
     assert "47/47 declared capabilities covered" in audit
     assert "236 files scanned, 0 leaks" in audit
@@ -374,14 +377,14 @@ def test_release_candidate_audit_prepares_without_publishing() -> None:
     assert "docs/evidence/agent-validation-baseline.json" in audit
     assert "GitHub Release object for `v0.1.0a3`: absent" in audit
     assert "corrected long description" in audit
-    assert "e3460120c7d85cfe8fa46f3bf5e8dc66f7e3ecb899979967d662b0072f800cae" in audit
-    assert "488ff0ebf8bee34426ec9787d8aaacf829f2f5efc146073a0ba4eaa2b73bcbb6" in audit
-    assert "3c69f5f1bec06abd9c260cc748a010cebfa22a1cea9a6b7ed8e7c0555cfb072a" in audit
-    assert "8aaaaaa19f63c34ba9a164daff8c63d43315e35450b9cea912a40b0514698e7e" in audit
-    assert "6c8003b10261b38e501ca1c0cfe645828a0ae59436c258ac147e69ff6db93d50" in audit
+    assert "Exact hashes for a local proof run are generated into" in audit
+    assert "build/release-candidate/SHA256SUMS.txt" in audit
+    assert "actionlineage-0.1.0a3-py3-none-any.whl" in audit
+    assert "actionlineage-0.1.0a3.tar.gz" in audit
 
     for status in (
         "PASS",
+        "PARTIAL PASS",
         "BLOCKED_ON_OWNER",
         "BLOCKED_ON_EXTERNAL_VALIDATION",
         "NOT_IN_RELEASE_SCOPE",
@@ -710,7 +713,7 @@ def test_public_claim_audit_tracks_package_description_drift() -> None:
     assert "FIXED_IN_JOURNAL_IO_FAILURE_SLICE" in hardening_plan
     assert "MITIGATED_WITH_CURL_FALLBACK" in hardening_plan
     assert "Done locally; external review pending" in hardening_plan
-    assert "Needs one final refresh against the final branch head" in hardening_plan
+    assert "Done locally; rerun after any new commit" in hardening_plan
     assert "Public package long descriptions can lag" in hardening_plan
     assert "Local release-proof reproduction docs mixed" in hardening_plan
     assert "bounded read-only `curl` fallback" in audit

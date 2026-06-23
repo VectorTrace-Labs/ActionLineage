@@ -1,6 +1,6 @@
 # Owner Publication Checklist
 
-Last reviewed: 2026-06-22.
+Last reviewed: 2026-06-23.
 
 This checklist lists actions that require owner approval or external service
 access. Codex must not perform these actions without explicit approval.
@@ -45,12 +45,14 @@ access. Codex must not perform these actions without explicit approval.
 
 ## Repository Settings
 
-Confirm through GitHub UI or API before public claims:
+Authenticated read-only GitHub API checks on 2026-06-23 confirmed branch
+protection on `main`, strict required checks, Dependabot security updates,
+secret scanning, and push protection. Reconfirm through GitHub UI or API before
+public claims:
 
-- branch protection on `main`;
-- CodeQL status;
-- Dependabot alerts and security updates;
-- secret scanning and push protection;
+- latest CodeQL status;
+- current Dependabot alert status;
+- current secret-scanning alert status;
 - private vulnerability reporting;
 - public GHCR package visibility, if a preview image is published.
 
