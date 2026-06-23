@@ -158,6 +158,8 @@ def test_readme_quickstart_uses_demo_aligned_contract() -> None:
     assert "demo-evidence-map.svg" in readme
     assert "canonical evidence remains `evidence.jsonl`" in readme
     assert "External review guide" in readme
+    assert "Good first issue candidates" in readme
+    assert "docs/GOOD_FIRST_ISSUES.md" in readme
     assert "Review outreach drafts" in readme
     assert "docs/REVIEW_OUTREACH_DRAFTS.md" in readme
     assert "Evaluation reproduction" in readme
@@ -181,6 +183,7 @@ def test_external_review_docs_prepare_review_without_claiming_validation() -> No
             encoding="utf-8"
         ),
         "hardening": (PROJECT_ROOT / "docs/SECURITY_HARDENING.md").read_text(encoding="utf-8"),
+        "good_first": (PROJECT_ROOT / "docs/GOOD_FIRST_ISSUES.md").read_text(encoding="utf-8"),
         "troubleshooting": (PROJECT_ROOT / "docs/TROUBLESHOOTING.md").read_text(encoding="utf-8"),
         "outreach": (PROJECT_ROOT / "docs/REVIEW_OUTREACH_DRAFTS.md").read_text(encoding="utf-8"),
         "case_study": (PROJECT_ROOT / "docs/ADOPTION_CASE_STUDY_TEMPLATE.md").read_text(
@@ -205,6 +208,17 @@ def test_external_review_docs_prepare_review_without_claiming_validation() -> No
     assert "release-consistency-offline.json" in docs["reproduction"]
     assert "review index summarizes the report counts" in docs["reproduction"]
     assert "release-consistency-*.json" in docs["external"]
+    assert "docs/GOOD_FIRST_ISSUES.md" in docs["external"]
+    assert "Good First Issue Candidates" in docs["good_first"]
+    assert "Candidate 1: Extend Ambiguous HTTP Correlation Coverage" in docs["good_first"]
+    assert "Candidate 2: Validate Markdown Fragment Links Locally" in docs["good_first"]
+    assert "Candidate 3: Add A Future Event Compatibility Fixture" in docs["good_first"]
+    assert "Candidate 4: Add One Failed-Prerequisite Troubleshooting Example" in docs["good_first"]
+    assert "Candidate 5: Add A Hostile Static-Console Context Fixture" in docs["good_first"]
+    assert "Acceptance criteria" in docs["good_first"]
+    assert "Suggested verification" in docs["good_first"]
+    assert "Out of scope" in docs["good_first"]
+    assert "They are not automatically opened" in docs["good_first"]
     assert "Outreach Drafts" in docs["external"]
     assert "Release And Evaluation Announcement Draft" in docs["outreach"]
     assert "Technical Article Outline" in docs["outreach"]
@@ -232,6 +246,7 @@ def test_external_review_docs_prepare_review_without_claiming_validation() -> No
         "scripts/check_release_consistency.py",
         "scripts/write_release_candidate_manifest.py",
         "build/release-candidate/REVIEW_INDEX.md",
+        "docs/GOOD_FIRST_ISSUES.md",
         "docs/REVIEW_OUTREACH_DRAFTS.md",
         "actionlineage doctor",
         'pipx run --pip-args="--pre"',
@@ -684,8 +699,10 @@ def test_public_claim_audit_tracks_package_description_drift() -> None:
     assert "PALPHA-014" in hardening_plan
     assert "PALPHA-015" in hardening_plan
     assert "PALPHA-016" in hardening_plan
+    assert "PALPHA-017" in hardening_plan
     assert "FIXED_IN_POST_PUBLICATION_VERIFY_SLICE" in hardening_plan
     assert "FIXED_IN_OUTREACH_DRAFTS_SLICE" in hardening_plan
+    assert "FIXED_IN_GOOD_FIRST_ISSUES_SLICE" in hardening_plan
     assert "MITIGATED_WITH_CURL_FALLBACK" in hardening_plan
     assert "3ff4185b199fc74474f65dfa86d72441728a010d" in hardening_plan
     assert "Public package long descriptions can lag" in hardening_plan

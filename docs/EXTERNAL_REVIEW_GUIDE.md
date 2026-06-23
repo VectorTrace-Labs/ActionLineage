@@ -125,15 +125,10 @@ For sensitive vulnerabilities, follow `SECURITY.md` and report privately.
 
 ## Useful First Contributions
 
-These are good first issue candidates for a maintainer to create manually when
-ready. They are not automatically opened by this document.
-
-- Extend the minimized ambiguous-correlation fixture with one additional
-  observer or adapter example.
-- Add one documentation link-check target that runs without network credentials.
-- Add a small compatibility fixture for a future-but-preserved event type.
-- Improve troubleshooting text for one failed quickstart prerequisite.
-- Add a synthetic static-console hostile-input fixture with no real secrets.
+`docs/GOOD_FIRST_ISSUES.md` contains maintainer-ready good first issue
+candidates with suggested scope, acceptance criteria, verification commands,
+and out-of-scope boundaries. They are not automatically opened by this
+document.
 
 ## Outreach Drafts
 

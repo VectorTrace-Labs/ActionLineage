@@ -315,6 +315,8 @@ reference.
   no-model eval baseline and limitations.
 - [External review guide](docs/EXTERNAL_REVIEW_GUIDE.md): five-minute review
   path, semantics to challenge, and safe feedback routes.
+- [Good first issue candidates](docs/GOOD_FIRST_ISSUES.md):
+  maintainer-ready issue drafts with bounded acceptance criteria.
 - [Review outreach drafts](docs/REVIEW_OUTREACH_DRAFTS.md): announcement and
   technical article outlines for maintainer review.
 - [Evaluation reproduction](docs/EVALUATION_REPRODUCTION.md): exact commands
