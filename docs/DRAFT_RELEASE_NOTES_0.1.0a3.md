@@ -34,9 +34,9 @@ exports.
 
 - Full eval-group coverage run: 318 tests passed, 86.14 percent total coverage,
   with no warning summary.
-- Release-candidate manifest: 9 artifact rows, 23 gate rows, and no manifest
+- Release-candidate manifest: 8 artifact rows, 23 gate rows, and no manifest
   generation issues.
-- Release proof review index: generated from the manifest and verified all 9
+- Release proof review index: generated from the manifest and verified all 8
   manifest-listed artifact hashes.
 - Dependency license report: 23 direct dependencies checked, 0 issues.
 - Built wheel and source distribution both ran `actionlineage version`, demo
@@ -49,7 +49,8 @@ exports.
 ## Known Limitations
 
 - GitHub Release object creation or repair is owner-gated.
-- Public PyPI/TestPyPI project URLs are absent until a future owner-approved
+- Public PyPI/TestPyPI project URLs are absent, and package descriptions may
+  retain stale GitHub Release artifact wording until a future owner-approved
   package release refreshes metadata.
 - Service mode, MCP interception, cloud observers, GHCR images, Kubernetes, and
   deployment assets remain preview or external-validation surfaces.

@@ -397,7 +397,7 @@ def test_release_candidate_audit_prepares_without_publishing() -> None:
     assert "not a request to republish immutable package-index artifacts" in draft_notes
     assert "ambiguous HTTP correlation as unverified evidence" in draft_notes
     assert "318 tests passed, 86.14 percent total coverage" in draft_notes
-    assert "9 artifact rows, 23 gate rows" in draft_notes
+    assert "8 artifact rows, 23 gate rows" in draft_notes
     assert "No external audit, external adoption, production use, independent review" in draft_notes
     assert "Codex must not perform these actions without explicit approval" in owner_checklist
     assert "build/release-candidate/REVIEW_INDEX.md" in owner_checklist

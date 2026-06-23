@@ -55,8 +55,8 @@ commit changes the source archive.
 | Dependency license report | PASS | `build/release-candidate/actionlineage-license-report.json` |
 | Release provenance generation | PASS | 2 artifact subjects |
 | SHA256 checksums | PASS | `build/release-candidate/SHA256SUMS.txt` |
-| Release-candidate manifest generation | PASS | `scripts/write_release_candidate_manifest.py` generated `build/release-candidate/manifest.json` with 9 artifacts, 23 gates, and no manifest issues |
-| Release proof review index | PASS | `build/release-candidate/REVIEW_INDEX.md` generated from the local manifest; 9 of 9 manifest-listed artifact hashes verified; release-consistency reports are summarized when present |
+| Release-candidate manifest generation | PASS | `scripts/write_release_candidate_manifest.py` generated `build/release-candidate/manifest.json` with 8 artifacts, 23 gates, and no manifest issues |
+| Release proof review index | PASS | `build/release-candidate/REVIEW_INDEX.md` generated from the local manifest; 8 of 8 manifest-listed artifact hashes verified; release-consistency reports are summarized when present |
 | Release workflow artifact proof | PASS | `.github/workflows/release.yml` generates `build/release/release-consistency-offline.json`, `build/release/manifest.json`, and `build/release/REVIEW_INDEX.md`, includes them in checksums and attestations, and smoke-checks the bundle after artifact download |
 | Release consistency, offline | PASS | 0 failures, 0 unknowns |
 | Release consistency, online | FAIL / OWNER-GATED | `fail_count=5`, `unknown_count=0`; package and GitHub JSON checks and project URL HEAD checks fall back from Python `urllib` to bounded read-only `curl` after local URL/TLS failures; this detects known public package metadata drift and the missing GitHub Release object |
