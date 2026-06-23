@@ -40,6 +40,7 @@ def build_summary(
     coverage_xml: Path,
     coverage_floor: float = DEFAULT_COVERAGE_FLOOR,
     sbom_path: Path,
+    license_report_path: Path,
     provenance_path: Path,
     dist_dir: Path,
     wheel_smoke_dir: Path,
@@ -57,6 +58,7 @@ def build_summary(
     artifact_checks = (
         ("Demo evidence map", demo_map_svg.exists(), str(demo_map_svg)),
         ("SBOM", sbom_path.exists(), str(sbom_path)),
+        ("Dependency license report", license_report_path.exists(), str(license_report_path)),
         ("Release provenance", provenance_path.exists(), str(provenance_path)),
         ("Wheel artifact", bool(list(dist_dir.glob("*.whl"))), str(dist_dir)),
         ("Source distribution", bool(list(dist_dir.glob("*.tar.gz"))), str(dist_dir)),
@@ -93,8 +95,9 @@ def build_summary(
             "",
             "Security and release proof steps in this job include Ruff, format check, strict mypy, "
             "pytest with branch coverage, claim-language guard, repository-local Markdown link "
-            "check, project secret scan, dependency audit, SBOM generation, built wheel/sdist "
-            "smoke tests, release consistency, and local provenance generation.",
+            "check, project secret scan, dependency license check, dependency audit, SBOM "
+            "generation, built wheel/sdist smoke tests, release consistency, and local provenance "
+            "generation.",
             "",
             "Agent Validation Lab evidence is produced by the dedicated "
             "`agent-validation` workflow.",
@@ -156,6 +159,7 @@ def _parse_args(argv: Sequence[str]) -> argparse.Namespace:
     parser.add_argument("--coverage-xml", type=Path, required=True)
     parser.add_argument("--coverage-floor", type=float, default=DEFAULT_COVERAGE_FLOOR)
     parser.add_argument("--sbom", type=Path, required=True)
+    parser.add_argument("--license-report", type=Path, required=True)
     parser.add_argument("--provenance", type=Path, required=True)
     parser.add_argument("--dist-dir", type=Path, required=True)
     parser.add_argument("--wheel-smoke-dir", type=Path, required=True)
@@ -172,6 +176,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         coverage_xml=args.coverage_xml,
         coverage_floor=args.coverage_floor,
         sbom_path=args.sbom,
+        license_report_path=args.license_report,
         provenance_path=args.provenance,
         dist_dir=args.dist_dir,
         wheel_smoke_dir=args.wheel_smoke_dir,

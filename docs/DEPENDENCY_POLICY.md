@@ -42,7 +42,8 @@ projection, or CLI dependency.
   would duplicate framework behavior for little release value.
 - License: BSD-3-Clause, based on current PyPI metadata.
 - Maintainer and update policy: locked by `uv.lock`, reviewed through normal
-  dependency-update PRs, SBOM generation, and `pip-audit`.
+  dependency-update PRs, SBOM generation, `scripts/check_dependency_licenses.py`,
+  and `pip-audit`.
 - Transitive impact: `httpcore2` and `truststore`; shared dependencies such as
   AnyIO, IDNA, H11, and typing extensions are already present elsewhere.
 - Security implications: used in local tests to exercise preview service
@@ -82,7 +83,10 @@ Run these before publishing a release candidate:
 ```bash
 uv run pip-audit
 uv run python scripts/generate_sbom.py --output build/actionlineage-sbom.json
+uv run python scripts/check_dependency_licenses.py \
+  --output build/actionlineage-license-report.json
 ```
 
-Generated SBOMs are release artifacts. Do not commit them unless the release
-process explicitly asks for a reviewed artifact snapshot.
+Generated SBOMs and dependency license reports are release artifacts. Do not
+commit them unless the release process explicitly asks for a reviewed artifact
+snapshot.

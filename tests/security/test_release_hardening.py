@@ -240,12 +240,14 @@ def test_ci_quality_summary_reports_coverage_and_artifacts(tmp_path: Path) -> No
         encoding="utf-8",
     )
     sbom_path = tmp_path / "sbom.json"
+    license_report_path = tmp_path / "license-report.json"
     provenance_path = tmp_path / "provenance.json"
     dist_dir = tmp_path / "dist"
     wheel_smoke_dir = tmp_path / "wheel-smoke"
     sdist_smoke_dir = tmp_path / "sdist-smoke"
     demo_map_svg = tmp_path / "demo" / "demo-evidence-map.svg"
     sbom_path.write_text("{}", encoding="utf-8")
+    license_report_path.write_text("{}", encoding="utf-8")
     provenance_path.write_text("{}", encoding="utf-8")
     dist_dir.mkdir()
     (dist_dir / "actionlineage-0.1.0a3-py3-none-any.whl").write_text("", encoding="utf-8")
@@ -260,6 +262,7 @@ def test_ci_quality_summary_reports_coverage_and_artifacts(tmp_path: Path) -> No
         coverage_xml=coverage_xml,
         coverage_floor=85,
         sbom_path=sbom_path,
+        license_report_path=license_report_path,
         provenance_path=provenance_path,
         dist_dir=dist_dir,
         wheel_smoke_dir=wheel_smoke_dir,
@@ -271,6 +274,7 @@ def test_ci_quality_summary_reports_coverage_and_artifacts(tmp_path: Path) -> No
     assert "Branch-enabled total coverage: `86.00%`" in result.markdown
     assert "Line coverage: `90.00%`" in result.markdown
     assert "Branch coverage: `78.00%`" in result.markdown
+    assert "| Dependency license report | PASS |" in result.markdown
     assert "| Wheel quickstart smoke | PASS |" in result.markdown
     assert "Agent Validation Lab evidence is produced by the dedicated" in result.markdown
 
@@ -283,6 +287,7 @@ def test_ci_quality_summary_reports_missing_evidence(tmp_path: Path) -> None:
         coverage_xml=tmp_path / "missing-coverage.xml",
         coverage_floor=85,
         sbom_path=tmp_path / "missing-sbom.json",
+        license_report_path=tmp_path / "missing-license-report.json",
         provenance_path=tmp_path / "missing-provenance.json",
         dist_dir=tmp_path / "missing-dist",
         wheel_smoke_dir=tmp_path / "missing-wheel-smoke",
@@ -294,6 +299,7 @@ def test_ci_quality_summary_reports_missing_evidence(tmp_path: Path) -> None:
     assert "Branch-enabled total coverage: `MISSING`" in result.markdown
     assert "coverage XML not found" in result.markdown
     assert "| SBOM | MISSING |" in result.markdown
+    assert "| Dependency license report | MISSING |" in result.markdown
     assert "| Wheel quickstart smoke | MISSING |" in result.markdown
 
 
@@ -301,12 +307,56 @@ def test_lightweight_sbom_includes_runtime_dependency() -> None:
     generator = _load_script("generate_sbom")
 
     sbom = generator.build_sbom(PROJECT_ROOT / "pyproject.toml")
-    packages = {(package["scope"], package["name"]) for package in sbom["packages"]}
+    packages = {(package["scope"], package["name"]): package for package in sbom["packages"]}
 
     assert sbom["bom_format"] == "actionlineage.dev/simple-sbom-v0"
     assert sbom["project"]["license"] == "Apache-2.0"
     assert ("runtime:pydantic>=2.10,<3", "pydantic") in packages
+    assert packages[("runtime:pydantic>=2.10,<3", "pydantic")]["license"] == "MIT"
     assert all("license" in package for package in sbom["packages"])
+
+
+def test_dependency_license_check_passes_current_direct_dependencies() -> None:
+    checker = _load_script("check_dependency_licenses")
+
+    report = checker.build_license_report(PROJECT_ROOT / "pyproject.toml")
+    packages = {(package["scope"], package["name"]): package for package in report["packages"]}
+
+    assert report["schema_version"] == "actionlineage.dev/dependency-license-report-v0"
+    assert report["ok"] is True
+    assert report["issues"] == []
+    assert report["packages_checked"] >= 23
+    assert packages[("runtime:pydantic>=2.10,<3", "pydantic")]["normalized_license"] == "MIT"
+    assert packages[("extra:dev:httpx2>=2,<3", "httpx2")]["normalized_license"] == ("BSD-3-Clause")
+
+
+def test_dependency_license_check_flags_unknown_and_denied_licenses() -> None:
+    checker = _load_script("check_dependency_licenses")
+
+    report = checker.evaluate_packages(
+        [
+            {
+                "name": "unknown-lib",
+                "scope": "runtime:unknown-lib>=1",
+                "status": "installed",
+                "version": "1.0.0",
+                "license": "unknown",
+            },
+            {
+                "name": "denied-lib",
+                "scope": "extra:dev:denied-lib>=1",
+                "status": "installed",
+                "version": "1.0.0",
+                "license": "GPL-3.0-only",
+            },
+        ]
+    )
+
+    assert report["ok"] is False
+    assert {issue["reason"] for issue in report["issues"]} == {
+        "denied_license",
+        "unknown_license",
+    }
 
 
 def test_release_provenance_hashes_dist_artifacts_without_signing_claims(tmp_path: Path) -> None:

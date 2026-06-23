@@ -48,12 +48,13 @@ evidence and limitations.
   execution is skipped unless maintainers configure `GH_MODELS_TOKEN`.
 - Deterministic demo evidence map generated from local demo artifacts for
   onboarding and visual review; canonical evidence remains the local journal.
-- Release hardening scripts for claim language, secret scanning, SBOM, local
-  provenance, dependency audit, repository-local Markdown link checking, and
-  release consistency.
+- Release hardening scripts for claim language, secret scanning, SBOM,
+  dependency license reporting, local provenance, dependency audit,
+  repository-local Markdown link checking, and release consistency.
 - CI release-proof gates for branch-enabled total coverage, wheel/sdist build,
-  first-time-user artifact smoke, SBOM, dependency audit, unsigned local
-  provenance generation, and concise GitHub job-summary evidence.
+  first-time-user artifact smoke, SBOM, dependency license checks, dependency
+  audit, unsigned local provenance generation, and concise GitHub job-summary
+  evidence.
 - Release workflow for CI-built artifacts, GitHub artifact attestations, and
   manual Trusted Publishing jobs.
 - External review guides, reproduction commands, and feedback templates that

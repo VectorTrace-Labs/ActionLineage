@@ -368,6 +368,8 @@ def test_release_checklist_covers_required_gates() -> None:
         "scripts/check_markdown_links.py",
         "scripts/secret_scan.py",
         "scripts/generate_sbom.py",
+        "scripts/check_dependency_licenses.py",
+        "--license-report build/actionlineage-license-report.json",
         "uv run pip-audit",
         "uv build --out-dir dist",
         "scripts/smoke_public_quickstart.py",
@@ -415,6 +417,9 @@ def test_ci_runs_local_release_proof_gates() -> None:
     assert (
         "uv run python scripts/generate_sbom.py --output /tmp/actionlineage-sbom.json" in workflow
     )
+    assert "name: Dependency license check" in workflow
+    assert "scripts/check_dependency_licenses.py" in workflow
+    assert "--output /tmp/actionlineage-license-report.json" in workflow
     assert "uv run pip-audit" in workflow
     assert "uv build --out-dir /tmp/actionlineage-dist" in workflow
     assert "uv run actionlineage demo run --output-dir /tmp/actionlineage-demo" in workflow
@@ -433,6 +438,7 @@ def test_ci_runs_local_release_proof_gates() -> None:
     assert "name: CI quality summary" in workflow
     assert "scripts/write_ci_quality_summary.py" in workflow
     assert "--coverage-floor 85" in workflow
+    assert "--license-report /tmp/actionlineage-license-report.json" in workflow
     assert 'cat /tmp/actionlineage-ci-summary.md >> "$GITHUB_STEP_SUMMARY"' in workflow
 
 
@@ -445,6 +451,9 @@ def test_release_workflow_builds_attests_and_uses_trusted_publishing() -> None:
     assert "python-version: ${{ matrix.python-version }}" in workflow
     assert "name: Verify release candidate" in workflow
     assert "name: Build release artifacts" in workflow
+    assert "name: Dependency license check" in workflow
+    assert "name: Generate dependency license report" in workflow
+    assert "build/release/actionlineage-license-report.json" in workflow
     assert "name: Smoke test release artifact bundle" in workflow
     assert "name: Attest release artifacts" not in workflow
     assert "needs: verify" in workflow

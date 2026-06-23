@@ -17,9 +17,11 @@ It runs on:
 Every run performs these stages:
 
 1. Verify the release candidate with lint, format, type checking, tests,
-   claim-language guard, secret scan, and dependency audit.
+   claim-language guard, secret scan, dependency license check, and dependency
+   audit.
 2. Build the wheel and source distribution.
-3. Generate SBOM, local release provenance, and checksums.
+3. Generate SBOM, dependency license report, local release provenance, and
+   checksums.
 4. Generate GitHub artifact attestations for the built artifacts.
 5. Upload the release artifact bundle.
 6. Download the artifact bundle with GitHub CLI and verify checksums plus wheel

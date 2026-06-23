@@ -105,6 +105,10 @@ def _package_row(name: str, requirement: str, scope: str) -> dict[str, str]:
 
 
 def _license(distribution: metadata.Distribution) -> str:
+    license_expression = distribution.metadata.get("License-Expression")
+    if license_expression:
+        return license_expression
+
     license_value = distribution.metadata.get("License")
     if license_value:
         return license_value

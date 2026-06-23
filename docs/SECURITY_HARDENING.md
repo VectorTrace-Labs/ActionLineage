@@ -11,6 +11,8 @@ Run these checks in CI and before release:
 uv run python scripts/check_claims_language.py .
 uv run python scripts/secret_scan.py .
 uv run python scripts/generate_sbom.py --output build/actionlineage-sbom.json
+uv run python scripts/check_dependency_licenses.py \
+  --output build/actionlineage-license-report.json
 uv run python scripts/generate_release_provenance.py \
   --dist-dir dist \
   --output build/actionlineage-release-provenance.json
@@ -21,11 +23,13 @@ gh workflow run release.yml -f publish_target=none
 The claim-language scan catches unsupported public claims. The secret scan is a
 high-confidence repository guard and does not replace dedicated enterprise
 secret scanning. The SBOM generator emits a lightweight JSON inventory from
-`pyproject.toml` and installed package metadata. The release provenance
-generator emits a local manifest with artifact hashes. The `release.yml`
-workflow builds release artifacts in GitHub Actions and generates GitHub
-artifact attestations; package-index publication uses the configured Trusted
-Publisher records described in `docs/PUBLISHING.md`.
+`pyproject.toml` and installed package metadata. The dependency license check is
+a local metadata allowlist/denylist gate for direct project dependencies; it is
+review evidence, not legal advice. The release provenance generator emits a
+local manifest with artifact hashes. The `release.yml` workflow builds release
+artifacts in GitHub Actions and generates GitHub artifact attestations;
+package-index publication uses the configured Trusted Publisher records
+described in `docs/PUBLISHING.md`.
 
 ## Resource Bounds
 
@@ -66,6 +70,8 @@ cloud credentials, model providers, or internet access.
 - Keep adapter dependencies behind optional extras.
 - Run `pip-audit` for known third-party advisories.
 - Generate an SBOM for release candidates.
+- Generate a dependency license report and fail on unknown or denied direct
+  dependency licenses.
 - Generate a local release provenance manifest for built artifacts.
 - Generate GitHub artifact attestations from the release workflow before
   describing release assets as attested.

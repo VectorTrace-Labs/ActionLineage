@@ -78,7 +78,8 @@ Status: Codex-executable alpha gates implemented; external validation remains.
 Codex-executable work:
 
 - Keep golden journals readable and projectable.
-- Keep scanners, SBOM, dependency audit, and local provenance in CI.
+- Keep scanners, SBOM, dependency license checks, dependency audit, and local
+  provenance in CI.
 - Keep provenance subjects limited to release artifacts.
 - Keep branch-enabled total coverage and concise GitHub job-summary evidence in
   CI as non-regression release signals.
@@ -98,7 +99,8 @@ Codex-executable work:
 
 - Keep Docker build and smoke tests in CI.
 - Keep deployment docs preview-labeled.
-- Generate local wheel, sdist, SBOM, and unsigned provenance.
+- Generate local wheel, sdist, SBOM, dependency license report, and unsigned
+  provenance.
 - Build release artifacts in GitHub Actions.
 - Generate GitHub artifact attestations for release artifacts.
 - Prepare manual TestPyPI/PyPI Trusted Publishing jobs without package-index
