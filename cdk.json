@@ -1,7 +1,0 @@
-{
-  "app": "tsx infra/bin/actionlineage-site.ts",
-  "context": {
-    "@aws-cdk/core:defaultCrossStackReferences": "strong",
-    "domainName": "actionlineage.dev"
-  }
-}
