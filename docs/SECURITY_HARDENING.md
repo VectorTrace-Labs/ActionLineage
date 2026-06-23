@@ -90,6 +90,11 @@ Component-local security regressions also cover static console context
 rendering: hostile note and saved-view fields are escaped, secret-like canaries
 are redacted, and annotations remain non-canonical review metadata.
 
+Journal append failure regressions cover preflight read failures and simulated
+write failures such as disk-full or permission errors. These paths fail as
+`JournalAppendError`, avoid echoing event payload canaries in the public error
+message, and release the local sidecar lock.
+
 ## Supply Chain
 
 - Keep core dependencies small and documented.

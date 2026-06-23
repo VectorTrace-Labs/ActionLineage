@@ -24,6 +24,13 @@ the existing journal before writing, requires the incoming
 record plus a newline terminator, flushes, and calls `fsync()` on the journal
 file.
 
+If the journal directory cannot be prepared, the existing journal cannot be
+read for preflight verification, or the append write/flush/fsync operation
+raises an operating-system I/O error such as a permission or disk-space failure,
+append fails with `JournalAppendError`. The public error message is bounded and
+does not include event payload data. The local sidecar lock is released on these
+failure paths.
+
 A journal record is complete only when the newline terminator is present. If an
 append is interrupted after partial bytes are visible but before the terminator,
 verification reports `truncated_record` at that record and stops at the prior

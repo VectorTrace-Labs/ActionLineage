@@ -702,12 +702,15 @@ def test_public_claim_audit_tracks_package_description_drift() -> None:
     assert "PALPHA-016" in hardening_plan
     assert "PALPHA-017" in hardening_plan
     assert "PALPHA-018" in hardening_plan
+    assert "PALPHA-024" in hardening_plan
     assert "FIXED_IN_POST_PUBLICATION_VERIFY_SLICE" in hardening_plan
     assert "FIXED_IN_OUTREACH_DRAFTS_SLICE" in hardening_plan
     assert "FIXED_IN_GOOD_FIRST_ISSUES_SLICE" in hardening_plan
     assert "FIXED_IN_MARKDOWN_FRAGMENT_CHECK_SLICE" in hardening_plan
+    assert "FIXED_IN_JOURNAL_IO_FAILURE_SLICE" in hardening_plan
     assert "MITIGATED_WITH_CURL_FALLBACK" in hardening_plan
-    assert "3ff4185b199fc74474f65dfa86d72441728a010d" in hardening_plan
+    assert "Done locally; external review pending" in hardening_plan
+    assert "Needs one final refresh against the final branch head" in hardening_plan
     assert "Public package long descriptions can lag" in hardening_plan
     assert "Local release-proof reproduction docs mixed" in hardening_plan
     assert "bounded read-only `curl` fallback" in audit

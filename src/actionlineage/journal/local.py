@@ -95,14 +95,20 @@ def append_event(
     """Safely append one redacted event to a local journal."""
 
     path = Path(path)
-    path.parent.mkdir(parents=True, exist_ok=True)
+    try:
+        path.parent.mkdir(parents=True, exist_ok=True)
+    except OSError as exc:
+        raise JournalAppendError("failed to prepare journal directory") from exc
 
     with _journal_lock(
         path.with_suffix(f"{path.suffix}.lock"),
         timeout_seconds=lock_timeout_seconds,
         poll_seconds=lock_poll_seconds,
     ):
-        verification = verify_journal(path)
+        try:
+            verification = verify_journal(path)
+        except OSError as exc:
+            raise JournalAppendError("failed to verify existing journal before append") from exc
         if not verification.ok:
             raise JournalAppendError("cannot append to a journal that fails verification")
 
@@ -118,7 +124,10 @@ def append_event(
             previous_event_hash=verification.last_event_hash,
             redaction_policy=redaction_policy,
         )
-        _append_line(path, canonical_bytes)
+        try:
+            _append_line(path, canonical_bytes)
+        except OSError as exc:
+            raise JournalAppendError("failed to append event to journal") from exc
         return redacted_event
 
 

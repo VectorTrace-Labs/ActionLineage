@@ -5,8 +5,10 @@ from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
 import pytest
+from pytest import MonkeyPatch
 from typer.testing import CliRunner
 
+import actionlineage.journal.local as local_journal_module
 from actionlineage.cli import app
 from actionlineage.domain import EventEnvelope, EventType, RedactionPolicy
 from actionlineage.journal import JournalAppendError, JournalLockError, LocalJournal, verify_journal
@@ -226,6 +228,50 @@ def test_lock_contention_fails_visibly(tmp_path: Path) -> None:
 
     with pytest.raises(JournalLockError):
         journal.append(make_event(0))
+
+
+def test_append_preflight_io_failure_is_bounded_and_releases_lock(
+    tmp_path: Path,
+    monkeypatch: MonkeyPatch,
+) -> None:
+    path = tmp_path / "events.jsonl"
+    raw_secret = "preflight-secret-value"
+    event = make_event(0).model_copy(update={"payload": {"secret": raw_secret}})
+
+    def fail_preflight(*_args: object, **_kwargs: object) -> object:
+        raise OSError(f"permission denied while reading {raw_secret}")
+
+    monkeypatch.setattr(local_journal_module, "verify_journal", fail_preflight)
+
+    with pytest.raises(JournalAppendError) as error:
+        LocalJournal(path).append(event)
+
+    assert str(error.value) == "failed to verify existing journal before append"
+    assert raw_secret not in str(error.value)
+    assert not path.with_suffix(f"{path.suffix}.lock").exists()
+    assert not path.exists()
+
+
+def test_append_write_io_failure_is_bounded_and_releases_lock(
+    tmp_path: Path,
+    monkeypatch: MonkeyPatch,
+) -> None:
+    path = tmp_path / "events.jsonl"
+    raw_secret = "write-secret-value"
+    event = make_event(0).model_copy(update={"payload": {"secret": raw_secret}})
+
+    def fail_write(_path: Path, _canonical_bytes: bytes) -> None:
+        raise OSError(f"no space left while writing {raw_secret}")
+
+    monkeypatch.setattr(local_journal_module, "_append_line", fail_write)
+
+    with pytest.raises(JournalAppendError) as error:
+        LocalJournal(path).append(event)
+
+    assert str(error.value) == "failed to append event to journal"
+    assert raw_secret not in str(error.value)
+    assert not path.with_suffix(f"{path.suffix}.lock").exists()
+    assert not path.exists()
 
 
 def test_cli_verify_outputs_machine_readable_json(tmp_path: Path) -> None:
