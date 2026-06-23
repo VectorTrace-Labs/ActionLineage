@@ -11,7 +11,7 @@ publishing, or sending any announcement.
 
 Before using any draft text:
 
-- confirm the intended version remains `0.1.0a3` and alpha-scoped;
+- confirm the intended version remains `0.1.0a4` and alpha-scoped;
 - run the release gate summary in `docs/QUALITY_SCORECARD.md`;
 - review `docs/OWNER_PUBLICATION_CHECKLIST.md`;
 - confirm `docs/DECISIONS_REQUIRED.md` owner gates for public announcements;
@@ -40,9 +40,9 @@ MCP server, or internet access after installation.
 Try the package smoke path:
 
 ```bash
-uvx --prerelease allow --from actionlineage==0.1.0a3 actionlineage version
-uvx --prerelease allow --from actionlineage==0.1.0a3 actionlineage demo run --output-dir actionlineage-demo
-uvx --prerelease allow --from actionlineage==0.1.0a3 actionlineage journal verify actionlineage-demo/evidence.jsonl
+uvx --prerelease allow --from actionlineage==0.1.0a4 actionlineage version
+uvx --prerelease allow --from actionlineage==0.1.0a4 actionlineage demo run --output-dir actionlineage-demo
+uvx --prerelease allow --from actionlineage==0.1.0a4 actionlineage journal verify actionlineage-demo/evidence.jsonl
 ```
 
 Reviewers can challenge the evidence semantics, redaction boundaries, journal

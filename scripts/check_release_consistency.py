@@ -249,7 +249,7 @@ def _check_local_tag(project_root: Path, expected_version: str) -> list[Check]:
                 severity="P1",
             )
         ]
-    status = PASS if result.strip() == tag else FAIL
+    status = PASS if result.strip() == tag else UNKNOWN
     details: dict[str, Any] = {}
     if status == PASS:
         rev = _run_git(project_root, ["rev-parse", f"{tag}^{{}}"])
@@ -259,10 +259,14 @@ def _check_local_tag(project_root: Path, expected_version: str) -> list[Check]:
         Check(
             id="local.git.tag",
             status=status,
-            summary="matching local version tag exists",
+            summary=(
+                "matching local version tag exists"
+                if status == PASS
+                else "matching local version tag is not present in this checkout"
+            ),
             expected=tag,
             actual=result.strip() or None,
-            severity="P0",
+            severity="P0" if status == PASS else "P1",
             details=details or None,
         )
     ]

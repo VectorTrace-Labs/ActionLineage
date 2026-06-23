@@ -28,6 +28,27 @@ def test_release_consistency_offline_current_repo_has_no_failures() -> None:
     assert checks["dist.present"]["status"] == "UNKNOWN"
 
 
+def test_release_consistency_treats_missing_local_tag_as_unknown(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    checker = _load_checker()
+
+    def fake_run_git(_project_root: Path, args: list[str]) -> str | None:
+        assert args == ["tag", "--list", "v1.2.3"]
+        return ""
+
+    monkeypatch.setattr(checker, "_run_git", fake_run_git)
+
+    checks = checker._check_local_tag(PROJECT_ROOT, "1.2.3")
+
+    assert len(checks) == 1
+    assert checks[0].status == "UNKNOWN"
+    assert checks[0].summary == "matching local version tag is not present in this checkout"
+    assert checks[0].expected == "v1.2.3"
+    assert checks[0].actual is None
+    assert checks[0].severity == "P1"
+
+
 def test_release_consistency_detects_runtime_version_mismatch(tmp_path: Path) -> None:
     checker = _load_checker()
     _write_minimal_project(tmp_path, runtime_version="1.2.4")
@@ -45,21 +66,21 @@ def test_release_consistency_rejects_sdist_local_state(tmp_path: Path) -> None:
     checker = _load_checker()
     dist_dir = tmp_path / "dist"
     dist_dir.mkdir()
-    metadata = _metadata("0.1.0a3", ">=3.12")
-    _write_wheel(dist_dir / "actionlineage-0.1.0a3-py3-none-any.whl", metadata)
+    metadata = _metadata("0.1.0a4", ">=3.12")
+    _write_wheel(dist_dir / "actionlineage-0.1.0a4-py3-none-any.whl", metadata)
     _write_sdist(
-        dist_dir / "actionlineage-0.1.0a3.tar.gz",
+        dist_dir / "actionlineage-0.1.0a4.tar.gz",
         metadata,
-        extra_name="actionlineage-0.1.0a3/.hypothesis/constants/example",
+        extra_name="actionlineage-0.1.0a4/.hypothesis/constants/example",
     )
 
     report = checker.build_report(PROJECT_ROOT, dist_dir=dist_dir)
 
     checks = {check["id"]: check for check in report["checks"]}
     assert report["ok"] is False
-    assert checks["dist.sdist.actionlineage-0.1.0a3.tar.gz.local_state"]["status"] == "FAIL"
-    assert checks["dist.wheel.actionlineage-0.1.0a3-py3-none-any.whl.version"]["status"] == "PASS"
-    assert checks["dist.sdist.actionlineage-0.1.0a3.tar.gz.version"]["status"] == "PASS"
+    assert checks["dist.sdist.actionlineage-0.1.0a4.tar.gz.local_state"]["status"] == "FAIL"
+    assert checks["dist.wheel.actionlineage-0.1.0a4-py3-none-any.whl.version"]["status"] == "PASS"
+    assert checks["dist.sdist.actionlineage-0.1.0a4.tar.gz.version"]["status"] == "PASS"
 
 
 def test_release_consistency_flags_stale_public_description_claims() -> None:

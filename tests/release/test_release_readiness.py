@@ -16,9 +16,9 @@ def test_package_metadata_is_public_alpha_ready() -> None:
     pyproject = tomllib.loads(PYPROJECT.read_text(encoding="utf-8"))
     project = pyproject["project"]
 
-    assert project["version"] == "0.1.0a3"
+    assert project["version"] == "0.1.0a4"
     assert project["requires-python"] == ">=3.12"
-    assert actionlineage.__version__ == "0.1.0a3"
+    assert actionlineage.__version__ == "0.1.0a4"
     assert "Development Status :: 3 - Alpha" in project["classifiers"]
     assert "Development Status :: 5 - Production/Stable" not in project["classifiers"]
     assert "Intended Audience :: Developers" in project["classifiers"]
@@ -131,7 +131,7 @@ def test_cli_version_matches_package_metadata() -> None:
     result = CliRunner().invoke(app, ["version"])
 
     assert result.exit_code == 0
-    assert result.stdout.strip() == "0.1.0a3"
+    assert result.stdout.strip() == "0.1.0a4"
 
 
 def test_readme_quickstart_uses_demo_aligned_contract() -> None:
@@ -139,10 +139,10 @@ def test_readme_quickstart_uses_demo_aligned_contract() -> None:
 
     assert "Five-Minute PyPI Evaluation" in readme
     assert "Python 3.12 or newer" in readme
-    assert "Because `0.1.0a3` is a prerelease" in readme
-    assert "uvx --prerelease allow --from actionlineage==0.1.0a3 actionlineage version" in readme
+    assert "Because `0.1.0a4` is a prerelease" in readme
+    assert "uvx --prerelease allow --from actionlineage==0.1.0a4 actionlineage version" in readme
     assert (
-        "uvx --prerelease allow --from actionlineage==0.1.0a3 actionlineage demo run --output-dir"
+        "uvx --prerelease allow --from actionlineage==0.1.0a4 actionlineage demo run --output-dir"
     ) in readme
     assert "PyPI path needs internet access to install the package" in readme
     assert "uv sync --locked --all-extras" in readme
@@ -238,7 +238,7 @@ def test_external_review_docs_prepare_review_without_claiming_validation() -> No
     )
 
     for required in (
-        "uvx --prerelease allow --from actionlineage==0.1.0a3 actionlineage version",
+        "uvx --prerelease allow --from actionlineage==0.1.0a4 actionlineage version",
         "actionlineage demo run",
         "actionlineage journal verify",
         "contracts/examples/outbound-http.json",
@@ -254,7 +254,7 @@ def test_external_review_docs_prepare_review_without_claiming_validation() -> No
         "docs/REVIEW_OUTREACH_DRAFTS.md",
         "actionlineage doctor",
         'pipx run --pip-args="--pre"',
-        "python -m pip install --pre actionlineage==0.1.0a3",
+        "python -m pip install --pre actionlineage==0.1.0a4",
     ):
         assert required in combined
 
@@ -276,9 +276,9 @@ def test_troubleshooting_doc_covers_first_time_user_failures() -> None:
     for required in (
         "Troubleshooting First-Time Evaluation",
         "actionlineage doctor",
-        "uvx --prerelease allow --from actionlineage==0.1.0a3",
+        "uvx --prerelease allow --from actionlineage==0.1.0a4",
         'pipx run --pip-args="--pre"',
-        "python -m pip install --pre actionlineage==0.1.0a3",
+        "python -m pip install --pre actionlineage==0.1.0a4",
         "Python 3.12",
         "uv sync --locked --extra adapters",
         "uv sync --locked --extra service",
@@ -358,12 +358,15 @@ def test_release_candidate_audit_prepares_without_publishing() -> None:
     assert "Release proof review index" in audit
     assert "Recorded in generated manifest field `audited_implementation_commit`" in audit
     assert "Version tag alignment" in audit
-    assert "do not attach local artifacts to a tag release when this field is `false`" in audit
+    assert (
+        "do not attach local artifacts to a tag release when this field is `false` or `unknown`"
+        in audit
+    )
     assert "rerun after any source or documentation commit before publication" in audit
     assert "Do not republish immutable PyPI/TestPyPI files" in audit
     assert "new owner-approved `0.1.0a4` release" in audit
     assert "135 files already formatted" in audit
-    assert "318 passed" in audit
+    assert "319 passed" in audit
     assert "86.14 percent total coverage" in audit
     assert "no warning summary" in audit
     assert "23 package entries" in audit
@@ -377,7 +380,7 @@ def test_release_candidate_audit_prepares_without_publishing() -> None:
     assert "build/release/manifest.json" in audit
     assert "build/release/REVIEW_INDEX.md" in audit
     assert "bounded read-only `curl`" in audit
-    assert "`fail_count=5`, `unknown_count=0`" in audit
+    assert "`fail_count=8`, `unknown_count=1`" in audit
     assert "Project URL HEAD reachability | PASS" in audit
     assert "PASS / AUTHENTICATED READ" in audit
     assert "CodeQL analysis" in audit
@@ -388,12 +391,12 @@ def test_release_candidate_audit_prepares_without_publishing() -> None:
     assert "236 files scanned, 0 leaks" in audit
     assert "docs/evidence/agent-validation-baseline.md" in audit
     assert "docs/evidence/agent-validation-baseline.json" in audit
-    assert "GitHub Release object for `v0.1.0a3`: absent" in audit
+    assert "GitHub Release object for `v0.1.0a4`: not created before owner release" in audit
     assert "corrected long description" in audit
     assert "Exact hashes for a local proof run are generated into" in audit
     assert "build/release-candidate/SHA256SUMS.txt" in audit
-    assert "actionlineage-0.1.0a3-py3-none-any.whl" in audit
-    assert "actionlineage-0.1.0a3.tar.gz" in audit
+    assert "actionlineage-0.1.0a4-py3-none-any.whl" in audit
+    assert "actionlineage-0.1.0a4.tar.gz" in audit
 
     for status in (
         "PASS",
@@ -472,8 +475,8 @@ def test_release_checklist_covers_required_gates() -> None:
         "uv run pip-audit",
         "uv build --out-dir dist",
         "scripts/smoke_public_quickstart.py",
-        "--package-spec dist/actionlineage-0.1.0a3-py3-none-any.whl",
-        "--package-spec dist/actionlineage-0.1.0a3.tar.gz",
+        "--package-spec dist/actionlineage-0.1.0a4-py3-none-any.whl",
+        "--package-spec dist/actionlineage-0.1.0a4.tar.gz",
         "scripts/write_ci_quality_summary.py",
         "--coverage-floor 85",
         "actionlineage_evals public-report",
@@ -711,7 +714,7 @@ def test_publishing_docs_record_package_publication_and_remaining_gates() -> Non
     assert "ghcr.io/vectortrace-labs/actionlineage" in package_managers
     assert "PyPI/TestPyPI | Alpha-supported" in package_managers
     assert (
-        "uvx --prerelease allow --from actionlineage==0.1.0a3 actionlineage version"
+        "uvx --prerelease allow --from actionlineage==0.1.0a4 actionlineage version"
     ) in package_managers
     assert "Python 3.12-compatible alpha release" in package_managers
     assert "do not publish or document a `latest` tag" in package_managers
