@@ -17,6 +17,7 @@ from actionlineage_evals.adapters import (  # noqa: E402
     GitHubModelsAdapter,
     LocalToolAgent,
     OpenAICompatibleAdapter,
+    ProviderError,
 )
 from actionlineage_evals.artifact_audit import audit_artifacts  # noqa: E402
 from actionlineage_evals.boundary import check_eval_import_boundaries  # noqa: E402
@@ -49,8 +50,11 @@ from actionlineage_evals.scenarios import (  # noqa: E402
 from actionlineage_evals.scoring import classify_failure  # noqa: E402
 from actionlineage_evals.stateful import deterministic_mutation_sequence  # noqa: E402
 from actionlineage_evals.summary import (  # noqa: E402
+    build_public_baseline_report,
+    render_public_baseline_report_markdown,
     summarize_scorecards,
     summarize_scorecards_text,
+    write_public_baseline_report,
 )
 from actionlineage_evals.tools import WorldState  # noqa: E402
 
@@ -95,6 +99,59 @@ def test_scenarios_and_capability_coverage_validate() -> None:
         coverage_path=PROJECT_ROOT / "evals" / "CAPABILITY_COVERAGE.yaml",
     )
     assert lint["ok"] is True
+
+
+def test_public_agent_validation_evidence_doc_matches_registry() -> None:
+    scenarios = load_scenarios(PROJECT_ROOT / "evals" / "scenarios")
+    coverage = validate_capability_coverage(
+        PROJECT_ROOT / "evals" / "CAPABILITY_COVERAGE.yaml",
+        strict=True,
+    )
+    doc = (PROJECT_ROOT / "docs" / "AGENT_VALIDATION_EVIDENCE.md").read_text(encoding="utf-8")
+    public_report = json.loads(
+        (PROJECT_ROOT / "docs" / "evidence" / "agent-validation-baseline.json").read_text(
+            encoding="utf-8"
+        )
+    )
+    public_report_md = (
+        PROJECT_ROOT / "docs" / "evidence" / "agent-validation-baseline.md"
+    ).read_text(encoding="utf-8")
+    normalized_doc = " ".join(doc.split())
+
+    assert f"{len(scenarios)} scenarios" in doc
+    assert (
+        f"{coverage['covered_capability_count']}/{coverage['capability_count']} "
+        "declared capabilities covered"
+    ) in doc
+    for scenario in scenarios:
+        assert f"`{scenario.scenario_id}`" in doc
+    for gap in coverage["known_gaps"]:
+        assert f"`{gap['id']}`" in doc
+    assert "Model output is not authoritative product evidence" in normalized_doc
+    assert "Agent Validation Lab beyond `Local-proof` maturity" in doc
+    assert public_report["schema_version"] == "actionlineage.dev/agent-validation-public-report-v0"
+    assert public_report["scenario_ids"] == [scenario.scenario_id for scenario in scenarios]
+    assert public_report["suite"]["scorecard_count"] == len(scenarios)
+    assert (
+        public_report["capability_coverage"]["covered_capability_count"]
+        == coverage["covered_capability_count"]
+    )
+    assert public_report["capability_coverage"]["capability_count"] == coverage["capability_count"]
+    assert public_report["model_adapters"] == [
+        {
+            "adapter": "scripted",
+            "model_id": None,
+            "no_model": True,
+        }
+    ]
+    assert public_report["failure_classification"]["counts"]["product_failure"] == 1
+    assert public_report["failure_classification"]["expected_control_scenarios"]
+    assert public_report["tool_schema_hashes"]
+    assert "Source commit under evaluation" in public_report_md
+    assert "Expected control scenarios intentionally preserve product, agent" in public_report_md
+    assert "Scripted adapter output is not treated as an authoritative product oracle." in (
+        public_report_md
+    )
 
 
 def test_actionlineage_core_does_not_import_eval_package() -> None:
@@ -151,6 +208,26 @@ def test_github_models_adapter_prefers_model_specific_token(monkeypatch) -> None
 
     assert seen["token"] == "models-token"
     assert turn.tool_calls == ()
+
+
+def test_github_models_adapter_requires_explicit_model_secret(monkeypatch) -> None:
+    monkeypatch.delenv("GH_MODELS_TOKEN", raising=False)
+    monkeypatch.delenv("GITHUB_MODELS_TOKEN", raising=False)
+    monkeypatch.setenv("GITHUB_TOKEN", "ambient-actions-token")
+
+    with pytest.raises(ProviderError, match="GH_MODELS_TOKEN or GITHUB_MODELS_TOKEN"):
+        GitHubModelsAdapter(model_id="openai/gpt-4.1-mini").generate(
+            prompt="return no tool calls",
+            tools=(),
+            budget=Budget(
+                max_model_requests=1,
+                max_model_turns=1,
+                max_tool_calls=1,
+                max_completion_tokens_per_turn=16,
+                timeout_seconds=10,
+            ),
+            request_index=0,
+        )
 
 
 def test_openai_compatible_adapter_allows_local_endpoint_without_token(monkeypatch) -> None:
@@ -388,6 +465,9 @@ def test_scripted_suite_runs_all_scenarios_and_replay(tmp_path: Path) -> None:
     suite_summary = json.loads((tmp_path / "evals" / "suite-summary.json").read_text())
     assert suite_summary["schema_version"] == "actionlineage.dev/eval-suite-summary/v0"
     assert suite_summary["failure_class_counts"]["product_failure"] == 1
+    summary_by_id = {item["scenario_id"]: item for item in suite_summary["scenarios"]}
+    assert summary_by_id["AVL-001"]["failure_fingerprint"] is None
+    assert summary_by_id["AVL-011"]["failure_fingerprint"].startswith("sha256:")
 
     avl001_oracles = [
         json.loads(line)
@@ -594,8 +674,53 @@ def test_scorecard_summary_reports_replay_commands(tmp_path: Path) -> None:
     assert summary["scenario_count"] == 1
     assert summary["scorecards"][0]["scenario_id"] == "AVL-007"
     assert summary["scorecards"][0]["failure_class"] == "provider_failure"
+    assert summary["scorecards"][0]["failure_fingerprint"].startswith("sha256:")
     assert "actionlineage_evals replay" in summary["scorecards"][0]["replay_command"]
+    assert "failure_fingerprint" in text
     assert "AVL-007" in text
+
+
+def test_public_baseline_report_is_generated_from_eval_artifacts(tmp_path: Path) -> None:
+    result = run_suite(
+        scenario_path=PROJECT_ROOT / "evals" / "scenarios" / "AVL-001.yaml",
+        artifact_root=tmp_path / "evals",
+        mode=RunMode.SCRIPTED,
+        model_adapter_name="scripted",
+    )
+    assert result.passed is True
+
+    report = build_public_baseline_report(tmp_path / "evals")
+    markdown = render_public_baseline_report_markdown(report)
+    json_output = tmp_path / "report" / "agent-validation-baseline.json"
+    markdown_output = tmp_path / "report" / "agent-validation-baseline.md"
+    written = write_public_baseline_report(
+        tmp_path / "evals",
+        json_output=json_output,
+        markdown_output=markdown_output,
+    )
+
+    assert report["ok"] is True
+    assert report["schema_version"] == "actionlineage.dev/agent-validation-public-report-v0"
+    assert report["suite"]["scorecard_count"] == 1
+    assert report["scenario_ids"][0] == "AVL-001"
+    assert report["seeds"] == [0]
+    assert report["model_adapters"] == [
+        {
+            "adapter": "scripted",
+            "model_id": None,
+            "no_model": True,
+        }
+    ]
+    assert report["tool_schema_hashes"]
+    assert report["coverage"]["event_type_coverage"]["tool.execution.acknowledged"] == 1
+    assert report["coverage"]["contract_coverage"]["passed"] == 1
+    assert report["hard_assertion_results"]["score_counts"]["integrity"]["passed"] == 1
+    assert report["runs"][0]["failure_fingerprint"] is None
+    assert written == report
+    assert json.loads(json_output.read_text(encoding="utf-8")) == report
+    assert markdown_output.read_text(encoding="utf-8") == markdown
+    assert "Source commit under evaluation" in markdown
+    assert "PYTHONPATH=evals uv run --group eval python -m actionlineage_evals run" in markdown
 
 
 def test_inspect_task_accepts_live_configuration_metadata() -> None:

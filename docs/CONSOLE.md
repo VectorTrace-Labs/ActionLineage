@@ -22,6 +22,10 @@ uv run actionlineage projection export-console \
 
 Open `build/actionlineage-demo/console.html` in a browser.
 
+Use exactly one selector when exporting a console: `--trace-id` or `--run-id`.
+For the deterministic demo, `--run-id run_demo_evidence_plane` selects the same
+events as the trace ID.
+
 To include analyst annotations and saved view hints, provide a JSON context file:
 
 ```json
@@ -75,6 +79,7 @@ reviewed input for future native shells and remains a rendered view.
 ## Included Views
 
 - Timeline rows ordered by the projection's deterministic incident order.
+- Explicit empty-state rows when a selector has no projected events.
 - Evidence graph showing causal parent-to-child edges and evidence-link
   subject-to-evidence edges.
 - Event details with escaped JSON payloads.
@@ -90,8 +95,21 @@ reviewed input for future native shells and remains a rendered view.
 - The console does not persist new evidence.
 - The console does not replace journal verification.
 - Missing observations are displayed as missing observations only.
+- A selector with no projected events means no matching events were in the
+  projection output; it is not evidence that no action occurred.
 - Case notes and saved views are rendered annotations, not journal evidence.
 - Console context text is passed through the redaction policy before rendering.
+- Hostile-looking filenames, HTML-like text, and link-like strings in context
+  are rendered as escaped text rather than active markup or links.
+- Console context files are bounded to 64 KiB by default and notes or saved
+  views are bounded to 50 items each. Oversized context fails closed before
+  rendering.
+- Annotation text that exceeds the active redaction capture limit is rendered
+  with a visible truncation marker and digest.
+- Generated HTML includes a restrictive Content Security Policy and does not
+  require scripts or remote resources.
+- The `projection export-console` CLI uses the same rendered empty states as
+  the Python API.
 - Rule debugging is available through the detection API and CLI; collaborative
   workflows are deferred to a later optional console package.
 

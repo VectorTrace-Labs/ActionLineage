@@ -1,0 +1,49 @@
+name: Evaluation feedback
+about: Report reproducibility feedback from the public-alpha demo or evaluation paths
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Use synthetic or minimized data only. Do not paste credentials, private prompts,
+        proprietary data, authorization headers, or unredacted production journals.
+  - type: dropdown
+    attributes:
+      label: Evaluation path
+      options:
+        - PyPI five-minute demo
+        - Repository demo
+        - Agent Validation no-model baseline
+        - Release proof gate
+        - Documentation-only review
+    validations:
+      required: true
+  - type: textarea
+    attributes:
+      label: Commands run
+      description: Include exact commands, versions, and exit codes.
+    validations:
+      required: true
+  - type: textarea
+    attributes:
+      label: Expected result
+      description: What did the guide, checklist, or test lead you to expect?
+    validations:
+      required: true
+  - type: textarea
+    attributes:
+      label: Actual result
+      description: Include concise output excerpts and artifact paths using synthetic data only.
+    validations:
+      required: true
+  - type: textarea
+    attributes:
+      label: Evidence semantics concern
+      description: Note any disagreement about acknowledged, observed, verified, unverified, timed-out, conflicting, or not-dispatched states.
+    validations:
+      required: false
+  - type: textarea
+    attributes:
+      label: Safe bundle or fixture
+      description: Link a minimized synthetic fixture or describe why one is not available.
+    validations:
+      required: false

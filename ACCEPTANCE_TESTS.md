@@ -34,6 +34,7 @@ Each test must be executable. Documentation-only evidence does not satisfy an ac
 - **AT-JRN-003**: Deleting, inserting, duplicating, or reordering an event fails verification when trusted anchors make those changes observable.
 - **AT-JRN-004**: The query projection can be deleted and rebuilt from a verified journal.
 - **AT-JRN-005**: Concurrent writes preserve a deterministic sequence or fail visibly.
+- **AT-JRN-006**: An interrupted append that leaves a final record without its newline terminator fails verification at the incomplete record.
 - **AT-JRN-010**: A Git anchor statement verifies committed anchor bytes and reports anchor mutation or ref drift without mutating repository history.
 - **AT-JRN-011**: External attestation sidecars bind anchor bytes to external statement digests and report anchor or statement mismatches without implementing custom cryptography.
 

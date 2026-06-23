@@ -47,6 +47,12 @@ HTTP response readbacks are fixture observations of a post-action response.
 They record URL, status code, optional ETag, and optional body digest. They do
 not store raw response bodies.
 
+When HTTP receiver, server-log, response-readback, or webhook observers find
+multiple equally plausible fixture records, they return `unverified` with an
+`ambiguous_candidate_count` and a limitation that the correlation remains
+ambiguous. They do not promote a duplicated or simultaneous-looking record set
+to `observed` or `verified` without a unique match.
+
 Cloud and Kubernetes observers are fixture-first. They validate local JSON
 examples without credentials, cluster access, or API calls. Live AWS, GCP,
 Azure, and Kubernetes collection adapters remain optional runtime work and must
@@ -66,6 +72,8 @@ payloads:
 - Observed evidence becomes `side_effect.verified` when corroborated by an
   independent observer, post-action readback, or fixture oracle.
 - Missing or unavailable evidence remains `side_effect.unverified`.
+- Ambiguous evidence remains `side_effect.unverified` until a unique
+  corroborating record can be identified.
 - Timeout becomes `side_effect.timed_out`.
 - Conflict becomes `side_effect.conflict_detected`.
 

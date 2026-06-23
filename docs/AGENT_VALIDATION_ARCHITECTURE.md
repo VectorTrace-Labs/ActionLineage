@@ -237,10 +237,11 @@ Generated artifacts can be scanned independently with `audit-artifacts`. The
 audit reports pattern names and file paths for redaction canaries and credential
 patterns, but it never echoes the matched sensitive value.
 
-Every suite run writes `suite-summary.json` for trend tracking. GitHub Actions
-job summaries render the same scorecard data as Markdown, including failure
-classes, replay-equivalence counts, first failing scorer, artifact paths, and
-exact replay commands.
+Every suite run writes `suite-summary.json` for trend tracking, including a
+stable `failure_fingerprint` for failed or expected-control cases. GitHub
+Actions job summaries render the same scorecard data as Markdown, including
+failure classes, replay-equivalence counts, first failing scorer, artifact
+paths, and exact replay commands.
 
 ## CI Lanes
 
@@ -254,16 +255,24 @@ Pull-request lane:
   Docker smoke.
 - Must not use `pull_request_target` or repository model credentials.
 
-Scheduled lane:
+Scheduled no-model lane:
+
+- Trigger: `schedule` and manual dispatch on the default branch.
+- Permissions: `contents: read`.
+- Model requests: zero.
+- Runs the deterministic scripted suite, replay path, regression corpus, artifact
+  audit, and public-report generation from trusted default-branch code.
+- Uploads generated artifacts for maintainer review.
+
+Scheduled live-model lane:
 
 - Trigger: `schedule` and manual dispatch on the default branch.
 - Permissions: `contents: read`, `models: read`.
 - Uses GitHub Models through a common `ModelAdapter`.
-- The job may provide an optional `GH_MODELS_TOKEN` repository/organization
-  secret when the repository-scoped `GITHUB_TOKEN` is not authorized for GitHub
-  Models. GitHub Actions rejects secret names beginning with `GITHUB_`, so
-  `GH_MODELS_TOKEN` is the repository secret name. The adapter falls back to
-  `GITHUB_TOKEN` when org-level Models access is enabled.
+- Skips all live-model execution unless the explicit `GH_MODELS_TOKEN`
+  repository or organization secret is configured. GitHub Actions rejects secret
+  names beginning with `GITHUB_`, so `GH_MODELS_TOKEN` is the repository secret
+  name.
 - Enforces strict request, token, tool-call, and wall-clock budgets.
 - Uploads redacted artifacts for maintainer review.
 

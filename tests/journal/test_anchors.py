@@ -5,11 +5,13 @@ import subprocess
 from datetime import UTC, datetime
 from pathlib import Path
 
+import pytest
 from typer.testing import CliRunner
 
 from actionlineage.cli import app
 from actionlineage.journal import (
     ExternalAttestationType,
+    JournalAnchorError,
     append_journal_anchor_log,
     create_external_anchor_attestation,
     create_git_anchor_statement,
@@ -161,6 +163,39 @@ def test_locate_corrupt_record_and_export_verified_prefix(tmp_path: Path) -> Non
     assert export.records_exported == 1
     assert verify_journal(prefix_path).ok
     assert len(prefix_path.read_text(encoding="utf-8").splitlines()) == 1
+
+
+def test_export_verified_prefix_rejects_in_place_output(tmp_path: Path) -> None:
+    path = tmp_path / "events.jsonl"
+    write_valid_journal(path, event_count=3)
+    lines = journal_lines(path)
+    lines[1] = lines[1].replace(b"child-1", b"child-X")
+    replace_journal_lines(path, lines)
+    original_bytes = path.read_bytes()
+
+    with pytest.raises(JournalAnchorError, match="output path must differ"):
+        export_verified_prefix(path, path)
+
+    assert path.read_bytes() == original_bytes
+
+
+def test_cli_export_verified_prefix_rejects_in_place_output(tmp_path: Path) -> None:
+    path = tmp_path / "events.jsonl"
+    write_valid_journal(path, event_count=3)
+    lines = journal_lines(path)
+    lines[1] = lines[1].replace(b"child-1", b"child-X")
+    replace_journal_lines(path, lines)
+    original_bytes = path.read_bytes()
+
+    result = runner.invoke(app, ["journal", "export-verified-prefix", str(path), str(path)])
+    data = json.loads(result.stdout)
+
+    assert result.exit_code == 1
+    assert data == {
+        "error": "verified-prefix output path must differ from source journal",
+        "ok": False,
+    }
+    assert path.read_bytes() == original_bytes
 
 
 def test_cli_anchor_create_and_verify(tmp_path: Path) -> None:

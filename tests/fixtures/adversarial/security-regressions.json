@@ -49,6 +49,16 @@
       "description": "Conflicting observer evidence must be preserved instead of overwritten."
     },
     {
+      "case_id": "adv-ambiguous-http-receipts",
+      "category": "correlation_ambiguity",
+      "expected_controls": [
+        "ambiguous_candidate_count",
+        "side_effect.unverified",
+        "not_side_effect.verified"
+      ],
+      "description": "Multiple plausible HTTP observer records must remain unverified instead of being promoted to a confident side-effect match."
+    },
+    {
       "case_id": "adv-oversized-payload",
       "category": "oversized_payload",
       "expected_controls": [

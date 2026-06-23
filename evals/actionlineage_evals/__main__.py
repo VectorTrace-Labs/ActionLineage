@@ -29,6 +29,7 @@ from actionlineage_evals.summary import (
     summarize_scorecards,
     summarize_scorecards_markdown,
     summarize_scorecards_text,
+    write_public_baseline_report,
 )
 
 
@@ -131,6 +132,25 @@ def main(argv: list[str] | None = None) -> int:
     summarize.add_argument("artifact_root", type=Path)
     summarize.add_argument("--format", choices=["json", "text", "markdown"], default="json")
 
+    public_report = subcommands.add_parser("public-report")
+    public_report.add_argument("artifact_root", type=Path)
+    public_report.add_argument(
+        "--json-output",
+        type=Path,
+        default=Path("docs/evidence/agent-validation-baseline.json"),
+    )
+    public_report.add_argument(
+        "--markdown-output",
+        type=Path,
+        default=Path("docs/evidence/agent-validation-baseline.md"),
+    )
+    public_report.add_argument("--scenario-path", type=Path, default=SCENARIO_DIR)
+    public_report.add_argument(
+        "--coverage-path",
+        type=Path,
+        default=Path("evals/CAPABILITY_COVERAGE.yaml"),
+    )
+
     audit = subcommands.add_parser("audit-artifacts")
     audit.add_argument("artifact_root", type=Path)
     audit.add_argument("--canary", action="append", default=[])
@@ -225,6 +245,24 @@ def main(argv: list[str] | None = None) -> int:
         summary = summarize_scorecards(args.artifact_root)
         _print(summary)
         return 0 if summary["ok"] else 1
+    if args.command == "public-report":
+        report = write_public_baseline_report(
+            args.artifact_root,
+            json_output=args.json_output,
+            markdown_output=args.markdown_output,
+            scenario_path=args.scenario_path,
+            coverage_path=args.coverage_path,
+        )
+        _print(
+            {
+                "json_output": str(args.json_output),
+                "markdown_output": str(args.markdown_output),
+                "ok": report["ok"],
+                "schema_version": report["schema_version"],
+                "scorecards": report["suite"]["scorecard_count"],
+            }
+        )
+        return 0 if report["ok"] else 1
     if args.command == "audit-artifacts":
         audit_result = audit_artifacts(
             args.artifact_root,

@@ -1,0 +1,38 @@
+name: Security design review
+about: Non-sensitive review of security boundaries, threat model, or release controls
+body:
+  - type: markdown
+    attributes:
+      value: |
+        For sensitive vulnerabilities, follow SECURITY.md and report privately.
+        Public design-review issues must use synthetic or minimized data only.
+  - type: textarea
+    attributes:
+      label: Surface
+      description: Redaction, journal integrity, policy behavior, static console, service preview, adapter boundary, supply chain, or release process.
+    validations:
+      required: true
+  - type: textarea
+    attributes:
+      label: Threat scenario
+      description: What could an attacker or faulty integration do?
+    validations:
+      required: true
+  - type: textarea
+    attributes:
+      label: Boundary or invariant at risk
+      description: Cite the invariant, maturity label, or trust boundary that may be affected.
+    validations:
+      required: true
+  - type: textarea
+    attributes:
+      label: Evidence
+      description: Provide synthetic reproduction steps, code references, or documentation references.
+    validations:
+      required: true
+  - type: textarea
+    attributes:
+      label: Proposed direction
+      description: Suggest tests, documentation changes, or implementation hardening.
+    validations:
+      required: false

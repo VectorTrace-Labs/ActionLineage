@@ -6,7 +6,7 @@ All notable changes will be documented here.
 
 No unreleased changes.
 
-## 1.0.0 - 2026-06-21
+## 0.1.0a3 - 2026-06-22
 
 ### Added
 

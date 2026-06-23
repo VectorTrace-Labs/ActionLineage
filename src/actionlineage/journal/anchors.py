@@ -592,19 +592,25 @@ def export_verified_prefix(
 ) -> VerifiedPrefixExport:
     """Export records verified before the first detected issue."""
 
+    journal_path = Path(journal_path)
+    output_path = Path(output_path)
+    if _same_resolved_path(journal_path, output_path):
+        raise JournalAnchorError("verified-prefix output path must differ from source journal")
+
     verification = verify_journal(
         journal_path,
         expected_record_count=expected_record_count,
         expected_last_event_hash=expected_last_event_hash,
     )
-    lines = journal_path.read_bytes().splitlines()
-    verified_lines = lines[: verification.records_verified]
 
     output_path.parent.mkdir(parents=True, exist_ok=True)
-    if verified_lines:
-        output_path.write_bytes(b"\n".join(verified_lines) + b"\n")
-    else:
-        output_path.write_bytes(b"")
+    with journal_path.open("rb") as source_file, output_path.open("wb") as output_file:
+        for index, raw_line in enumerate(source_file):
+            if index >= verification.records_verified:
+                break
+            output_file.write(raw_line)
+            if not raw_line.endswith(b"\n"):
+                output_file.write(b"\n")
 
     return VerifiedPrefixExport(
         source_path=journal_path,
@@ -612,6 +618,10 @@ def export_verified_prefix(
         records_exported=verification.records_verified,
         verification=verification,
     )
+
+
+def _same_resolved_path(left: Path, right: Path) -> bool:
+    return left.resolve(strict=False) == right.resolve(strict=False)
 
 
 def _anchor_signature(anchor: JournalAnchor, signing_key: bytes) -> str:

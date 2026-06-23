@@ -28,7 +28,7 @@ external-validation surfaces until they are externally validated.
 | Lineage Contracts, sequence detections, Lineage Lab | Local-proof | Contract, detection, and replay tests |
 | Agent Validation Lab | Local-proof | Development-only eval group, scenario fixtures, no-model CI lanes |
 | MCP, policy, OpenTelemetry, service, Postgres, cloud/Kubernetes fixtures | Preview | Optional extras and local fixture tests |
-| GitHub release artifacts and attestations | Local-proof | Release workflow and `v0.1.0a3` artifact path |
+| GitHub release artifacts and attestations | External-validation-required | `v0.1.0a3` tag exists; GitHub Release object is owner-gated |
 | PyPI/TestPyPI package publication | Alpha-supported | `v0.1.0a3` uses Trusted Publishing; fresh install/demo smoke passed |
 | GHCR container publication | Preview | Tag-gated release workflow path |
 | Homebrew tap, external audits, production history | Planned or external-validation-required | See `docs/DECISIONS_REQUIRED.md` |
@@ -72,6 +72,15 @@ make demo
 ```
 
 Repository demo artifacts are written under `build/actionlineage-demo/`.
+To generate a deterministic SVG overview from those demo artifacts, run:
+
+```bash
+make demo-map
+```
+
+That writes `build/actionlineage-demo/demo-evidence-map.svg` and
+`build/actionlineage-demo/demo-evidence-map.json`. The SVG is an onboarding aid
+derived from `incident.json`; the canonical evidence remains `evidence.jsonl`.
 
 Inspect repository-generated evidence:
 
@@ -95,6 +104,10 @@ uv run actionlineage projection export-console \
   build/actionlineage-demo/projection.sqlite \
   build/actionlineage-demo/console.html \
   --trace-id trace_demo_evidence_plane
+
+uv run python scripts/generate_demo_evidence_map.py \
+  --demo-dir build/actionlineage-demo \
+  --check
 
 uv run actionlineage contract validate \
   contracts/examples/outbound-http.json \
@@ -187,6 +200,7 @@ PYTHONPATH=evals uv run --group eval python -m actionlineage_evals summarize \
 ```
 
 See [evals/README.md](evals/README.md),
+[docs/AGENT_VALIDATION_EVIDENCE.md](docs/AGENT_VALIDATION_EVIDENCE.md),
 [docs/AGENT_VALIDATION_ARCHITECTURE.md](docs/AGENT_VALIDATION_ARCHITECTURE.md),
 [docs/AGENT_VALIDATION_THREAT_MODEL.md](docs/AGENT_VALIDATION_THREAT_MODEL.md),
 and [docs/AGENT_VALIDATION_PLAN.md](docs/AGENT_VALIDATION_PLAN.md).
@@ -297,6 +311,20 @@ reference.
 - [Maturity model](docs/MATURITY.md): supported, preview, planned, and external
   validation labels.
 - [Quality scorecard](docs/QUALITY_SCORECARD.md): public claim-to-evidence map.
+- [Agent Validation evidence](docs/AGENT_VALIDATION_EVIDENCE.md): deterministic
+  no-model eval baseline and limitations.
+- [External review guide](docs/EXTERNAL_REVIEW_GUIDE.md): five-minute review
+  path, semantics to challenge, and safe feedback routes.
+- [Good first issue candidates](docs/GOOD_FIRST_ISSUES.md):
+  maintainer-ready issue drafts with bounded acceptance criteria.
+- [Review outreach drafts](docs/REVIEW_OUTREACH_DRAFTS.md): announcement and
+  technical article outlines for maintainer review.
+- [Evaluation reproduction](docs/EVALUATION_REPRODUCTION.md): exact commands
+  for public-package, demo, Agent Validation, and local release proof.
+- [Troubleshooting](docs/TROUBLESHOOTING.md): first-time install, demo, path,
+  browser, offline/online, and release proof guidance.
+- [Known limitations](docs/KNOWN_LIMITATIONS.md): public-alpha boundaries and
+  external-validation gaps.
 - [Architecture](ARCHITECTURE.md): component boundaries and runtime flow.
 - [Threat model](THREAT_MODEL.md): assets, adversaries, trust boundaries, and
   claim language.
@@ -327,8 +355,12 @@ reference.
 - [Operations](docs/OPERATIONS.md): service mode, health, storage, and deployment
   notes.
 - [Release checklist](docs/RELEASE_CHECKLIST.md): public release gates.
+- [Release-candidate audit](docs/RELEASE_CANDIDATE_AUDIT.md): latest local
+  candidate proof, blockers, and generated manifest path.
 - [Publishing](docs/PUBLISHING.md): GitHub release workflow, artifact
   attestations, and Trusted Publishing setup.
+- [Owner publication checklist](docs/OWNER_PUBLICATION_CHECKLIST.md): actions
+  that require owner approval.
 - [Package managers](docs/PACKAGE_MANAGERS.md): GHCR, PyPI, Homebrew,
   conda-forge, and deferred channel plan.
 - [Review process](docs/REVIEW_PROCESS.md): required checks, advisory AI
@@ -350,11 +382,12 @@ Core dependencies are intentionally small: Pydantic and Typer. Optional extras
 hold MCP, OpenTelemetry, SQLAlchemy, FastAPI, JWT, and related integration
 dependencies.
 
-Public alpha artifacts are attached to GitHub Releases and `actionlineage`
-`0.1.0a3` is published to PyPI and TestPyPI through Trusted Publishing. The
-release workflow is prepared to publish preview GHCR images for version tags,
-while Homebrew and additional package-manager channels remain gated on external
-setup and validation. See [docs/PACKAGE_MANAGERS.md](docs/PACKAGE_MANAGERS.md).
+`actionlineage` `0.1.0a3` is published to PyPI and TestPyPI through Trusted
+Publishing. The `v0.1.0a3` Git tag exists, while the matching GitHub Release
+object and hosted release-artifact page remain owner-gated. The release workflow
+is prepared to publish preview GHCR images for version tags, while Homebrew and
+additional package-manager channels remain gated on external setup and
+validation. See [docs/PACKAGE_MANAGERS.md](docs/PACKAGE_MANAGERS.md).
 
 ## Security Model In One Paragraph
 

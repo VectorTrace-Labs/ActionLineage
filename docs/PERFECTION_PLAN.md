@@ -37,11 +37,14 @@ release decision and external validation evidence.
 
 ## Phase 2: Five-Minute Clean Installation
 
-Status: implemented for repository-based alpha evaluation.
+Status: implemented for repository-based alpha evaluation and locally built
+wheel/source-distribution first-time-user smoke validation.
 
 Acceptance tests:
 
 - Fresh clone path uses `uv sync --locked --all-extras` and `make demo`.
+- Built wheel and source distribution artifacts run the public CLI quickstart
+  path through `scripts/smoke_public_quickstart.py`.
 - README and tutorial validate `contracts/examples/outbound-http.json` against
   demo evidence.
 - Clean tracked snapshot passes with `uv run --all-extras pytest`.
@@ -75,9 +78,12 @@ Status: Codex-executable alpha gates implemented; external validation remains.
 Codex-executable work:
 
 - Keep golden journals readable and projectable.
-- Keep scanners, SBOM, dependency audit, and local provenance in CI.
+- Keep scanners, SBOM, dependency license checks, dependency audit, and local
+  provenance in CI.
 - Keep provenance subjects limited to release artifacts.
-- Add benchmarks and coverage reports when release cadence needs them.
+- Keep branch-enabled total coverage and concise GitHub job-summary evidence in
+  CI as non-regression release signals.
+- Add benchmarks when release cadence needs them.
 
 External validation:
 
@@ -93,7 +99,10 @@ Codex-executable work:
 
 - Keep Docker build and smoke tests in CI.
 - Keep deployment docs preview-labeled.
-- Generate local wheel, sdist, SBOM, and unsigned provenance.
+- Generate local wheel, sdist, SBOM, dependency license report, and unsigned
+  provenance.
+- Generate a local release-candidate manifest and release proof review index so
+  reviewers can verify artifact hashes and gate status from committed scripts.
 - Build release artifacts in GitHub Actions.
 - Generate GitHub artifact attestations for release artifacts.
 - Prepare manual TestPyPI/PyPI Trusted Publishing jobs without package-index
@@ -104,8 +113,36 @@ External validation:
 - Configure TestPyPI and PyPI Trusted Publisher records for `release.yml`.
 - Run TestPyPI and PyPI publish jobs.
 - Link successful attestation verification from release notes.
-- Confirm branch protection, CodeQL, Dependabot alerts, secret scanning, push
-  protection, and private vulnerability reporting in GitHub.
+- Confirm branch protection, CodeQL run and alert state, Dependabot alerts,
+  secret scanning, push protection, repository security policy, and private
+  vulnerability reporting in GitHub; current authenticated reads show these
+  controls enabled and no open CodeQL, Dependabot, secret-scanning, or
+  repository advisory alerts.
+
+## Phase 6: External Review Readiness
+
+Status: review preparation is implemented for public alpha; actual review and
+adoption evidence remain external validation.
+
+Acceptance tests:
+
+- External review guide gives a five-minute install path, expected outputs,
+  semantics to challenge, safe data-sharing rules, and feedback routes.
+- Security and agent-platform review checklists preserve maturity labels and
+  product invariants.
+- Evaluation reproduction commands cover public package, repository demo,
+  Agent Validation, local release proof, the generated release-candidate
+  manifest, and the generated release proof review index without requiring
+  credentials.
+- Issue templates collect reproducible, minimized feedback without requesting
+  secrets or private data.
+
+Rollback: remove the review docs and templates. No event-schema migration is
+involved.
+
+Stop condition: any review-readiness text claims external audit, external
+adoption, production use, independent review, or community validation without
+real evidence.
 
 ## 1.0 Exit Criteria
 

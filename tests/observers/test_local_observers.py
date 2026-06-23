@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import sqlite3
+from contextlib import closing
 
 from actionlineage.domain import (
     CorroborationType,
@@ -96,6 +97,30 @@ def test_http_receiver_observer_reports_verified_and_conflicting_receipts() -> N
     assert conflicting.outcome == ObserverOutcome.CONFLICTING
 
 
+def test_http_receiver_observer_keeps_ambiguous_receipts_unverified() -> None:
+    observer = MockHttpReceiverObserver()
+    observer.record_receipt(destination="http://receiver.local/collect", body_digest="sha256:body")
+    observer.record_receipt(destination="http://receiver.local/collect", body_digest="sha256:body")
+
+    ambiguous = observer.observe_receipt(
+        destination="http://receiver.local/collect",
+        expected_body_digest="sha256:body",
+    )
+    decision = verify_observation(
+        subject_event_id="evt_ack",
+        evidence_event_id="evt_ambiguous",
+        observation=ambiguous,
+        confidence=0.0,
+    )
+
+    assert ambiguous.outcome == ObserverOutcome.UNVERIFIED
+    assert ambiguous.verification_status == VerificationStatus.UNVERIFIED
+    assert ambiguous.as_payload()["observed_state"]["ambiguous_candidate_count"] == 2
+    assert "correlation remains ambiguous" in " ".join(ambiguous.as_payload()["limitations"])
+    assert decision.event_type == EventType.SIDE_EFFECT_UNVERIFIED
+    assert decision.evidence_link.verification_status == VerificationStatus.UNVERIFIED
+
+
 def test_http_server_log_observer_reports_observed_conflicting_and_unverified() -> None:
     observer = HttpServerLogObserver()
     observer.record_access(
@@ -131,6 +156,29 @@ def test_http_server_log_observer_reports_observed_conflicting_and_unverified() 
     assert "not proof of absence" in " ".join(unverified.as_payload()["limitations"])
 
 
+def test_http_server_log_observer_keeps_multiple_matches_unverified() -> None:
+    observer = HttpServerLogObserver()
+    for request_id in ("req-1", "req-2"):
+        observer.record_access(
+            url="https://receiver.local/collect",
+            method="POST",
+            status_code=202,
+            request_id=request_id,
+            body_digest="sha256:body",
+        )
+
+    ambiguous = observer.observe_access(
+        url="https://receiver.local/collect",
+        method="POST",
+        expected_status_code=202,
+        expected_body_digest="sha256:body",
+    )
+
+    assert ambiguous.outcome == ObserverOutcome.UNVERIFIED
+    assert ambiguous.as_payload()["observed_state"]["ambiguous_candidate_count"] == 2
+    assert "correlation remains ambiguous" in " ".join(ambiguous.as_payload()["limitations"])
+
+
 def test_http_response_readback_observer_reports_observed_conflicting_and_unverified() -> None:
     observer = HttpResponseReadbackObserver()
     observer.record_response(
@@ -164,6 +212,27 @@ def test_http_response_readback_observer_reports_observed_conflicting_and_unveri
     ]
     assert unverified.outcome == ObserverOutcome.UNVERIFIED
     assert "not proof of absence" in " ".join(unverified.as_payload()["limitations"])
+
+
+def test_http_response_readback_observer_keeps_multiple_matches_unverified() -> None:
+    observer = HttpResponseReadbackObserver()
+    for etag in ("etag-1", "etag-2"):
+        observer.record_response(
+            url="https://receiver.local/status/123",
+            status_code=200,
+            body_digest="sha256:response-body",
+            etag=etag,
+        )
+
+    ambiguous = observer.observe_response(
+        url="https://receiver.local/status/123",
+        expected_status_code=200,
+        expected_body_digest="sha256:response-body",
+    )
+
+    assert ambiguous.outcome == ObserverOutcome.UNVERIFIED
+    assert ambiguous.as_payload()["observed_state"]["ambiguous_candidate_count"] == 2
+    assert "correlation remains ambiguous" in " ".join(ambiguous.as_payload()["limitations"])
 
 
 def test_webhook_receipt_observer_reports_observed_conflicting_and_unverified() -> None:
@@ -206,6 +275,27 @@ def test_webhook_receipt_observer_reports_observed_conflicting_and_unverified() 
     assert "not proof of absence" in " ".join(unverified.as_payload()["limitations"])
 
 
+def test_webhook_receipt_observer_keeps_multiple_matches_unverified() -> None:
+    observer = WebhookReceiptObserver()
+    for delivery_id in ("delivery-1", "delivery-2"):
+        observer.record_delivery(
+            callback_url="https://receiver.local/hooks/actionlineage",
+            delivery_id=delivery_id,
+            body_digest="sha256:webhook-body",
+            status_code=202,
+        )
+
+    ambiguous = observer.observe_delivery(
+        callback_url="https://receiver.local/hooks/actionlineage",
+        expected_body_digest="sha256:webhook-body",
+        expected_status_code=202,
+    )
+
+    assert ambiguous.outcome == ObserverOutcome.UNVERIFIED
+    assert ambiguous.as_payload()["observed_state"]["ambiguous_candidate_count"] == 2
+    assert "correlation remains ambiguous" in " ".join(ambiguous.as_payload()["limitations"])
+
+
 def test_process_observer_and_self_reported_verification() -> None:
     process = ProcessObserver().observe_exit(process_identifier="pid:123", return_code=0)
     self_reported = self_reported_verification(
@@ -236,7 +326,7 @@ def test_observer_unavailable_remains_unverified(tmp_path) -> None:
 
 def test_sqlite_readback_observer_reports_matching_row(tmp_path) -> None:
     database_path = tmp_path / "readback.sqlite"
-    with sqlite3.connect(database_path) as connection:
+    with closing(sqlite3.connect(database_path)) as connection, connection:
         connection.execute("create table audit_log (event_id text primary key, status text)")
         connection.execute(
             "insert into audit_log (event_id, status) values (?, ?)",
@@ -258,7 +348,7 @@ def test_sqlite_readback_observer_reports_observed_absence_for_expected_absent_r
     tmp_path,
 ) -> None:
     database_path = tmp_path / "readback.sqlite"
-    with sqlite3.connect(database_path) as connection:
+    with closing(sqlite3.connect(database_path)) as connection, connection:
         connection.execute("create table audit_log (event_id text primary key)")
 
     observation = SqliteReadbackObserver().observe_row(
@@ -275,7 +365,7 @@ def test_sqlite_readback_observer_reports_observed_absence_for_expected_absent_r
 
 def test_sqlite_readback_observer_reports_conflict_for_unexpected_row_state(tmp_path) -> None:
     database_path = tmp_path / "readback.sqlite"
-    with sqlite3.connect(database_path) as connection:
+    with closing(sqlite3.connect(database_path)) as connection, connection:
         connection.execute("create table audit_log (event_id text primary key)")
 
     observation = SqliteReadbackObserver().observe_row(
@@ -302,7 +392,7 @@ def test_sqlite_readback_observer_unverified_when_database_missing(tmp_path) -> 
 
 def test_sqlite_readback_observer_invalid_identifier_is_unavailable(tmp_path) -> None:
     database_path = tmp_path / "readback.sqlite"
-    with sqlite3.connect(database_path) as connection:
+    with closing(sqlite3.connect(database_path)) as connection, connection:
         connection.execute("create table audit_log (event_id text primary key)")
 
     observation = SqliteReadbackObserver().observe_row(

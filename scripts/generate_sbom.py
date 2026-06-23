@@ -33,7 +33,7 @@ def build_sbom(project_path: Path) -> dict[str, Any]:
         "project": {
             "name": project["name"],
             "version": project["version"],
-            "license": project.get("license", {}).get("text", "unknown"),
+            "license": _project_license(project),
         },
         "packages": sorted(package_rows, key=lambda row: (row["scope"], row["name"])),
     }
@@ -65,6 +65,17 @@ def _requirements(project: dict[str, Any]) -> dict[str, str]:
     return requirements
 
 
+def _project_license(project: dict[str, Any]) -> str:
+    license_value = project.get("license")
+    if isinstance(license_value, str):
+        return license_value
+    if isinstance(license_value, dict):
+        text = license_value.get("text")
+        if isinstance(text, str):
+            return text
+    return "unknown"
+
+
 def _requirement_name(requirement: str) -> str | None:
     match = re.match(r"([A-Za-z0-9_.-]+)", requirement)
     return match.group(1).replace("_", "-").lower() if match else None
@@ -94,6 +105,10 @@ def _package_row(name: str, requirement: str, scope: str) -> dict[str, str]:
 
 
 def _license(distribution: metadata.Distribution) -> str:
+    license_expression = distribution.metadata.get("License-Expression")
+    if license_expression:
+        return license_expression
+
     license_value = distribution.metadata.get("License")
     if license_value:
         return license_value

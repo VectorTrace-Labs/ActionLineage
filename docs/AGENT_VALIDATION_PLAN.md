@@ -395,16 +395,23 @@ PR lane:
 - Runs scenario schema validation, capability coverage lint, replay-only evals,
   and deterministic fixture tests.
 
-Scheduled lane:
+Scheduled no-model lane:
+
+- Trigger: default-branch `schedule` and `workflow_dispatch`.
+- Permissions: `contents: read`.
+- Model requests: zero.
+- Runs deterministic scripted scenarios, replay, regression corpus checks,
+  artifact audit, and public-report generation.
+- Uploads redacted artifacts with short retention.
+
+Scheduled live-model lane:
 
 - Trigger: default-branch `schedule` and `workflow_dispatch`.
 - Permissions: `contents: read`, `models: read`.
 - Uses GitHub Models through `ModelAdapter`.
-- Prefer a narrowly scoped `GH_MODELS_TOKEN` Actions secret when organization
-  policy blocks repository `GITHUB_TOKEN` model inference. GitHub Actions
-  rejects secret names beginning with `GITHUB_`, so `GH_MODELS_TOKEN` is the
-  repository secret name. Fall back to `GITHUB_TOKEN` when GitHub Models is
-  enabled for the organization/repository.
+- Skips all live-model execution unless maintainers configure the explicit
+  `GH_MODELS_TOKEN` Actions secret. GitHub Actions rejects secret names
+  beginning with `GITHUB_`, so `GH_MODELS_TOKEN` is the repository secret name.
 - Uploads redacted artifacts with short retention.
 
 Local lane:

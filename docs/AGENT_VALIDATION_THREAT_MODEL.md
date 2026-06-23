@@ -97,10 +97,13 @@ Risk: PR code obtains `GITHUB_TOKEN` model permissions or repository secrets.
 Controls:
 
 - PR lane uses `pull_request`, `contents: read`, and zero model requests.
+- Scheduled no-model lane runs trusted default-branch code with zero model
+  requests and produces deterministic public-report artifacts.
 - Scheduled model lane runs only on default-branch trusted code with
-  `models: read`.
+  `models: read`, and skips live-model execution unless the explicit
+  `GH_MODELS_TOKEN` secret is configured.
 - Optional `GH_MODELS_TOKEN` secrets are only passed to scheduled or manually
-  dispatched default-branch jobs.
+  dispatched default-branch live-model jobs.
 - Do not use `pull_request_target` for eval execution.
 - Do not check out untrusted PR code in a privileged workflow.
 - Artifacts from untrusted jobs are treated as untrusted input.

@@ -1,15 +1,18 @@
 from __future__ import annotations
 
+import hashlib
 import importlib.util
 import json
 import string
 import sys
+from datetime import UTC, datetime
 from pathlib import Path
 from types import ModuleType
 
 from hypothesis import given, settings
 from hypothesis import strategies as st
 
+from actionlineage.demo import run_demo
 from actionlineage.domain import RedactionPolicy, capture_string, serialize_event_for_persistence
 from tests.domain.test_events import build_event
 
@@ -76,15 +79,328 @@ def test_secret_scan_skips_local_assistant_docs_by_default(tmp_path: Path) -> No
     assert len(scanner.scan_paths([tmp_path], include_local_only=True)) == 1
 
 
+def test_markdown_link_check_passes_current_repository() -> None:
+    checker = _load_script("check_markdown_links")
+
+    result = checker.scan_paths([PROJECT_ROOT], repository_root=PROJECT_ROOT)
+
+    assert result.ok
+    assert result.issues == ()
+    assert result.checked_links >= 40
+
+
+def test_markdown_link_check_flags_missing_and_escaping_targets(tmp_path: Path) -> None:
+    checker = _load_script("check_markdown_links")
+    readme = tmp_path / "README.md"
+    readme.write_text(
+        "[missing](docs/missing.md)\n"
+        "[escape](../outside.md)\n"
+        "[external](https://example.com/actionlineage)\n"
+        "```md\n"
+        "[ignored](missing-in-code-fence.md)\n"
+        "```\n",
+        encoding="utf-8",
+    )
+
+    result = checker.scan_paths([tmp_path], repository_root=tmp_path)
+
+    assert not result.ok
+    assert result.checked_links == 2
+    assert [issue.code for issue in result.issues] == [
+        "missing_target",
+        "target_escapes_repository",
+    ]
+
+
+def test_markdown_link_check_handles_reference_links_and_file_uris(tmp_path: Path) -> None:
+    checker = _load_script("check_markdown_links")
+    docs_dir = tmp_path / "docs"
+    docs_dir.mkdir()
+    (docs_dir / "guide.md").write_text("# Guide\n", encoding="utf-8")
+    readme = tmp_path / "README.md"
+    readme.write_text(
+        "[guide]: docs/guide.md\n"
+        "[Guide][guide]\n"
+        "[local-file](file:///tmp/actionlineage-secret.md)\n",
+        encoding="utf-8",
+    )
+
+    result = checker.scan_paths([tmp_path], repository_root=tmp_path)
+
+    assert not result.ok
+    assert result.checked_links == 2
+    assert [issue.code for issue in result.issues] == ["file_uri"]
+
+
+def test_markdown_link_check_validates_local_heading_fragments(tmp_path: Path) -> None:
+    checker = _load_script("check_markdown_links")
+    docs_dir = tmp_path / "docs"
+    docs_dir.mkdir()
+    (docs_dir / "guide.md").write_text(
+        "# Quick Start\n"
+        "\n"
+        "## Duplicate\n"
+        "## Duplicate\n"
+        '<a id="explicit-anchor"></a>\n'
+        "```md\n"
+        "# Ignored Heading\n"
+        "```\n",
+        encoding="utf-8",
+    )
+    readme = tmp_path / "README.md"
+    readme.write_text(
+        "# Local Section\n"
+        "[valid](docs/guide.md#quick-start)\n"
+        "[duplicate](docs/guide.md#duplicate-1)\n"
+        "[explicit](docs/guide.md#explicit-anchor)\n"
+        "[same](#local-section)\n"
+        "[missing-file-fragment](docs/guide.md#not-here)\n"
+        "[missing-same-fragment](#not-local)\n"
+        "[external](https://example.com/actionlineage#ignored)\n",
+        encoding="utf-8",
+    )
+
+    result = checker.scan_paths([tmp_path], repository_root=tmp_path)
+
+    assert not result.ok
+    assert result.checked_links == 6
+    assert [issue.code for issue in result.issues] == [
+        "missing_fragment",
+        "missing_fragment",
+    ]
+    assert [issue.target for issue in result.issues] == [
+        "docs/guide.md#not-here",
+        "#not-local",
+    ]
+
+
+def test_public_quickstart_smoke_runs_local_cli(tmp_path: Path) -> None:
+    smoker = _load_script("smoke_public_quickstart")
+
+    result = smoker.run_smoke(
+        cli_prefix=("uv", "run", "actionlineage"),
+        output_dir=tmp_path / "quickstart",
+        contract_path=PROJECT_ROOT / "contracts/examples/outbound-http.json",
+    )
+
+    assert result.ok
+    assert [step.name for step in result.steps] == [
+        "version",
+        "demo",
+        "demo_artifacts_exist",
+        "journal_verify",
+        "contract_validate",
+        "case_export",
+        "case_export_artifacts_exist",
+        "console_export",
+        "console_export_artifacts_exist",
+    ]
+    assert (tmp_path / "quickstart/demo/evidence.jsonl").exists()
+    assert (tmp_path / "quickstart/case/case.json").exists()
+    assert (tmp_path / "quickstart/console.html").exists()
+
+
+def test_public_quickstart_smoke_builds_uvx_package_prefix() -> None:
+    smoker = _load_script("smoke_public_quickstart")
+    args = smoker._parse_args(
+        (
+            "--package-spec",
+            "actionlineage==0.1.0a3",
+            "--uvx-prerelease",
+            "allow",
+        )
+    )
+
+    assert smoker.cli_prefix_from_args(args) == (
+        "uvx",
+        "--prerelease",
+        "allow",
+        "--from",
+        "actionlineage==0.1.0a3",
+        "actionlineage",
+    )
+
+
+def test_public_quickstart_smoke_fails_when_expected_artifacts_are_missing(
+    monkeypatch,
+    tmp_path: Path,
+) -> None:
+    smoker = _load_script("smoke_public_quickstart")
+
+    def fake_run_step(*, name: str, command: tuple[str, ...], timeout_seconds: float):
+        assert timeout_seconds == smoker.DEFAULT_STEP_TIMEOUT_SECONDS
+        return smoker.SmokeStep(
+            name=name,
+            command=command,
+            exit_code=0,
+            stdout="0.1.0a3\n" if name == "version" else "{}\n",
+            stderr="",
+        )
+
+    monkeypatch.setattr(smoker, "_run_step", fake_run_step)
+
+    result = smoker.run_smoke(
+        cli_prefix=("actionlineage",),
+        output_dir=tmp_path / "quickstart",
+        contract_path=PROJECT_ROOT / "contracts/examples/outbound-http.json",
+    )
+
+    assert not result.ok
+    assert result.steps[-1].name == "demo_artifacts_exist"
+    assert "evidence.jsonl" in result.steps[-1].stdout
+
+
+def test_public_quickstart_smoke_reports_timed_out_step(monkeypatch) -> None:
+    smoker = _load_script("smoke_public_quickstart")
+
+    def fake_run(*args, **kwargs):
+        raise smoker.subprocess.TimeoutExpired(
+            cmd=args[0],
+            timeout=kwargs["timeout"],
+            output="partial stdout",
+            stderr="partial stderr",
+        )
+
+    monkeypatch.setattr(smoker.subprocess, "run", fake_run)
+
+    result = smoker._run_step(
+        name="demo",
+        command=("actionlineage", "demo", "run"),
+        timeout_seconds=0.01,
+    )
+
+    assert result.exit_code == 124
+    assert "partial stdout" in result.stdout
+    assert "partial stderr" in result.stderr
+    assert "step timed out after 0.01 seconds" in result.stderr
+
+
+def test_ci_quality_summary_reports_coverage_and_artifacts(tmp_path: Path) -> None:
+    writer = _load_script("write_ci_quality_summary")
+    coverage_xml = tmp_path / "coverage.xml"
+    coverage_xml.write_text(
+        '<coverage lines-valid="100" lines-covered="90" '
+        'branches-valid="50" branches-covered="39" />',
+        encoding="utf-8",
+    )
+    sbom_path = tmp_path / "sbom.json"
+    license_report_path = tmp_path / "license-report.json"
+    provenance_path = tmp_path / "provenance.json"
+    dist_dir = tmp_path / "dist"
+    wheel_smoke_dir = tmp_path / "wheel-smoke"
+    sdist_smoke_dir = tmp_path / "sdist-smoke"
+    demo_map_svg = tmp_path / "demo" / "demo-evidence-map.svg"
+    sbom_path.write_text("{}", encoding="utf-8")
+    license_report_path.write_text("{}", encoding="utf-8")
+    provenance_path.write_text("{}", encoding="utf-8")
+    dist_dir.mkdir()
+    (dist_dir / "actionlineage-0.1.0a3-py3-none-any.whl").write_text("", encoding="utf-8")
+    (dist_dir / "actionlineage-0.1.0a3.tar.gz").write_text("", encoding="utf-8")
+    demo_map_svg.parent.mkdir()
+    demo_map_svg.write_text("<svg />", encoding="utf-8")
+    _write_quickstart_smoke_artifacts(wheel_smoke_dir)
+    _write_quickstart_smoke_artifacts(sdist_smoke_dir)
+
+    result = writer.build_summary(
+        python_version="3.13.5",
+        coverage_xml=coverage_xml,
+        coverage_floor=85,
+        sbom_path=sbom_path,
+        license_report_path=license_report_path,
+        provenance_path=provenance_path,
+        dist_dir=dist_dir,
+        wheel_smoke_dir=wheel_smoke_dir,
+        sdist_smoke_dir=sdist_smoke_dir,
+        demo_map_svg=demo_map_svg,
+    )
+
+    assert result.ok
+    assert "Branch-enabled total coverage: `86.00%`" in result.markdown
+    assert "Line coverage: `90.00%`" in result.markdown
+    assert "Branch coverage: `78.00%`" in result.markdown
+    assert "| Dependency license report | PASS |" in result.markdown
+    assert "| Wheel quickstart smoke | PASS |" in result.markdown
+    assert "Agent Validation Lab evidence is produced by the dedicated" in result.markdown
+
+
+def test_ci_quality_summary_reports_missing_evidence(tmp_path: Path) -> None:
+    writer = _load_script("write_ci_quality_summary")
+
+    result = writer.build_summary(
+        python_version="3.13.5",
+        coverage_xml=tmp_path / "missing-coverage.xml",
+        coverage_floor=85,
+        sbom_path=tmp_path / "missing-sbom.json",
+        license_report_path=tmp_path / "missing-license-report.json",
+        provenance_path=tmp_path / "missing-provenance.json",
+        dist_dir=tmp_path / "missing-dist",
+        wheel_smoke_dir=tmp_path / "missing-wheel-smoke",
+        sdist_smoke_dir=tmp_path / "missing-sdist-smoke",
+        demo_map_svg=tmp_path / "missing-demo-map.svg",
+    )
+
+    assert not result.ok
+    assert "Branch-enabled total coverage: `MISSING`" in result.markdown
+    assert "coverage XML not found" in result.markdown
+    assert "| SBOM | MISSING |" in result.markdown
+    assert "| Dependency license report | MISSING |" in result.markdown
+    assert "| Wheel quickstart smoke | MISSING |" in result.markdown
+
+
 def test_lightweight_sbom_includes_runtime_dependency() -> None:
     generator = _load_script("generate_sbom")
 
     sbom = generator.build_sbom(PROJECT_ROOT / "pyproject.toml")
-    packages = {(package["scope"], package["name"]) for package in sbom["packages"]}
+    packages = {(package["scope"], package["name"]): package for package in sbom["packages"]}
 
     assert sbom["bom_format"] == "actionlineage.dev/simple-sbom-v0"
+    assert sbom["project"]["license"] == "Apache-2.0"
     assert ("runtime:pydantic>=2.10,<3", "pydantic") in packages
+    assert packages[("runtime:pydantic>=2.10,<3", "pydantic")]["license"] == "MIT"
     assert all("license" in package for package in sbom["packages"])
+
+
+def test_dependency_license_check_passes_current_direct_dependencies() -> None:
+    checker = _load_script("check_dependency_licenses")
+
+    report = checker.build_license_report(PROJECT_ROOT / "pyproject.toml")
+    packages = {(package["scope"], package["name"]): package for package in report["packages"]}
+
+    assert report["schema_version"] == "actionlineage.dev/dependency-license-report-v0"
+    assert report["ok"] is True
+    assert report["issues"] == []
+    assert report["packages_checked"] >= 23
+    assert packages[("runtime:pydantic>=2.10,<3", "pydantic")]["normalized_license"] == "MIT"
+    assert packages[("extra:dev:httpx2>=2,<3", "httpx2")]["normalized_license"] == ("BSD-3-Clause")
+
+
+def test_dependency_license_check_flags_unknown_and_denied_licenses() -> None:
+    checker = _load_script("check_dependency_licenses")
+
+    report = checker.evaluate_packages(
+        [
+            {
+                "name": "unknown-lib",
+                "scope": "runtime:unknown-lib>=1",
+                "status": "installed",
+                "version": "1.0.0",
+                "license": "unknown",
+            },
+            {
+                "name": "denied-lib",
+                "scope": "extra:dev:denied-lib>=1",
+                "status": "installed",
+                "version": "1.0.0",
+                "license": "GPL-3.0-only",
+            },
+        ]
+    )
+
+    assert report["ok"] is False
+    assert {issue["reason"] for issue in report["issues"]} == {
+        "denied_license",
+        "unknown_license",
+    }
 
 
 def test_release_provenance_hashes_dist_artifacts_without_signing_claims(tmp_path: Path) -> None:
@@ -109,6 +425,412 @@ def test_release_provenance_hashes_dist_artifacts_without_signing_claims(tmp_pat
     ]
 
 
+def test_release_candidate_manifest_summarizes_local_proof_artifacts(tmp_path: Path) -> None:
+    writer = _load_script("write_release_candidate_manifest")
+    project_path = tmp_path / "pyproject.toml"
+    project_path.write_text(
+        '[project]\nname = "actionlineage"\nversion = "0.1.0a3"\n',
+        encoding="utf-8",
+    )
+    artifact_root = tmp_path / "build" / "release-candidate"
+    dist_dir = tmp_path / "dist"
+    artifact_root.mkdir(parents=True)
+    dist_dir.mkdir(parents=True)
+    wheel = dist_dir / "actionlineage-0.1.0a3-py3-none-any.whl"
+    sdist = dist_dir / "actionlineage-0.1.0a3.tar.gz"
+    wheel.write_bytes(b"wheel")
+    sdist.write_bytes(b"sdist")
+    (artifact_root / "actionlineage-sbom.json").write_text(
+        json.dumps({"packages": [{"name": "pydantic"}, {"name": "typer"}]}),
+        encoding="utf-8",
+    )
+    (artifact_root / "actionlineage-license-report.json").write_text(
+        json.dumps(
+            {
+                "allowed_licenses": ["Apache-2.0", "MIT"],
+                "issues": [],
+                "packages_checked": 2,
+            }
+        ),
+        encoding="utf-8",
+    )
+    (artifact_root / "actionlineage-release-provenance.json").write_text(
+        "{}",
+        encoding="utf-8",
+    )
+    (artifact_root / "SHA256SUMS.txt").write_text("checksums\n", encoding="utf-8")
+    (artifact_root / "coverage.xml").write_text("<coverage />", encoding="utf-8")
+    (artifact_root / "pypi.json").write_text(
+        json.dumps(
+            {
+                "info": {
+                    "project_urls": None,
+                    "requires_python": ">=3.12",
+                    "version": "0.1.0a3",
+                }
+            }
+        ),
+        encoding="utf-8",
+    )
+    (artifact_root / "github-tags.json").write_text(
+        json.dumps([{"ref": "refs/tags/v0.1.0a3"}]),
+        encoding="utf-8",
+    )
+    (artifact_root / "github-release-v0.1.0a3.json").write_text(
+        json.dumps({"message": "Not Found"}),
+        encoding="utf-8",
+    )
+    (artifact_root / "github-releases.json").write_text(
+        json.dumps([{"tag_name": "v0.1.0a2"}]),
+        encoding="utf-8",
+    )
+
+    result = writer.build_release_candidate_manifest(
+        project_path=project_path,
+        artifact_root=artifact_root,
+        dist_dir=dist_dir,
+        repository_root=tmp_path,
+        audited_implementation_commit="abc123",
+        generated_at=datetime(2026, 6, 23, tzinfo=UTC),
+        gates=(
+            {
+                "name": "ruff_check",
+                "status": "PASS",
+                "evidence": "uv run ruff check .",
+            },
+        ),
+    )
+    manifest = result.manifest
+
+    assert result.ok
+    assert result.issues == ()
+    assert manifest["schema_version"] == "actionlineage.dev/release-candidate-manifest-v0"
+    assert manifest["generated_at"] == "2026-06-23T00:00:00Z"
+    assert manifest["release"] == "0.1.0a3"
+    assert manifest["artifact_root"] == "build/release-candidate"
+    assert manifest["audited_implementation_commit"] == "abc123"
+    assert manifest["version_tag"] == {
+        "matches_audited_implementation": None,
+        "name": "v0.1.0a3",
+        "resolved_commit": None,
+    }
+    assert manifest["sbom_package_count"] == 2
+    assert manifest["license_report"] == {
+        "allowed_licenses": ["Apache-2.0", "MIT"],
+        "issue_count": 0,
+        "packages_checked": 2,
+    }
+    assert manifest["public_state"]["pypi"] == {
+        "project_urls": None,
+        "requires_python": ">=3.12",
+        "version": "0.1.0a3",
+    }
+    assert manifest["public_state"]["github"] == {
+        "published_release_tags": ["v0.1.0a2"],
+        "release_lookup_message": "Not Found",
+        "tag_refs": ["refs/tags/v0.1.0a3"],
+    }
+    artifacts = {row["path"]: row for row in manifest["artifacts"]}
+    assert (
+        artifacts["dist/actionlineage-0.1.0a3-py3-none-any.whl"]["sha256"]
+        == hashlib.sha256(b"wheel").hexdigest()
+    )
+    assert artifacts["dist/actionlineage-0.1.0a3.tar.gz"]["size_bytes"] == 5
+    assert "build/release-candidate/coverage.xml" in artifacts
+    assert "build/release-candidate/SHA256SUMS.txt" not in artifacts
+    assert manifest["gates"] == [
+        {
+            "name": "ruff_check",
+            "status": "PASS",
+            "evidence": "uv run ruff check .",
+        }
+    ]
+
+
+def test_release_candidate_manifest_requires_core_release_artifacts(tmp_path: Path) -> None:
+    writer = _load_script("write_release_candidate_manifest")
+    project_path = tmp_path / "pyproject.toml"
+    project_path.write_text(
+        '[project]\nname = "actionlineage"\nversion = "0.1.0a3"\n',
+        encoding="utf-8",
+    )
+    artifact_root = tmp_path / "build" / "release-candidate"
+    artifact_root.mkdir(parents=True)
+
+    result = writer.build_release_candidate_manifest(
+        project_path=project_path,
+        artifact_root=artifact_root,
+        repository_root=tmp_path,
+        audited_implementation_commit="abc123",
+        generated_at=datetime(2026, 6, 23, tzinfo=UTC),
+    )
+
+    assert not result.ok
+    assert {issue["code"] for issue in result.issues} == {"required_artifact_missing"}
+    assert len(result.issues) == 5
+
+
+def test_release_review_index_verifies_manifest_artifacts(tmp_path: Path) -> None:
+    writer = _load_script("write_release_review_index")
+    artifact_root = tmp_path / "build" / "release-candidate"
+    dist_dir = artifact_root / "dist"
+    dist_dir.mkdir(parents=True)
+    wheel = dist_dir / "actionlineage-0.1.0a3-py3-none-any.whl"
+    sbom = artifact_root / "actionlineage-sbom.json"
+    offline_report = artifact_root / "release-consistency-offline.json"
+    online_report = artifact_root / "release-consistency-online.json"
+    wheel.write_bytes(b"wheel")
+    sbom.write_text("{}", encoding="utf-8")
+    offline_report.write_text(
+        json.dumps(
+            {
+                "checks": [{"id": "local.version.runtime", "status": "PASS"}],
+                "expected_version": "0.1.0a3",
+                "fail_count": 0,
+                "mode": "offline",
+                "ok": True,
+                "unknown_count": 0,
+            },
+            sort_keys=True,
+        ),
+        encoding="utf-8",
+    )
+    online_report.write_text(
+        json.dumps(
+            {
+                "checks": [
+                    {
+                        "actual": "HTTP 404",
+                        "id": "online.github.release",
+                        "severity": "P0",
+                        "status": "FAIL",
+                        "summary": "GitHub exposes a release object for the expected tag",
+                    },
+                    {
+                        "actual": "certificate verify failed",
+                        "id": "online.project_url.homepage",
+                        "severity": "P2",
+                        "status": "UNKNOWN",
+                        "summary": "project URL could not be checked: Homepage",
+                    },
+                ],
+                "expected_version": "0.1.0a3",
+                "fail_count": 1,
+                "mode": "online",
+                "ok": False,
+                "unknown_count": 1,
+            },
+            sort_keys=True,
+        ),
+        encoding="utf-8",
+    )
+    manifest_path = artifact_root / "manifest.json"
+    manifest_path.write_text(
+        json.dumps(
+            {
+                "schema_version": "actionlineage.dev/release-candidate-manifest-v0",
+                "release": "0.1.0a3",
+                "artifact_root": "build/release-candidate",
+                "audited_implementation_commit": "abc123",
+                "version_tag": {
+                    "matches_audited_implementation": False,
+                    "name": "v0.1.0a3",
+                    "resolved_commit": "def456",
+                },
+                "generated_at": "2026-06-23T00:00:00Z",
+                "artifacts": [
+                    {
+                        "path": str(wheel.relative_to(tmp_path)),
+                        "sha256": hashlib.sha256(b"wheel").hexdigest(),
+                        "size_bytes": 5,
+                    },
+                    {
+                        "path": str(sbom.relative_to(tmp_path)),
+                        "sha256": hashlib.sha256(b"{}").hexdigest(),
+                        "size_bytes": 2,
+                    },
+                    {
+                        "path": str(offline_report.relative_to(tmp_path)),
+                        "sha256": hashlib.sha256(offline_report.read_bytes()).hexdigest(),
+                        "size_bytes": offline_report.stat().st_size,
+                    },
+                    {
+                        "path": str(online_report.relative_to(tmp_path)),
+                        "sha256": hashlib.sha256(online_report.read_bytes()).hexdigest(),
+                        "size_bytes": online_report.stat().st_size,
+                    },
+                ],
+                "gates": [
+                    {
+                        "name": "ruff_check",
+                        "status": "PASS",
+                        "evidence": "uv run ruff check .",
+                    },
+                    {
+                        "name": "github_release_object",
+                        "status": "BLOCKED_ON_OWNER",
+                        "evidence": "Release object is absent.",
+                    },
+                ],
+                "license_report": {
+                    "allowed_licenses": ["Apache-2.0", "MIT"],
+                    "issue_count": 0,
+                    "packages_checked": 2,
+                },
+                "public_state": {
+                    "pypi": {
+                        "version": "0.1.0a3",
+                        "requires_python": ">=3.12",
+                        "project_urls": None,
+                    },
+                    "testpypi": {
+                        "version": "0.1.0a3",
+                        "requires_python": ">=3.12",
+                        "project_urls": None,
+                    },
+                    "github": {
+                        "published_release_tags": ["v0.1.0a2"],
+                        "release_lookup_message": "Not Found",
+                    },
+                },
+                "sbom_package_count": 2,
+            },
+            indent=2,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
+    result = writer.build_review_index(manifest_path, repository_root=tmp_path)
+
+    assert result.ok
+    assert result.issues == ()
+    assert "ActionLineage Release Proof Review Index" in result.markdown
+    assert "not publication evidence" in result.markdown
+    assert "| Version tag | `v0.1.0a3` |" in result.markdown
+    assert "| Version tag commit | `def456` |" in result.markdown
+    assert "| Version tag matches audited commit | `false` |" in result.markdown
+    assert "Artifacts verified locally | `4/4`" in result.markdown
+    assert "| `build/release-candidate/dist/actionlineage-0.1.0a3-py3-none-any.whl` | `PASS`" in (
+        result.markdown
+    )
+    assert "| Dependency licenses checked | `2` |" in result.markdown
+    assert "## Release Consistency Reports" in result.markdown
+    assert (
+        "| `build/release-candidate/release-consistency-offline.json` | `offline` | "
+        "`true` | `0` | `0` | `0.1.0a3` |" in result.markdown
+    )
+    assert (
+        "| `build/release-candidate/release-consistency-online.json` | `online` | "
+        "`false` | `1` | `1` | `0.1.0a3` |" in result.markdown
+    )
+    assert "`online.github.release` | `FAIL` | `P0`" in result.markdown
+    assert "`online.project_url.homepage` | `UNKNOWN` | `P2`" in result.markdown
+    assert "BLOCKED_ON_OWNER" in result.markdown
+    assert "shasum -a 256 -c build/release-candidate/SHA256SUMS.txt" in result.markdown
+
+
+def test_release_review_index_fails_on_artifact_hash_mismatch(tmp_path: Path) -> None:
+    writer = _load_script("write_release_review_index")
+    artifact_root = tmp_path / "build" / "release-candidate"
+    artifact_root.mkdir(parents=True)
+    artifact = artifact_root / "actionlineage-sbom.json"
+    artifact.write_text("changed", encoding="utf-8")
+    manifest_path = artifact_root / "manifest.json"
+    manifest_path.write_text(
+        json.dumps(
+            {
+                "schema_version": "actionlineage.dev/release-candidate-manifest-v0",
+                "release": "0.1.0a3",
+                "artifact_root": "build/release-candidate",
+                "artifacts": [
+                    {
+                        "path": str(artifact.relative_to(tmp_path)),
+                        "sha256": "0" * 64,
+                        "size_bytes": 7,
+                    }
+                ],
+                "gates": [],
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    result = writer.build_review_index(manifest_path, repository_root=tmp_path)
+
+    assert not result.ok
+    assert result.issues == (
+        {
+            "code": "hash_mismatch",
+            "path": "build/release-candidate/actionlineage-sbom.json",
+            "message": "artifact verification status HASH_MISMATCH",
+        },
+    )
+    assert "HASH_MISMATCH" in result.markdown
+
+
+def test_release_review_index_reports_malformed_release_consistency_report(
+    tmp_path: Path,
+) -> None:
+    writer = _load_script("write_release_review_index")
+    artifact_root = tmp_path / "build" / "release-candidate"
+    artifact_root.mkdir(parents=True)
+    report = artifact_root / "release-consistency-offline.json"
+    report.write_text("{", encoding="utf-8")
+    manifest_path = artifact_root / "manifest.json"
+    manifest_path.write_text(
+        json.dumps(
+            {
+                "schema_version": "actionlineage.dev/release-candidate-manifest-v0",
+                "release": "0.1.0a3",
+                "artifact_root": "build/release-candidate",
+                "artifacts": [
+                    {
+                        "path": str(report.relative_to(tmp_path)),
+                        "sha256": hashlib.sha256(b"{").hexdigest(),
+                        "size_bytes": 1,
+                    }
+                ],
+                "gates": [],
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    result = writer.build_review_index(manifest_path, repository_root=tmp_path)
+
+    assert not result.ok
+    assert result.issues[0]["code"] == "malformed_release_consistency_report"
+    assert result.issues[0]["path"] == "build/release-candidate/release-consistency-offline.json"
+
+
+def test_demo_evidence_map_is_deterministic_and_checkable(tmp_path: Path) -> None:
+    generator = _load_script("generate_demo_evidence_map")
+    demo = run_demo(tmp_path / "demo")
+    svg_path = tmp_path / "demo-evidence-map.svg"
+    summary_path = tmp_path / "demo-evidence-map.json"
+
+    evidence_map = generator.build_evidence_map(demo.incident_path)
+    svg = generator.render_svg(evidence_map)
+    written = generator.write_evidence_map(demo.incident_path, svg_path, summary_path)
+
+    assert evidence_map["map_format"] == "actionlineage.dev/demo-evidence-map-v0"
+    assert evidence_map["ok"] is True
+    assert evidence_map["event_count"] == 18
+    assert evidence_map["verification_status_counts"]["verified"] == 1
+    assert evidence_map["verification_status_counts"]["unverified"] == 2
+    assert evidence_map["verification_status_counts"]["conflicting"] == 1
+    assert evidence_map["verification_status_counts"]["not_dispatched"] == 1
+    assert "Tool acknowledgement is not side-effect evidence" in svg
+    assert generator.render_svg(evidence_map) == svg
+    assert written == evidence_map
+    assert generator.check_evidence_map(demo.incident_path, svg_path, summary_path) == []
+
+    svg_path.write_text(svg.replace("ActionLineage", "Changed", 1), encoding="utf-8")
+
+    assert generator.check_evidence_map(demo.incident_path, svg_path, summary_path) == ["svg_stale"]
+
+
 def test_adversarial_fixture_categories_are_complete() -> None:
     fixture = json.loads(ADVERSARIAL_FIXTURE.read_text(encoding="utf-8"))
 
@@ -116,6 +838,7 @@ def test_adversarial_fixture_categories_are_complete() -> None:
 
     assert categories == {
         "conflicting_observer",
+        "correlation_ambiguity",
         "descriptor_drift",
         "malformed_adapter_payload",
         "oversized_payload",
@@ -169,3 +892,11 @@ def _load_script(name: str) -> ModuleType:
     sys.modules[name] = module
     spec.loader.exec_module(module)
     return module
+
+
+def _write_quickstart_smoke_artifacts(path: Path) -> None:
+    (path / "demo").mkdir(parents=True)
+    (path / "case").mkdir()
+    (path / "demo" / "evidence.jsonl").write_text("{}", encoding="utf-8")
+    (path / "case" / "case.json").write_text("{}", encoding="utf-8")
+    (path / "console.html").write_text("<html></html>", encoding="utf-8")

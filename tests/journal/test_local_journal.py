@@ -5,8 +5,10 @@ from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
 import pytest
+from pytest import MonkeyPatch
 from typer.testing import CliRunner
 
+import actionlineage.journal.local as local_journal_module
 from actionlineage.cli import app
 from actionlineage.domain import EventEnvelope, EventType, RedactionPolicy
 from actionlineage.journal import JournalAppendError, JournalLockError, LocalJournal, verify_journal
@@ -145,6 +147,20 @@ def test_tail_deletion_requires_trusted_anchor_to_detect(tmp_path: Path) -> None
     }
 
 
+def test_truncated_final_record_without_newline_fails_verification(tmp_path: Path) -> None:
+    path = tmp_path / "events.jsonl"
+    write_valid_journal(path)
+    path.write_bytes(path.read_bytes().removesuffix(b"\n"))
+
+    result = verify_journal(path)
+
+    assert not result.ok
+    assert result.records_verified == 2
+    assert result.issues[0].record_number == 3
+    assert result.issues[0].code == "truncated_record"
+    assert "child-2" not in result.issues[0].message
+
+
 def test_journal_append_redacts_before_hashing_and_persistence(tmp_path: Path) -> None:
     path = tmp_path / "events.jsonl"
     raw_secret = "journal-secret-value-123456789"
@@ -214,6 +230,50 @@ def test_lock_contention_fails_visibly(tmp_path: Path) -> None:
         journal.append(make_event(0))
 
 
+def test_append_preflight_io_failure_is_bounded_and_releases_lock(
+    tmp_path: Path,
+    monkeypatch: MonkeyPatch,
+) -> None:
+    path = tmp_path / "events.jsonl"
+    raw_secret = "preflight-secret-value"
+    event = make_event(0).model_copy(update={"payload": {"secret": raw_secret}})
+
+    def fail_preflight(*_args: object, **_kwargs: object) -> object:
+        raise OSError(f"permission denied while reading {raw_secret}")
+
+    monkeypatch.setattr(local_journal_module, "verify_journal", fail_preflight)
+
+    with pytest.raises(JournalAppendError) as error:
+        LocalJournal(path).append(event)
+
+    assert str(error.value) == "failed to verify existing journal before append"
+    assert raw_secret not in str(error.value)
+    assert not path.with_suffix(f"{path.suffix}.lock").exists()
+    assert not path.exists()
+
+
+def test_append_write_io_failure_is_bounded_and_releases_lock(
+    tmp_path: Path,
+    monkeypatch: MonkeyPatch,
+) -> None:
+    path = tmp_path / "events.jsonl"
+    raw_secret = "write-secret-value"
+    event = make_event(0).model_copy(update={"payload": {"secret": raw_secret}})
+
+    def fail_write(_path: Path, _canonical_bytes: bytes) -> None:
+        raise OSError(f"no space left while writing {raw_secret}")
+
+    monkeypatch.setattr(local_journal_module, "_append_line", fail_write)
+
+    with pytest.raises(JournalAppendError) as error:
+        LocalJournal(path).append(event)
+
+    assert str(error.value) == "failed to append event to journal"
+    assert raw_secret not in str(error.value)
+    assert not path.with_suffix(f"{path.suffix}.lock").exists()
+    assert not path.exists()
+
+
 def test_cli_verify_outputs_machine_readable_json(tmp_path: Path) -> None:
     path = tmp_path / "events.jsonl"
     journal = write_valid_journal(path)
@@ -253,6 +313,20 @@ def test_cli_verify_returns_nonzero_for_invalid_journal(tmp_path: Path) -> None:
     assert result.exit_code == 1
     assert data["ok"] is False
     assert data["issues"][0]["code"] == "event_hash_mismatch"
+
+
+def test_cli_verify_reports_truncated_final_record(tmp_path: Path) -> None:
+    path = tmp_path / "events.jsonl"
+    write_valid_journal(path)
+    path.write_bytes(path.read_bytes().removesuffix(b"\n"))
+
+    result = runner.invoke(app, ["journal", "verify", str(path)])
+    data = json.loads(result.stdout)
+
+    assert result.exit_code == 1
+    assert data["ok"] is False
+    assert data["records_verified"] == 2
+    assert data["issues"][0]["code"] == "truncated_record"
 
 
 def test_journal_verify_parse_error_does_not_echo_raw_payload(tmp_path: Path) -> None:

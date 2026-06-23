@@ -67,6 +67,10 @@ SHA-256 and store hashes as `sha256:<hex>`.
 The local journal writer uses a sidecar lock file and append/fsync writes. It
 requires each event's `causality.sequence` to equal the next journal record
 index. Concurrent attempts with stale or duplicate sequence numbers fail visibly.
+Each writer-produced record is newline terminated. Verification treats a record
+without its newline terminator as `truncated_record`, which makes interrupted
+or partial final appends fail visibly instead of being accepted as complete
+records.
 
 Verification reports a machine-readable result containing `ok`,
 `records_verified`, `last_event_hash`, and structured issues. Verification can
@@ -79,6 +83,8 @@ optionally compare a trusted expected record count and trusted last hash.
   verification.
 - Tail deletion is only detectable when the verifier receives a trusted expected
   record count or last hash.
+- Interrupted final appends without a newline terminator fail verification at
+  the incomplete record.
 - The local hash chain must not be described as tamper-proof.
 - Future signature or external anchoring work can reuse `last_event_hash` as an
   anchor value without changing the local journal record format.
@@ -90,3 +96,5 @@ optionally compare a trusted expected record count and trusted last hash.
 - `AT-JRN-003` covers deletion, insertion, duplication, and reordering.
 - `AT-JRN-005` covers concurrent append behavior by requiring deterministic
   sequence order or visible failure.
+- `AT-JRN-006` covers interrupted append handling by rejecting a final record
+  without its newline terminator.

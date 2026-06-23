@@ -16,7 +16,7 @@ jobs:
     name: No-model scenario validation and replay (Python ${{ matrix.python-version }})
     runs-on: ubuntu-latest
     timeout-minutes: 20
-    if: github.event_name != 'schedule'
+    if: github.event_name != 'schedule' || github.ref == 'refs/heads/main'
     strategy:
       fail-fast: false
       matrix:
@@ -44,7 +44,7 @@ jobs:
         run: |
           uv run --group eval python -m actionlineage_evals run \
             --scenario-path evals/scenarios \
-            --artifact-root build/evals/pr \
+            --artifact-root build/evals/no-model \
             --mode scripted \
             --model-adapter scripted \
             --seeds 1
@@ -53,8 +53,8 @@ jobs:
           PYTHONPATH: evals
         run: |
           uv run --group eval python -m actionlineage_evals replay \
-            build/evals/pr/avl-001-scripted-seed-0/replay-bundle \
-            --artifact-root build/evals/pr-replay
+            build/evals/no-model/avl-001-scripted-seed-0/replay-bundle \
+            --artifact-root build/evals/no-model-replay
       - name: Replay reviewed regression corpus
         env:
           PYTHONPATH: evals
@@ -67,6 +67,14 @@ jobs:
         env:
           PYTHONPATH: evals
         run: uv run --group eval python -m actionlineage_evals audit-artifacts build/evals
+      - name: Generate no-model public report artifact
+        env:
+          PYTHONPATH: evals
+        run: |
+          uv run --group eval python -m actionlineage_evals public-report \
+            build/evals/no-model \
+            --json-output build/evals/reports/agent-validation-baseline.json \
+            --markdown-output build/evals/reports/agent-validation-baseline.md
       - name: Summarize no-model eval artifacts
         if: always()
         env:
@@ -163,18 +171,37 @@ jobs:
       contents: read
       models: read
     steps:
+      - name: Check explicit live-model secret
+        id: live-secret
+        env:
+          GH_MODELS_TOKEN: ${{ secrets.GH_MODELS_TOKEN }}
+        run: |
+          if [ -n "$GH_MODELS_TOKEN" ]; then
+            echo "configured=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "configured=false" >> "$GITHUB_OUTPUT"
+            {
+              echo "### Scheduled live-model Agent Validation Lab"
+              echo
+              echo "Skipped: GH_MODELS_TOKEN is not configured; no model requests were made."
+            } >> "$GITHUB_STEP_SUMMARY"
+          fi
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+        if: steps.live-secret.outputs.configured == 'true'
       - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405
+        if: steps.live-secret.outputs.configured == 'true'
         with:
           python-version: "3.12"
       - name: Install uv
+        if: steps.live-secret.outputs.configured == 'true'
         run: python -m pip install --upgrade uv
       - name: Sync eval dependencies
+        if: steps.live-secret.outputs.configured == 'true'
         run: uv sync --locked --all-extras --group eval
       - name: Run bounded scheduled model evals
+        if: steps.live-secret.outputs.configured == 'true'
         env:
           GH_MODELS_TOKEN: ${{ secrets.GH_MODELS_TOKEN }}
-          GITHUB_TOKEN: ${{ github.token }}
           PYTHONPATH: evals
         run: |
           uv run --group eval python -m actionlineage_evals run \
@@ -186,6 +213,7 @@ jobs:
             --seeds 1 \
             --max-scenarios 6
       - name: Replay scheduled live bundles
+        if: steps.live-secret.outputs.configured == 'true'
         env:
           PYTHONPATH: evals
         run: |
@@ -193,21 +221,22 @@ jobs:
             build/evals/scheduled \
             --replay-artifact-root build/evals/scheduled-replay
       - name: Audit scheduled eval artifacts for redaction leaks
+        if: steps.live-secret.outputs.configured == 'true'
         env:
           PYTHONPATH: evals
         run: uv run --group eval python -m actionlineage_evals audit-artifacts build/evals
       - name: Summarize scheduled eval artifacts
-        if: always()
+        if: always() && steps.live-secret.outputs.configured == 'true'
         env:
           PYTHONPATH: evals
         run: |
           {
             echo "### Scheduled Agent Validation Lab scorecards"
             echo
-            uv run --group eval python -m actionlineage_evals summarize build/evals --format markdown || true
+              uv run --group eval python -m actionlineage_evals summarize build/evals --format markdown || true
           } >> "$GITHUB_STEP_SUMMARY"
       - name: Upload scheduled eval artifacts
-        if: always()
+        if: always() && steps.live-secret.outputs.configured == 'true'
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
         with:
           name: actionlineage-agent-validation-scheduled

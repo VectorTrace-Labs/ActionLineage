@@ -8,9 +8,9 @@ validated yet.
 
 | Channel | Status | Notes |
 | --- | --- | --- |
-| GitHub Releases | Alpha-supported | Release artifacts are built by GitHub Actions, checksummed, and attested. |
+| GitHub Releases | External-validation-required | Release workflow can build, checksum, and attest artifacts; the `v0.1.0a3` GitHub Release object remains owner-gated. |
 | PyPI/TestPyPI | Alpha-supported | `actionlineage` `0.1.0a3` is published as the Python 3.12-compatible alpha release through Trusted Publishing; fresh install/demo smoke passed from both indexes. |
-| GHCR container image | Preview | The release workflow builds, smoke-tests, and publishes tagged images with `GITHUB_TOKEN`. |
+| GHCR container image | Preview | The release workflow can build, smoke-test, and publish tagged images with `GITHUB_TOKEN`; public package visibility still requires external validation. |
 | Homebrew tap | Planned | A tap and formula should be created after Python package publication or a validated source formula path. |
 | conda-forge | Planned | Defer until PyPI publication and at least one public alpha feedback cycle. |
 

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import re
 import sqlite3
+from contextlib import closing
 from dataclasses import dataclass, field
 from enum import StrEnum
 from pathlib import Path
@@ -164,25 +165,62 @@ class MockHttpReceiverObserver:
         destination: str,
         expected_body_digest: str | None = None,
     ) -> ObservationOutcome:
-        for receipt in self.receipts:
-            if receipt.get("destination") != destination:
-                continue
-            if (
-                expected_body_digest is not None
-                and receipt.get("body_digest") != expected_body_digest
-            ):
+        candidates = tuple(
+            receipt for receipt in self.receipts if receipt.get("destination") == destination
+        )
+        if expected_body_digest is not None:
+            exact_matches = tuple(
+                receipt
+                for receipt in candidates
+                if receipt.get("body_digest") == expected_body_digest
+            )
+            if len(exact_matches) > 1:
+                return _ambiguous_http_observation(
+                    observer_identity=self.observer_identity,
+                    resource_identifier=destination,
+                    observed_state={
+                        "ambiguous_candidate_count": len(exact_matches),
+                        "destination": destination,
+                        "expected_body_digest": expected_body_digest,
+                    },
+                )
+            if len(exact_matches) == 1:
+                receipt = exact_matches[0]
+                return ObservationOutcome(
+                    observer_identity=self.observer_identity,
+                    resource_type=ResourceType.URL,
+                    resource_identifier=destination,
+                    outcome=ObserverOutcome.OBSERVED,
+                    observed_state={"receipt": receipt},
+                    limitations=("mock receiver fixture observation",),
+                    trust=TrustLevel.LOCAL,
+                )
+            if candidates:
                 return ObservationOutcome(
                     observer_identity=self.observer_identity,
                     resource_type=ResourceType.URL,
                     resource_identifier=destination,
                     outcome=ObserverOutcome.CONFLICTING,
                     observed_state={
-                        "receipt": receipt,
+                        "candidate_count": len(candidates),
                         "expected_body_digest": expected_body_digest,
+                        "receipt": candidates[0],
                     },
                     limitations=("receiver observed a conflicting body digest",),
                     trust=TrustLevel.LOCAL,
                 )
+        elif len(candidates) > 1:
+            return _ambiguous_http_observation(
+                observer_identity=self.observer_identity,
+                resource_identifier=destination,
+                observed_state={
+                    "ambiguous_candidate_count": len(candidates),
+                    "destination": destination,
+                },
+            )
+
+        if len(candidates) == 1:
+            receipt = candidates[0]
             return ObservationOutcome(
                 observer_identity=self.observer_identity,
                 resource_type=ResourceType.URL,
@@ -242,26 +280,32 @@ class HttpServerLogObserver:
     ) -> ObservationOutcome:
         """Observe request metadata in local fixture server logs."""
 
-        for entry in self.log_entries:
-            if entry.get("url") != url:
-                continue
-            if method is not None and entry.get("method") != method.upper():
-                continue
-            conflicts = _http_log_conflicts(
+        candidates = tuple(
+            entry
+            for entry in self.log_entries
+            if entry.get("url") == url and (method is None or entry.get("method") == method.upper())
+        )
+        exact_matches = tuple(
+            entry
+            for entry in candidates
+            if not _http_log_conflicts(
                 entry,
                 expected_body_digest=expected_body_digest,
                 expected_status_code=expected_status_code,
             )
-            if conflicts:
-                return ObservationOutcome(
-                    observer_identity=self.observer_identity,
-                    resource_type=ResourceType.URL,
-                    resource_identifier=url,
-                    outcome=ObserverOutcome.CONFLICTING,
-                    observed_state={"conflicts": conflicts, "log_entry": entry},
-                    limitations=("server log entry conflicted with expected request metadata",),
-                    trust=TrustLevel.LOCAL,
-                )
+        )
+        if len(exact_matches) > 1:
+            return _ambiguous_http_observation(
+                observer_identity=self.observer_identity,
+                resource_identifier=url,
+                observed_state={
+                    "ambiguous_candidate_count": len(exact_matches),
+                    "method": method,
+                    "url": url,
+                },
+            )
+        if len(exact_matches) == 1:
+            entry = exact_matches[0]
             return ObservationOutcome(
                 observer_identity=self.observer_identity,
                 resource_type=ResourceType.URL,
@@ -269,6 +313,26 @@ class HttpServerLogObserver:
                 outcome=ObserverOutcome.OBSERVED,
                 observed_state={"log_entry": entry},
                 limitations=("fixture server log observation",),
+                trust=TrustLevel.LOCAL,
+            )
+        if candidates:
+            entry = candidates[0]
+            conflicts = _http_log_conflicts(
+                entry,
+                expected_body_digest=expected_body_digest,
+                expected_status_code=expected_status_code,
+            )
+            return ObservationOutcome(
+                observer_identity=self.observer_identity,
+                resource_type=ResourceType.URL,
+                resource_identifier=url,
+                outcome=ObserverOutcome.CONFLICTING,
+                observed_state={
+                    "candidate_count": len(candidates),
+                    "conflicts": conflicts,
+                    "log_entry": entry,
+                },
+                limitations=("server log entry conflicted with expected request metadata",),
                 trust=TrustLevel.LOCAL,
             )
         return ObservationOutcome(
@@ -316,25 +380,28 @@ class HttpResponseReadbackObserver:
     ) -> ObservationOutcome:
         """Observe a fixture response readback."""
 
-        for response in self.responses:
-            if response.get("url") != url:
-                continue
-            conflicts = _http_response_conflicts(
+        candidates = tuple(response for response in self.responses if response.get("url") == url)
+        exact_matches = tuple(
+            response
+            for response in candidates
+            if not _http_response_conflicts(
                 response,
                 expected_body_digest=expected_body_digest,
                 expected_etag=expected_etag,
                 expected_status_code=expected_status_code,
             )
-            if conflicts:
-                return ObservationOutcome(
-                    observer_identity=self.observer_identity,
-                    resource_type=ResourceType.URL,
-                    resource_identifier=url,
-                    outcome=ObserverOutcome.CONFLICTING,
-                    observed_state={"conflicts": conflicts, "response": response},
-                    limitations=("response readback conflicted with expected metadata",),
-                    trust=TrustLevel.LOCAL,
-                )
+        )
+        if len(exact_matches) > 1:
+            return _ambiguous_http_observation(
+                observer_identity=self.observer_identity,
+                resource_identifier=url,
+                observed_state={
+                    "ambiguous_candidate_count": len(exact_matches),
+                    "url": url,
+                },
+            )
+        if len(exact_matches) == 1:
+            response = exact_matches[0]
             return ObservationOutcome(
                 observer_identity=self.observer_identity,
                 resource_type=ResourceType.URL,
@@ -342,6 +409,27 @@ class HttpResponseReadbackObserver:
                 outcome=ObserverOutcome.OBSERVED,
                 observed_state={"response": response},
                 limitations=("fixture response readback observation",),
+                trust=TrustLevel.LOCAL,
+            )
+        if candidates:
+            response = candidates[0]
+            conflicts = _http_response_conflicts(
+                response,
+                expected_body_digest=expected_body_digest,
+                expected_etag=expected_etag,
+                expected_status_code=expected_status_code,
+            )
+            return ObservationOutcome(
+                observer_identity=self.observer_identity,
+                resource_type=ResourceType.URL,
+                resource_identifier=url,
+                outcome=ObserverOutcome.CONFLICTING,
+                observed_state={
+                    "candidate_count": len(candidates),
+                    "conflicts": conflicts,
+                    "response": response,
+                },
+                limitations=("response readback conflicted with expected metadata",),
                 trust=TrustLevel.LOCAL,
             )
         return ObservationOutcome(
@@ -394,26 +482,33 @@ class WebhookReceiptObserver:
     ) -> ObservationOutcome:
         """Observe a webhook delivery receipt from local fixture state."""
 
-        for receipt in self.receipts:
-            if receipt.get("callback_url") != callback_url:
-                continue
-            if delivery_id is not None and receipt.get("delivery_id") != delivery_id:
-                continue
-            conflicts = _webhook_receipt_conflicts(
+        candidates = tuple(
+            receipt
+            for receipt in self.receipts
+            if receipt.get("callback_url") == callback_url
+            and (delivery_id is None or receipt.get("delivery_id") == delivery_id)
+        )
+        exact_matches = tuple(
+            receipt
+            for receipt in candidates
+            if not _webhook_receipt_conflicts(
                 receipt,
                 expected_body_digest=expected_body_digest,
                 expected_status_code=expected_status_code,
             )
-            if conflicts:
-                return ObservationOutcome(
-                    observer_identity=self.observer_identity,
-                    resource_type=ResourceType.URL,
-                    resource_identifier=callback_url,
-                    outcome=ObserverOutcome.CONFLICTING,
-                    observed_state={"conflicts": conflicts, "receipt": receipt},
-                    limitations=("webhook receipt conflicted with expected delivery metadata",),
-                    trust=TrustLevel.LOCAL,
-                )
+        )
+        if len(exact_matches) > 1:
+            return _ambiguous_http_observation(
+                observer_identity=self.observer_identity,
+                resource_identifier=callback_url,
+                observed_state={
+                    "ambiguous_candidate_count": len(exact_matches),
+                    "callback_url": callback_url,
+                    "delivery_id": delivery_id,
+                },
+            )
+        if len(exact_matches) == 1:
+            receipt = exact_matches[0]
             return ObservationOutcome(
                 observer_identity=self.observer_identity,
                 resource_type=ResourceType.URL,
@@ -421,6 +516,26 @@ class WebhookReceiptObserver:
                 outcome=ObserverOutcome.OBSERVED,
                 observed_state={"receipt": receipt},
                 limitations=("webhook fixture receipt observation",),
+                trust=TrustLevel.LOCAL,
+            )
+        if candidates:
+            receipt = candidates[0]
+            conflicts = _webhook_receipt_conflicts(
+                receipt,
+                expected_body_digest=expected_body_digest,
+                expected_status_code=expected_status_code,
+            )
+            return ObservationOutcome(
+                observer_identity=self.observer_identity,
+                resource_type=ResourceType.URL,
+                resource_identifier=callback_url,
+                outcome=ObserverOutcome.CONFLICTING,
+                observed_state={
+                    "candidate_count": len(candidates),
+                    "conflicts": conflicts,
+                    "receipt": receipt,
+                },
+                limitations=("webhook receipt conflicted with expected delivery metadata",),
                 trust=TrustLevel.LOCAL,
             )
         return ObservationOutcome(
@@ -559,7 +674,7 @@ class SqliteReadbackObserver:
         clauses = [f"{_sqlite_identifier(column)} = ?" for column in where]
         values = tuple(where.values())
         sql = f"select count(*) from {table_name} where {' and '.join(clauses)}"
-        with sqlite3.connect(database_path) as connection:
+        with closing(sqlite3.connect(database_path)) as connection:
             row = connection.execute(sql, values).fetchone()
         return int(row[0]) if row is not None else 0
 
@@ -568,6 +683,23 @@ def _sqlite_identifier(value: str) -> str:
     if re.fullmatch(r"[A-Za-z_][A-Za-z0-9_]*", value) is None:
         raise sqlite3.OperationalError("sqlite identifier is invalid")
     return value
+
+
+def _ambiguous_http_observation(
+    *,
+    observer_identity: str,
+    resource_identifier: str,
+    observed_state: JsonObject,
+) -> ObservationOutcome:
+    return ObservationOutcome(
+        observer_identity=observer_identity,
+        resource_type=ResourceType.URL,
+        resource_identifier=resource_identifier,
+        outcome=ObserverOutcome.UNVERIFIED,
+        observed_state=observed_state,
+        limitations=("multiple plausible observer records matched; correlation remains ambiguous",),
+        trust=TrustLevel.LOCAL,
+    )
 
 
 def _webhook_receipt_conflicts(

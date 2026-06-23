@@ -27,21 +27,45 @@ evidence and limitations.
 - JSON Lineage Contract validation for local journal evidence.
 - PyPI and TestPyPI package publication for the current public-alpha version,
   with fresh install and demo smoke validation.
+- Built wheel and source distribution first-time-user smoke validation for
+  version, demo, journal verification, contract validation, case export, and
+  static console export.
 - Python 3.12+ source, package metadata, CI, and release workflow validation.
 
 ## Local-Proof Surface
 
-- Journal anchors, Git anchor statements, archive manifests, and recovery
-  helpers under documented local trust assumptions.
+- Journal append I/O failure handling, anchors, Git anchor statements, archive
+  manifests, and recovery helpers under documented local trust assumptions;
+  verified-prefix recovery writes separate files and rejects in-place journal
+  overwrite.
+- HTTP fixture observers keep multiple plausible records unverified and expose
+  `ambiguous_candidate_count` rather than selecting one match without evidence.
 - Built-in sequence detections and Lineage Lab replay/mutation/minimization.
 - Agent Validation Lab scenario validation, no-model replay, provenance, and
-  artifact audits as a development-only evaluation surface.
-- Release hardening scripts for claim language, secret scanning, SBOM, local
-  provenance, and dependency audit.
-- CI release-proof gates for wheel/sdist build, SBOM, dependency audit, and
-  unsigned local provenance generation.
-- Release workflow for CI-built artifacts, GitHub artifact attestations, and
-  manual Trusted Publishing jobs.
+  artifact audits as a development-only evaluation surface; the current
+  deterministic baseline is summarized in `docs/AGENT_VALIDATION_EVIDENCE.md`
+  and generated into `docs/evidence/agent-validation-baseline.*`. Scheduled
+  no-model artifacts run on trusted default-branch code; optional live-model
+  execution is skipped unless maintainers configure `GH_MODELS_TOKEN`.
+- Deterministic demo evidence map generated from local demo artifacts for
+  onboarding and visual review; canonical evidence remains the local journal.
+- Release hardening scripts for claim language, secret scanning, SBOM,
+  dependency license reporting, local provenance, dependency audit,
+  repository-local Markdown link checking, release consistency, generated
+  release-candidate manifests, and generated release proof review indexes.
+- CI release-proof gates for branch-enabled total coverage, wheel/sdist build,
+  first-time-user artifact smoke, SBOM, dependency license checks, dependency
+  audit, unsigned local provenance generation, and concise GitHub job-summary
+  evidence.
+- Release workflow for CI-built artifacts, GitHub artifact attestations, manual
+  Trusted Publishing jobs, and owner-gated post-publication smoke verification
+  reports.
+- External review guides, reproduction commands, and feedback templates that
+  make review easier without claiming review has happened.
+- Release-candidate audit artifacts and owner publication checklist that prepare
+  publication decisions without performing owner-gated actions. Generated
+  manifests and review indexes are local navigation and hash-verification aids,
+  not hosted releases or external validation.
 
 ## Preview Surface
 
@@ -58,6 +82,10 @@ evidence and limitations.
 
 - PyPI/TestPyPI package ownership transfer to the organization account after
   package-index organization approval.
+- GitHub Release object and hosted release artifacts for `v0.1.0a3`; the tag
+  exists, but creating or repairing the release object is an owner action.
+- Public package metadata project URLs for PyPI/TestPyPI after the next
+  owner-approved release publishes corrected metadata.
 - Homebrew tap and formula publication.
 - conda-forge recipe publication.
 - Branch protection and GitHub security-control status.

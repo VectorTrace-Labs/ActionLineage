@@ -63,15 +63,15 @@ PYTHONPATH=evals uv run --group eval python -m actionlineage_evals summarize \
 PYTHONPATH=evals uv run --group eval python -m actionlineage_evals docker-smoke
 ```
 
-Scheduled GitHub Models runs use the same interface with `--mode live
---model-adapter github_models`. In GitHub Actions, the adapter first reads a
-model-specific `GH_MODELS_TOKEN` secret, then falls back to the workflow
-`GITHUB_TOKEN`. GitHub Actions rejects secret names beginning with `GITHUB_`, so
-`GH_MODELS_TOKEN` is the repository secret name. The secret is only passed to the
-scheduled or manually dispatched default-branch job; pull-request jobs remain
-no-model and secret-free. Local Ollama runs use `--model-adapter ollama`. Local
-OpenAI-compatible chat-completions servers use `--model-adapter
-openai_compatible` with `OPENAI_COMPATIBLE_BASE_URL` or
+Scheduled no-model runs execute on the trusted default branch and generate a
+public-report artifact from deterministic scripted scorecards. Scheduled GitHub
+Models runs use the same interface with `--mode live --model-adapter
+github_models`, but the workflow skips all live-model execution unless the
+explicit `GH_MODELS_TOKEN` secret is configured. GitHub Actions rejects secret
+names beginning with `GITHUB_`, so `GH_MODELS_TOKEN` is the repository secret
+name. Pull-request jobs remain no-model and secret-free. Local Ollama runs use
+`--model-adapter ollama`. Local OpenAI-compatible chat-completions servers use
+`--model-adapter openai_compatible` with `OPENAI_COMPATIBLE_BASE_URL` or
 `OPENAI_COMPATIBLE_CHAT_COMPLETIONS_URL`. All live adapters stay bounded by
 scenario budgets.
 
@@ -85,9 +85,9 @@ Every scenario run writes:
 - `replay-bundle/`: transcript and journal material for no-model replay.
 
 Every suite run also writes `suite-summary.json`, a compact trendable report
-with scenario status, failure-class counts, and scorer pass/fail counts.
-GitHub Actions job summaries render the same scorecards as Markdown with replay
-commands for quick triage.
+with scenario status, failure-class counts, stable failure fingerprints, and
+scorer pass/fail counts. GitHub Actions job summaries render the same
+scorecards as Markdown with replay commands for quick triage.
 
 The scheduled GitHub Models lane runs the first six scenarios. `AVL-007` is a
 deterministic no-model provider-failure control, `AVL-008` is a budget

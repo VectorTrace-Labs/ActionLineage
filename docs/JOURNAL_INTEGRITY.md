@@ -16,6 +16,32 @@ This is tamper-evident relative to the journal bytes and any trusted anchor. It
 is not tamper-proof, forensically complete, or resistant to an attacker who can
 rewrite both the journal and all trusted anchors.
 
+## Append durability and incomplete records
+
+The local writer serializes append attempts with a sidecar lock file, verifies
+the existing journal before writing, requires the incoming
+`causality.sequence` to equal the next record index, writes one canonical JSON
+record plus a newline terminator, flushes, and calls `fsync()` on the journal
+file.
+
+If the journal directory cannot be prepared, the existing journal cannot be
+read for preflight verification, or the append write/flush/fsync operation
+raises an operating-system I/O error such as a permission or disk-space failure,
+append fails with `JournalAppendError`. The public error message is bounded and
+does not include event payload data. The local sidecar lock is released on these
+failure paths.
+
+A journal record is complete only when the newline terminator is present. If an
+append is interrupted after partial bytes are visible but before the terminator,
+verification reports `truncated_record` at that record and stops at the prior
+verified prefix. ActionLineage does not repair or truncate the source journal in
+place; use verified-prefix export to copy the records that verified before the
+first issue.
+
+The lock is a local sidecar file, not a distributed lock. Filesystems, network
+mounts, or backup tools that do not honor local exclusive creation semantics
+need deployment-specific controls before relying on concurrent writers.
+
 ## Trusted anchors
 
 Use `create_journal_anchor()` or the CLI to capture a trusted root:
@@ -161,7 +187,9 @@ uv run actionlineage journal export-verified-prefix evidence.jsonl verified-pref
 ```
 
 The command writes records verified before the first detected issue. It does not
-modify, repair, or delete the original journal.
+modify, repair, truncate, or delete the original journal. The output path must
+be different from the source journal path; in-place recovery is rejected before
+any output file is opened.
 
 ## Retention
 
