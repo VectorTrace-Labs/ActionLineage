@@ -6,6 +6,9 @@ This page collects reproducible public-alpha evaluation commands. Generated
 artifacts belong under `build/`, `dist/`, or a temporary directory and are not
 committed unless a release process explicitly requests them.
 
+If an installation, demo, browser, path, or offline/online environment issue
+blocks these commands, see `docs/TROUBLESHOOTING.md`.
+
 ## Published Package Smoke
 
 ```bash

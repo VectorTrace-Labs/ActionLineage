@@ -317,6 +317,8 @@ reference.
   path, semantics to challenge, and safe feedback routes.
 - [Evaluation reproduction](docs/EVALUATION_REPRODUCTION.md): exact commands
   for public-package, demo, Agent Validation, and local release proof.
+- [Troubleshooting](docs/TROUBLESHOOTING.md): first-time install, demo, path,
+  browser, and offline/online guidance.
 - [Known limitations](docs/KNOWN_LIMITATIONS.md): public-alpha boundaries and
   external-validation gaps.
 - [Architecture](ARCHITECTURE.md): component boundaries and runtime flow.

@@ -73,6 +73,7 @@ def test_release_docs_are_present() -> None:
         "docs/SECURITY_REVIEW_CHECKLIST.md",
         "docs/AGENT_PLATFORM_REVIEW_CHECKLIST.md",
         "docs/EVALUATION_REPRODUCTION.md",
+        "docs/TROUBLESHOOTING.md",
         "docs/ADOPTION_CASE_STUDY_TEMPLATE.md",
         "docs/KNOWN_LIMITATIONS.md",
         ".github/copilot-instructions.md",
@@ -142,6 +143,8 @@ def test_readme_quickstart_uses_demo_aligned_contract() -> None:
     assert "canonical evidence remains `evidence.jsonl`" in readme
     assert "External review guide" in readme
     assert "Evaluation reproduction" in readme
+    assert "Troubleshooting" in readme
+    assert "docs/TROUBLESHOOTING.md" in readme
     assert "Known limitations" in readme
     assert "Release-candidate audit" in readme
     assert "Owner publication checklist" in readme
@@ -159,6 +162,7 @@ def test_external_review_docs_prepare_review_without_claiming_validation() -> No
         "reproduction": (PROJECT_ROOT / "docs/EVALUATION_REPRODUCTION.md").read_text(
             encoding="utf-8"
         ),
+        "troubleshooting": (PROJECT_ROOT / "docs/TROUBLESHOOTING.md").read_text(encoding="utf-8"),
         "case_study": (PROJECT_ROOT / "docs/ADOPTION_CASE_STUDY_TEMPLATE.md").read_text(
             encoding="utf-8"
         ),
@@ -175,6 +179,7 @@ def test_external_review_docs_prepare_review_without_claiming_validation() -> No
     assert "Agent Platform Review Checklist" in docs["platform"]
     assert "Lifecycle Semantics" in docs["platform"]
     assert "Published Package Smoke" in docs["reproduction"]
+    assert "docs/TROUBLESHOOTING.md" in docs["reproduction"]
     assert "No-Model Agent Validation Baseline" in docs["reproduction"]
     assert "Local Release Proof" in docs["reproduction"]
     assert "This is a template" in docs["case_study"]
@@ -193,6 +198,9 @@ def test_external_review_docs_prepare_review_without_claiming_validation() -> No
         "docs/evidence/agent-validation-baseline.json",
         "scripts/check_claims_language.py",
         "scripts/secret_scan.py",
+        "actionlineage doctor",
+        'pipx run --pip-args="--pre"',
+        "python -m pip install --pre actionlineage==0.1.0a3",
     ):
         assert required in combined
 
@@ -205,6 +213,36 @@ def test_external_review_docs_prepare_review_without_claiming_validation() -> No
     )
     for claim in unsupported_claims:
         assert claim not in normalized
+
+
+def test_troubleshooting_doc_covers_first_time_user_failures() -> None:
+    troubleshooting = (PROJECT_ROOT / "docs/TROUBLESHOOTING.md").read_text(encoding="utf-8")
+    normalized = troubleshooting.lower()
+
+    for required in (
+        "Troubleshooting First-Time Evaluation",
+        "actionlineage doctor",
+        "uvx --prerelease allow --from actionlineage==0.1.0a3",
+        'pipx run --pip-args="--pre"',
+        "python -m pip install --pre actionlineage==0.1.0a3",
+        "Python 3.12",
+        "uv sync --locked --extra adapters",
+        "uv sync --locked --extra service",
+        "contracts/examples/outbound-http.json",
+        "actionlineage projection export-console",
+        "Offline Versus Online",
+        "Do not share live secrets",
+        "evaluation feedback template",
+        "SECURITY.md",
+    ):
+        assert required in troubleshooting
+
+    for unsupported_claim in (
+        "production ready",
+        "externally validated",
+        "externally audited",
+    ):
+        assert unsupported_claim not in normalized
 
 
 def test_external_review_issue_templates_collect_safe_repro_context() -> None:
@@ -331,6 +369,7 @@ def test_release_checklist_covers_required_gates() -> None:
         "actionlineage demo run",
         "actionlineage projection export-console",
         "uv run --all-extras pytest",
+        "First-time-user troubleshooting covers",
         "gh workflow run release.yml -f publish_target=none",
         "gh workflow run release.yml -f publish_target=testpypi",
         "gh workflow run release.yml -f publish_target=pypi",

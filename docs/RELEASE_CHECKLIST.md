@@ -235,6 +235,10 @@ See `docs/PACKAGE_MANAGERS.md`.
 ## Documentation Gates
 
 - README quickstart works from a fresh clone.
+- First-time-user troubleshooting covers prerelease installation, unsupported
+  Python versions, package-manager behavior, optional extras, common demo
+  failures, path/browser issues, offline/online expectations, and safe failure
+  reports.
 - API, CLI, schema, tutorial, migration, FAQ, security, privacy, and operations
   docs are present.
 - Repository-relative Markdown links resolve with
