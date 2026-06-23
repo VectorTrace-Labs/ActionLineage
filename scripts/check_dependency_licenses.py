@@ -10,6 +10,7 @@ import re
 import sys
 from collections.abc import Iterable, Sequence
 from dataclasses import dataclass
+from functools import lru_cache
 from pathlib import Path
 from types import ModuleType
 from typing import Any
@@ -32,7 +33,6 @@ CLASSIFIER_LICENSE_MAP = {
     "OSI Approved :: MIT License": "MIT",
     "OSI Approved :: Mozilla Public License 2.0 (MPL 2.0)": "MPL-2.0",
 }
-GENERATE_SBOM: ModuleType | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -164,10 +164,8 @@ def _parse_args(argv: Sequence[str]) -> argparse.Namespace:
     return parser.parse_args(argv)
 
 
+@lru_cache(maxsize=1)
 def _generate_sbom() -> ModuleType:
-    global GENERATE_SBOM
-    if GENERATE_SBOM is not None:
-        return GENERATE_SBOM
     script_path = Path(__file__).resolve().with_name("generate_sbom.py")
     spec = importlib.util.spec_from_file_location("generate_sbom", script_path)
     if spec is None or spec.loader is None:
@@ -175,7 +173,6 @@ def _generate_sbom() -> ModuleType:
     module = importlib.util.module_from_spec(spec)
     sys.modules["generate_sbom"] = module
     spec.loader.exec_module(module)
-    GENERATE_SBOM = module
     return module
 
 

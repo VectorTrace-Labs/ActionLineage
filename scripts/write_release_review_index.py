@@ -243,9 +243,11 @@ def _render_markdown(
     lines = [
         "# ActionLineage Release Proof Review Index",
         "",
-        "This index is generated from local release-candidate proof. It is a reviewer navigation "
-        "aid, not publication evidence, not a GitHub Release object, and not a signed "
-        "attestation.",
+        (
+            "This index is generated from local release-candidate proof. "
+            + "It is a reviewer navigation aid, not publication evidence, "
+            + "not a GitHub Release object, and not a signed attestation."
+        ),
         "",
         "## Candidate",
         "",
@@ -292,15 +294,19 @@ def _render_markdown(
             "",
             "## Reviewer Checks",
             "",
-            "Run these checks against the local artifact directory before attaching or reviewing "
-            "release assets:",
+            (
+                "Run these checks against the local artifact directory before attaching "
+                + "or reviewing release assets:"
+            ),
             "",
             "```bash",
             *_reviewer_commands(manifest=manifest, manifest_path=manifest_path, checks=checks),
             "```",
             "",
-            "Owner-gated actions remain separate: do not push, tag, publish, upload, or create a "
-            "GitHub Release from this index alone.",
+            (
+                "Owner-gated actions remain separate: do not push, tag, publish, upload, "
+                + "or create a GitHub Release from this index alone."
+            ),
             "",
         ]
     )

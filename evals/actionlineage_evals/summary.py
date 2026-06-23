@@ -364,9 +364,11 @@ def render_public_baseline_report_markdown(report: JsonMap) -> str:
     lines = [
         "# Agent Validation Baseline Evidence",
         "",
-        "This deterministic report is generated from the development-only no-model "
-        "Agent Validation Lab artifacts. It is local proof, not external validation "
-        "and not a live-model reliability claim.",
+        (
+            "This deterministic report is generated from the development-only no-model "
+            + "Agent Validation Lab artifacts. It is local proof, not external validation "
+            + "and not a live-model reliability claim."
+        ),
         "",
         "## Summary",
         "",
@@ -398,16 +400,18 @@ def render_public_baseline_report_markdown(report: JsonMap) -> str:
         f"| Detection scores | `{json.dumps(coverage['detection_coverage'], sort_keys=True)}` |",
         f"| Failure classes | `{json.dumps(failure, sort_keys=True)}` |",
         "",
-        "Expected control scenarios intentionally preserve product, agent, "
-        "harness, provider, and budget failure classes when those classes are "
-        "the scenario objective. They do not represent unresolved release "
-        "blockers when the suite passes.",
+        (
+            "Expected control scenarios intentionally preserve product, agent, "
+            + "harness, provider, and budget failure classes when those classes are "
+            + "the scenario objective. They do not represent unresolved release "
+            + "blockers when the suite passes."
+        ),
         "",
         "## Scenario Results",
         "",
         (
             "| Scenario | Passed | Failure class | Failure fingerprint | Seed | "
-            "Event count | Verification statuses | Artifacts |"
+            + "Event count | Verification statuses | Artifacts |"
         ),
         "| --- | --- | --- | --- | ---: | ---: | --- | --- |",
     ]
