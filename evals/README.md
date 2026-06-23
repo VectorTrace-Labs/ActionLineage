@@ -102,8 +102,10 @@ The scheduled GitHub Models lane runs the first six scenarios. `AVL-007` is a
 deterministic no-model provider-failure control, `AVL-008` is a budget
 exhaustion control, `AVL-009` is a harness-failure control, and `AVL-010` is an
 agent-failure control. `AVL-011` is a product-failure oracle-mismatch control.
-These deterministic controls run in scripted and replay lanes rather than
-calling a live provider.
+`AVL-012` is a concurrent child-run isolation control that checks run IDs,
+evidence links, and projection readbacks for interleaved tool calls. These
+deterministic controls run in scripted and replay lanes rather than calling a
+live provider.
 
 Replay runs include a `replay_equivalence` scorer. It compares semantic
 scorecard essentials from the source run with the replayed run, while ignoring

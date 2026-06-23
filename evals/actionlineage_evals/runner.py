@@ -34,6 +34,7 @@ from actionlineage_evals.models import (
     ScenarioDefinition,
     ScenarioResult,
     ScoreResult,
+    ToolCall,
 )
 from actionlineage_evals.provenance import write_run_provenance
 from actionlineage_evals.replay import (
@@ -185,14 +186,28 @@ def run_scenario(
         if scenario.scenario_id == "AVL-009" and provider_error is None and agent_error is None:
             harness_error = HarnessControlError("synthetic harness oracle failure for AVL-009")
         if provider_error is None and agent_error is None and harness_error is None:
-            for turn in turns:
-                for call in turn.tool_calls:
-                    harness.execute(call)
-            _apply_runtime_mutations(
-                recorder=recorder,
-                scenario=scenario,
-                mutation_sequence=mutation_sequence,
-            )
+            if scenario.scenario_id == "AVL-012":
+                try:
+                    _execute_concurrent_tool_plan(
+                        recorder=recorder,
+                        world=world,
+                        turns=turns,
+                        mode=mode,
+                        provider=adapter.provider,
+                        model_id=adapter.model_id,
+                    )
+                except AgentExecutionError as exc:
+                    agent_error = exc
+            else:
+                for turn in turns:
+                    for call in turn.tool_calls:
+                        harness.execute(call)
+            if agent_error is None:
+                _apply_runtime_mutations(
+                    recorder=recorder,
+                    scenario=scenario,
+                    mutation_sequence=mutation_sequence,
+                )
         write_json(
             paths.mutation_sequence_path,
             {
@@ -459,6 +474,48 @@ def _mutation_sequence(scenario: ScenarioDefinition, seed: int) -> list[dict[str
     return mutations
 
 
+def _execute_concurrent_tool_plan(
+    *,
+    recorder: EventRecorder,
+    world: WorldState,
+    turns: tuple[ModelTurn, ...],
+    mode: RunMode,
+    provider: str,
+    model_id: str,
+) -> None:
+    labels = _concurrent_run_labels(turns)
+    for label in labels:
+        recorder.record_scoped_run_started(
+            mode=mode.value,
+            provider=provider,
+            model_id=model_id,
+            run_label=label,
+            coordinator_run_id=recorder.run_id,
+        )
+    for turn in turns:
+        for call in turn.tool_calls:
+            run_label = _tool_call_run_label(call)
+            ToolHarness(recorder=recorder, world=world, run_label=run_label).execute(call)
+    for label in labels:
+        recorder.record_scoped_run_completed(passed=True, run_label=label)
+
+
+def _concurrent_run_labels(turns: tuple[ModelTurn, ...]) -> tuple[str, ...]:
+    labels: list[str] = []
+    for turn in turns:
+        for call in turn.tool_calls:
+            label = _tool_call_run_label(call)
+            if label not in labels:
+                labels.append(label)
+    return tuple(labels)
+
+
+def _tool_call_run_label(call: ToolCall) -> str:
+    if not isinstance(call.arguments.get("run_label"), str):
+        raise AgentExecutionError("concurrent tool plan is missing required run_label")
+    return str(call.arguments["run_label"])
+
+
 def _apply_runtime_mutations(
     *,
     recorder: EventRecorder,
@@ -524,6 +581,8 @@ def _mutation_semantic_property(mutation_type: str) -> str:
         return "optional-field omission must not alter authoritative lifecycle outcome"
     if mutation_type == "event_ordering_skew":
         return "timestamp/order variation must preserve causal parent requirements"
+    if mutation_type == "concurrency":
+        return "interleaved child runs must preserve run attribution and evidence links"
     return "declared mutation is tracked for replay provenance"
 
 

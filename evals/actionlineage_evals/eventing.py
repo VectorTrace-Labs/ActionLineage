@@ -11,6 +11,7 @@ from typing import cast
 
 from actionlineage.adapters.mcp.descriptors import McpToolDescriptor, descriptor_hash
 from actionlineage.domain import (
+    Causality,
     Classification,
     Correlation,
     EventEnvelope,
@@ -55,37 +56,18 @@ class EventRecorder:
     seed: int
     journal_path: Path
     _events: list[EventEnvelope] | None = None
+    _id_generator: SequentialIdGenerator | None = None
     _normalizer: EvidenceNormalizer | None = None
+    _normalizers: dict[str, EvidenceNormalizer] | None = None
     _journal: LocalJournal | None = None
 
     def __post_init__(self) -> None:
         self.journal_path.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
         self.journal_path.unlink(missing_ok=True)
-        correlation = Correlation(
-            trace_id=f"trace_{self.scenario_id.lower()}_{self.seed:04d}",
-            run_id=f"run_{self.scenario_id.lower()}_{self.seed:04d}",
-        )
-        source = Source(
-            component="agent_validation_lab",
-            instance_id=f"{self.scenario_id.lower()}-{self.seed}",
-            version="0",
-        )
-        principal = Principal(
-            principal_id="agent_validation_lab_agent",
-            principal_type=PrincipalType.AGENT,
-            on_behalf_of="agent_validation_lab_user",
-            credential_id="none",
-        )
-        classification = Classification(sensitivity=Sensitivity.INTERNAL, trust=TrustLevel.LOCAL)
         self._events = []
-        self._normalizer = EvidenceNormalizer(
-            correlation=correlation,
-            source=source,
-            principal=principal,
-            classification=classification,
-            clock=FixedClock(EVAL_TIME),
-            id_generator=SequentialIdGenerator(self.scenario_id, self.seed),
-        )
+        self._id_generator = SequentialIdGenerator(self.scenario_id, self.seed)
+        self._normalizers = {}
+        self._normalizer = self._normalizer_for(None)
         self._journal = LocalJournal(
             self.journal_path,
             redaction_policy=RedactionPolicy.from_paths(
@@ -104,11 +86,14 @@ class EventRecorder:
 
     @property
     def run_id(self) -> str:
-        return self._require_normalizer().correlation.run_id
+        return self._normalizer_for(None).correlation.run_id
 
     @property
     def trace_id(self) -> str:
-        return self._require_normalizer().correlation.trace_id
+        return self._normalizer_for(None).correlation.trace_id
+
+    def run_id_for_label(self, run_label: str | None) -> str:
+        return self._normalizer_for(run_label).correlation.run_id
 
     def record(
         self,
@@ -119,19 +104,32 @@ class EventRecorder:
         principal: Principal | None = None,
         classification: Classification | None = None,
         parent_event_id: str | None = None,
+        root_event_id: str | None = None,
+        run_label: str | None = None,
     ) -> EventEnvelope:
         """Record one event and return the persisted hashed event."""
 
-        event = self._require_normalizer().record(
+        events = self._require_events()
+        event = self._normalizer_for(run_label).record(
             event_type,
             cast(JsonObject, payload),
             source=source,
             principal=principal,
             classification=classification,
             parent_event_id=parent_event_id,
+            root_event_id=root_event_id,
+        )
+        event = event.model_copy(
+            update={
+                "causality": Causality(
+                    root_event_id=event.causality.root_event_id,
+                    parent_event_id=event.causality.parent_event_id,
+                    sequence=len(events),
+                )
+            }
         )
         persisted = self._require_journal().append(event)
-        self._require_events().append(persisted)
+        events.append(persisted)
         return persisted
 
     def record_intent(self, *, prompt: str, scenario_id: str) -> EventEnvelope:
@@ -151,22 +149,58 @@ class EventRecorder:
         )
 
     def record_run_started(self, *, mode: str, provider: str, model_id: str) -> EventEnvelope:
+        return self.record_scoped_run_started(
+            mode=mode,
+            provider=provider,
+            model_id=model_id,
+            run_label=None,
+        )
+
+    def record_scoped_run_started(
+        self,
+        *,
+        mode: str,
+        provider: str,
+        model_id: str,
+        run_label: str | None,
+        coordinator_run_id: str | None = None,
+    ) -> EventEnvelope:
+        run_payload: JsonMap = {
+            "mode": mode,
+            "model_id": model_id,
+            "model_provider": provider,
+            "scenario_id": self.scenario_id,
+        }
+        if run_label is not None:
+            run_payload.update(
+                {
+                    "concurrent_child": True,
+                    "coordinator_run_id": coordinator_run_id,
+                    "run_label": run_label,
+                }
+            )
         return self.record(
             EventType.AGENT_RUN_STARTED,
-            {
-                "run": {
-                    "mode": mode,
-                    "model_id": model_id,
-                    "model_provider": provider,
-                    "scenario_id": self.scenario_id,
-                }
-            },
+            {"run": run_payload},
+            run_label=run_label,
         )
 
     def record_run_completed(self, *, passed: bool) -> EventEnvelope:
+        return self.record_scoped_run_completed(passed=passed, run_label=None)
+
+    def record_scoped_run_completed(
+        self,
+        *,
+        passed: bool,
+        run_label: str | None,
+    ) -> EventEnvelope:
+        run_payload: JsonMap = {"passed": passed, "scenario_id": self.scenario_id}
+        if run_label is not None:
+            run_payload.update({"concurrent_child": True, "run_label": run_label})
         return self.record(
             EventType.AGENT_RUN_COMPLETED,
-            {"run": {"passed": passed, "scenario_id": self.scenario_id}},
+            {"run": run_payload},
+            run_label=run_label,
         )
 
     def record_run_failed(
@@ -193,10 +227,44 @@ class EventRecorder:
             raise RuntimeError("event recorder not initialized")
         return self._events
 
-    def _require_normalizer(self) -> EvidenceNormalizer:
-        if self._normalizer is None:
+    def _normalizer_for(self, run_label: str | None) -> EvidenceNormalizer:
+        if self._normalizers is None:
             raise RuntimeError("event recorder not initialized")
-        return self._normalizer
+        key = run_label or ""
+        normalizer = self._normalizers.get(key)
+        if normalizer is None:
+            normalizer = self._build_normalizer(run_label)
+            self._normalizers[key] = normalizer
+        return normalizer
+
+    def _build_normalizer(self, run_label: str | None) -> EvidenceNormalizer:
+        if self._id_generator is None:
+            raise RuntimeError("event recorder not initialized")
+        label_suffix = f"_{run_label}" if run_label else ""
+        correlation = Correlation(
+            trace_id=f"trace_{self.scenario_id.lower()}_{self.seed:04d}",
+            run_id=f"run_{self.scenario_id.lower()}{label_suffix}_{self.seed:04d}",
+        )
+        source = Source(
+            component="agent_validation_lab",
+            instance_id=f"{self.scenario_id.lower()}{label_suffix}-{self.seed}",
+            version="0",
+        )
+        principal = Principal(
+            principal_id="agent_validation_lab_agent",
+            principal_type=PrincipalType.AGENT,
+            on_behalf_of="agent_validation_lab_user",
+            credential_id="none",
+        )
+        classification = Classification(sensitivity=Sensitivity.INTERNAL, trust=TrustLevel.LOCAL)
+        return EvidenceNormalizer(
+            correlation=correlation,
+            source=source,
+            principal=principal,
+            classification=classification,
+            clock=FixedClock(EVAL_TIME),
+            id_generator=self._id_generator,
+        )
 
     def _require_journal(self) -> LocalJournal:
         if self._journal is None:
@@ -217,6 +285,7 @@ def tool_descriptor(tool_name: str, *, variant: str = "v1") -> McpToolDescriptor
                 "body": {"type": "string"},
                 "mode": {"type": "string"},
                 "path": {"type": "string"},
+                "run_label": {"type": "string"},
                 "url": {"type": "string"},
             },
             "type": "object",

@@ -447,6 +447,7 @@
               "contract",
               "detection",
               "capability_coverage",
+              "run_isolation",
               "replayability",
               "failure_classification"
             ]

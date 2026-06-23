@@ -1,6 +1,6 @@
 # Agent Validation Evidence
 
-Last reviewed: 2026-06-22.
+Last reviewed: 2026-06-23.
 
 This page records the current deterministic, no-model Agent Validation Lab
 evidence for public-alpha review. The lab is a development-only evaluation
@@ -44,12 +44,12 @@ PYTHONPATH=evals uv run --group eval python -m actionlineage_evals check-public-
 
 | Evidence | Current result |
 | --- | --- |
-| Scenario validation | 11 scenarios: `AVL-001` through `AVL-011` |
+| Scenario validation | 12 scenarios: `AVL-001` through `AVL-012` |
 | Scenario lint | 0 issues |
-| Capability coverage | 47/47 declared capabilities covered |
+| Capability coverage | 48/48 declared capabilities covered |
 | Eval import boundary | No ActionLineage core imports from eval-only packages |
-| Scripted no-model suite | 11 scorecards, 0 failed |
-| Artifact audit | 236 files scanned, 0 leaks |
+| Scripted no-model suite | 12 scorecards, 0 failed |
+| Artifact audit | 293 files scanned, 0 leaks |
 | Baseline freshness gate | Committed baseline is checked against regenerated no-model artifacts; provenance-only drift is allowed, input or semantic drift fails |
 | Scheduled no-model lane | Trusted default-branch workflow generates deterministic artifacts and public-report outputs without model credentials |
 | Scheduled live-model lane | Optional and skipped unless maintainers configure `GH_MODELS_TOKEN`; provider instability remains non-blocking |
@@ -60,7 +60,7 @@ Failure-class counts from the scripted baseline:
 
 | Failure class | Count | Meaning |
 | --- | ---: | --- |
-| `none` | 6 | Positive or benign scenarios without modeled failure controls |
+| `none` | 7 | Positive or benign scenarios without modeled failure controls |
 | `provider_failure` | 1 | Expected provider-failure control (`AVL-007`) |
 | `inconclusive_budget_exhausted` | 1 | Expected budget-exhaustion control (`AVL-008`) |
 | `harness_failure` | 1 | Expected harness-failure control (`AVL-009`) |
@@ -79,13 +79,14 @@ Agent Validation Lab beyond `Local-proof` maturity.
 | `AVL-002` | Acknowledged HTTP send with timed-out or unverified side effect |
 | `AVL-003` | Policy denied and not dispatched with redaction canary |
 | `AVL-004` | Descriptor drift detection |
-| `AVL-005` | Conflicting observer evidence |
-| `AVL-006` | Replay and mutation robustness |
+| `AVL-005` | Read-then-send unverified causal chain |
+| `AVL-006` | Denied unsafe send followed by allowed safe alternative |
 | `AVL-007` | Provider-failure control |
 | `AVL-008` | Budget-exhaustion control |
 | `AVL-009` | Harness-failure control |
 | `AVL-010` | Agent-failure control |
 | `AVL-011` | Product-failure oracle-mismatch control |
+| `AVL-012` | Concurrent child-run isolation |
 
 ## Known Gaps
 
@@ -94,7 +95,6 @@ The strict coverage report still records explicit known gaps:
 | Gap | Reason |
 | --- | --- |
 | `cloud_observer_live` | Live cloud observers remain outside development-only eval scope. |
-| `multi_agent_concurrency` | Deferred until the single-agent vertical slice is deterministic. |
 | `service_mode_auth_eval` | Optional service mode is preview and not required for the first lab slice. |
 
 These gaps are not alpha-supported capabilities. Keep them labeled as planned,

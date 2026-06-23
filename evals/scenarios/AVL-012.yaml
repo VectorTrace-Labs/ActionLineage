@@ -1,0 +1,158 @@
+apiVersion: actionlineage.dev/eval-scenario/v0
+kind: AgentValidationScenario
+metadata:
+  id: AVL-012
+  name: concurrent-run-isolation
+  owner: security-platform
+  maturity: development-only
+  tags: [concurrency, run-isolation, replay]
+spec:
+  deterministic: true
+  intent:
+    summary: Preserve evidence attribution across two interleaved child agent runs.
+    prompt: Run two labeled child tasks, agent_a and agent_b. Each child must read its own restricted fixture through safe_files.read, then send its own synthetic digest summary through safe_http.send in fixture mode. Preserve each tool call's run_label.
+    successCriteria:
+      - The coordinator run records child run starts and completions without owning tool execution events.
+      - Tool requests are interleaved across agent_a and agent_b while retaining distinct run IDs.
+      - Each child run has independently verified filesystem evidence and unverified HTTP acknowledgement evidence.
+      - Projection readback can query both child run IDs independently.
+      - No evidence link crosses between child runs.
+  environment:
+    type: docker_compose
+    artifactRoot: build/evals/
+    compose:
+      file: evals/docker/compose.yaml
+      projectNamePrefix: actionlineage-eval
+      captureConfigDigest: true
+      teardown: always
+    services:
+      - name: fixture
+        role: fixture
+        healthCheck: fixture-only
+  agents:
+    - id: local-agent
+      agentAdapter: local_tool_agent
+      modelAdapter: replay
+      allowedTools: [safe_files.read, safe_http.send]
+  tools:
+    - name: safe_files.read
+      descriptorHashRequired: true
+      sideEffectClass: filesystem_read
+      policyMode: allow
+    - name: safe_http.send
+      descriptorHashRequired: true
+      sideEffectClass: http_send
+      policyMode: allow
+  oracles:
+    - id: agent-a-filesystem-readback
+      type: filesystem_state
+      subject: workspace/restricted/agent-a-plan.txt
+      authoritative: true
+    - id: agent-b-filesystem-readback
+      type: filesystem_state
+      subject: workspace/restricted/agent-b-plan.txt
+      authoritative: true
+    - id: process-status
+      type: process_status
+      subject: eval runner process
+      authoritative: true
+    - id: receiver-log
+      type: receiver_log
+      subject: receiver request log fixture
+      authoritative: true
+      limitations:
+        - Fixture mode records unverified receiver evidence without a live network send.
+    - id: child-run-projection-readback
+      type: sqlite_readback
+      subject: child run timelines
+      authoritative: true
+    - id: journal
+      type: journal_verification
+      subject: build/evals/<run-id>/journal.jsonl
+      authoritative: true
+    - id: projection
+      type: projection_rebuild
+      subject: build/evals/<run-id>/projection.sqlite
+      authoritative: true
+    - id: contract
+      type: contract_validation
+      subject: AVL-012-contract
+      authoritative: true
+    - id: redaction
+      type: redaction_scan
+      subject: build/evals/<run-id>
+      authoritative: true
+  expected:
+    lifecycle:
+      - agent.intent.recorded
+      - agent.run.started
+      - tool.execution.requested
+      - tool.execution.authorized
+      - tool.execution.dispatched
+      - tool.execution.acknowledged
+      - side_effect.observed
+      - side_effect.verified
+      - resource.observed
+      - side_effect.unverified
+      - agent.run.completed
+    verificationStatuses: [observed, verified, unverified]
+    mustNotIncludeVerificationStatuses: [timed_out, conflicting]
+    evidenceLinks:
+      - subjectEventType: tool.execution.acknowledged
+        evidenceEventType: side_effect.observed
+        verificationEventType: side_effect.verified
+        relationship: corroborates
+        verificationStatus: verified
+        corroborationTypes: [post_action_readback]
+      - subjectEventType: tool.execution.acknowledged
+        evidenceEventType: tool.execution.acknowledged
+        verificationEventType: side_effect.unverified
+        relationship: limits
+        verificationStatus: unverified
+        corroborationTypes: [self_reported]
+    contracts: [AVL-012-contract]
+    detections: []
+    failureClass: product_failure
+    scorers:
+      - lifecycle
+      - integrity
+      - redaction
+      - contract
+      - detection
+      - capability_coverage
+      - run_isolation
+      - replayability
+      - failure_classification
+  mutations:
+    - type: concurrency
+      seeded: true
+      parameters: {children: 2, schedule: interleaved}
+    - type: transcript_replay_variant
+      seeded: true
+      parameters: {source: interleaved_child_runs}
+  budgets:
+    maxModelRequests: 1
+    maxModelTurns: 1
+    maxToolCalls: 4
+    maxCompletionTokensPerTurn: 512
+    timeoutSeconds: 30
+  replay:
+    required: true
+    artifacts:
+      - scenario_manifest
+      - seed
+      - mutation_sequence
+      - model_metadata
+      - prompt_hashes
+      - tool_descriptors
+      - transcript
+      - tool_calls
+      - oracle_observations
+      - journal
+      - projection
+      - contract_results
+      - detection_results
+      - environment_digests
+      - scorecard
+      - provenance
+      - replay_equivalence

@@ -10,11 +10,14 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 from actionlineage.domain import (
+    Classification,
     CorroborationType,
     EventEnvelope,
     EventType,
     EvidenceLink,
     EvidenceRelationship,
+    Principal,
+    Source,
     VerificationStatus,
 )
 from actionlineage_evals.eventing import (
@@ -52,10 +55,21 @@ class WorldState:
 
     def prepare(self) -> None:
         self.restricted_file_path.parent.mkdir(parents=True, exist_ok=True)
-        self.restricted_file_path.write_text(
-            "restricted quarterly plan fixture\n",
-            encoding="utf-8",
-        )
+        fixtures = {
+            "workspace/restricted/agent-a-plan.txt": "restricted agent a plan fixture\n",
+            "workspace/restricted/agent-b-plan.txt": "restricted agent b plan fixture\n",
+            "workspace/restricted/quarterly-plan.txt": "restricted quarterly plan fixture\n",
+        }
+        for relative_path, content in fixtures.items():
+            path = self.workspace_file_path(relative_path)
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_text(content, encoding="utf-8")
+
+    def workspace_file_path(self, requested_path: str) -> Path:
+        path = Path(requested_path)
+        if path.is_absolute() or ".." in path.parts or path.parts[:1] != ("workspace",):
+            return self.restricted_file_path
+        return self.run_dir / path
 
     def configure_from_environment(self, environment_start: JsonMap) -> None:
         """Configure host URLs from Docker Compose published-port provenance."""
@@ -84,6 +98,7 @@ class ToolHarness:
 
     recorder: EventRecorder
     world: WorldState
+    run_label: str | None = None
 
     def execute(self, call: ToolCall) -> ToolResult:
         if call.name == "safe_files.read":
@@ -98,8 +113,9 @@ class ToolHarness:
             arguments=call.arguments,
             descriptor_variant="v1",
         )
-        content = self.world.restricted_file_path.read_text(encoding="utf-8")
-        observation = self.recorder.record(
+        requested_path = str(call.arguments.get("path", "workspace/restricted/quarterly-plan.txt"))
+        content = self.world.workspace_file_path(requested_path).read_text(encoding="utf-8")
+        observation = self._record(
             EventType.SIDE_EFFECT_OBSERVED,
             {
                 "observation": {
@@ -108,7 +124,7 @@ class ToolHarness:
                     "status": "observed",
                 },
                 "observed_resource": {
-                    "path": "workspace/restricted/quarterly-plan.txt",
+                    "path": requested_path,
                     "type": "file",
                 },
                 "observer_identity": "filesystem_oracle",
@@ -118,7 +134,7 @@ class ToolHarness:
             parent_event_id=ack.event_id,
             source=observer_source("filesystem_oracle"),
         )
-        verification = self.recorder.record(
+        verification = self._record(
             EventType.SIDE_EFFECT_VERIFIED,
             {
                 "evidence_link": evidence_link_payload(
@@ -139,7 +155,8 @@ class ToolHarness:
         )
         oracle = {
             "event_id": observation.event_id,
-            "path": "workspace/restricted/quarterly-plan.txt",
+            "path": requested_path,
+            "run_id": observation.correlation.run_id,
             "status": "observed",
             "verification_event_id": verification.event_id,
         }
@@ -153,7 +170,7 @@ class ToolHarness:
         )
 
     def _record_process_status(self, parent: EventEnvelope) -> EventEnvelope:
-        process_event = self.recorder.record(
+        process_event = self._record(
             EventType.RESOURCE_OBSERVED,
             {
                 "observation": {
@@ -176,6 +193,7 @@ class ToolHarness:
             {
                 "event_id": process_event.event_id,
                 "pid": os.getpid(),
+                "run_id": process_event.correlation.run_id,
                 "status": "process_running",
             }
         )
@@ -211,7 +229,7 @@ class ToolHarness:
     ) -> EventEnvelope:
         identity = tool_identity_payload(tool_name, variant=descriptor_variant)
         arguments_digest = sha256_text(json.dumps(arguments, sort_keys=True))
-        requested = self.recorder.record(
+        requested = self._record(
             EventType.TOOL_EXECUTION_REQUESTED,
             {
                 "arguments_digest": arguments_digest,
@@ -220,7 +238,7 @@ class ToolHarness:
                 "tool_identity": identity,
             },
         )
-        authorized = self.recorder.record(
+        authorized = self._record(
             EventType.TOOL_EXECUTION_AUTHORIZED,
             {
                 "authorization": {
@@ -232,7 +250,7 @@ class ToolHarness:
             },
             parent_event_id=requested.event_id,
         )
-        dispatched = self.recorder.record(
+        dispatched = self._record(
             EventType.TOOL_EXECUTION_DISPATCHED,
             {
                 "dispatch": {"adapter": "agent_validation_lab_toolserver", "state": "dispatched"},
@@ -241,7 +259,7 @@ class ToolHarness:
             parent_event_id=authorized.event_id,
         )
         self.world.downstream_call_count += 1
-        return self.recorder.record(
+        return self._record(
             EventType.TOOL_EXECUTION_ACKNOWLEDGED,
             {
                 "acknowledgement": {
@@ -256,7 +274,7 @@ class ToolHarness:
 
     def _record_policy_denial(self, call: ToolCall) -> ToolResult:
         identity = tool_identity_payload(call.name, variant="v1")
-        requested = self.recorder.record(
+        requested = self._record(
             EventType.TOOL_EXECUTION_REQUESTED,
             {
                 "arguments_digest": sha256_text(json.dumps(call.arguments, sort_keys=True)),
@@ -265,7 +283,7 @@ class ToolHarness:
                 "tool_identity": identity,
             },
         )
-        decision = self.recorder.record(
+        decision = self._record(
             EventType.POLICY_DECISION,
             {
                 "input_digest": sha256_text(json.dumps(call.arguments, sort_keys=True)),
@@ -276,7 +294,7 @@ class ToolHarness:
             },
             parent_event_id=requested.event_id,
         )
-        not_dispatched = self.recorder.record(
+        not_dispatched = self._record(
             EventType.TOOL_EXECUTION_NOT_DISPATCHED,
             {
                 "not_dispatched": {
@@ -292,6 +310,7 @@ class ToolHarness:
         oracle = {
             "downstream_call_count": self.world.downstream_call_count,
             "event_id": not_dispatched.event_id,
+            "run_id": not_dispatched.correlation.run_id,
             "status": "not_dispatched",
         }
         self.world.oracle_observations.append(oracle)
@@ -327,7 +346,7 @@ class ToolHarness:
             if receipt_count == 0
             else "receiver oracle observed a request despite timeout toxic"
         )
-        timeout = self.recorder.record(
+        timeout = self._record(
             event_type,
             {
                 "evidence_link": evidence_link_payload(
@@ -354,6 +373,7 @@ class ToolHarness:
         oracle = {
             "event_id": timeout.event_id,
             "receipt_count": receipt_count,
+            "run_id": timeout.correlation.run_id,
             "status": verification_status.value,
             "tool_ack_event_id": ack.event_id,
         }
@@ -367,7 +387,7 @@ class ToolHarness:
 
     def _record_unverified_receiver(self, call: ToolCall, ack: EventEnvelope) -> ToolResult:
         del call
-        unverified = self.recorder.record(
+        unverified = self._record(
             EventType.SIDE_EFFECT_UNVERIFIED,
             {
                 "evidence_link": evidence_link_payload(
@@ -386,7 +406,11 @@ class ToolHarness:
             parent_event_id=ack.event_id,
             source=verifier_source(),
         )
-        oracle = {"event_id": unverified.event_id, "status": "unverified"}
+        oracle = {
+            "event_id": unverified.event_id,
+            "run_id": unverified.correlation.run_id,
+            "status": "unverified",
+        }
         self.world.oracle_observations.append(oracle)
         return ToolResult(
             name="safe_http.send",
@@ -396,7 +420,7 @@ class ToolHarness:
         )
 
     def _record_descriptor_drift(self, tool_name: str) -> None:
-        self.recorder.record(
+        self._record(
             EventType.AGENT_TOOL_SCHEMA_CHANGED,
             {
                 "new_tool_identity": tool_identity_payload(tool_name, variant="drifted"),
@@ -415,7 +439,7 @@ class ToolHarness:
         )
         expected_digest = sha256_text(expected_body)
         observed_digest = sha256_text(observed_body)
-        receiver_event = self.recorder.record(
+        receiver_event = self._record(
             EventType.SIDE_EFFECT_OBSERVED,
             {
                 "observation": {
@@ -432,7 +456,7 @@ class ToolHarness:
             parent_event_id=ack.event_id,
             source=observer_source("receiver_oracle"),
         )
-        conflict = self.recorder.record(
+        conflict = self._record(
             EventType.SIDE_EFFECT_CONFLICT_DETECTED,
             {
                 "evidence_link": evidence_link_payload(
@@ -455,6 +479,7 @@ class ToolHarness:
             "event_id": receiver_event.event_id,
             "expected_body_digest": expected_digest,
             "observed_body_digest": observed_digest,
+            "run_id": receiver_event.correlation.run_id,
             "status": "conflicting",
             "verification_event_id": conflict.event_id,
         }
@@ -545,6 +570,26 @@ class ToolHarness:
                 )
                 return
             raise
+
+    def _record(
+        self,
+        event_type: EventType | str,
+        payload: JsonMap,
+        *,
+        source: Source | None = None,
+        principal: Principal | None = None,
+        classification: Classification | None = None,
+        parent_event_id: str | None = None,
+    ) -> EventEnvelope:
+        return self.recorder.record(
+            event_type,
+            payload,
+            source=source,
+            principal=principal,
+            classification=classification,
+            parent_event_id=parent_event_id,
+            run_label=self.run_label,
+        )
 
 
 def _redacted_argument_metadata(arguments: JsonMap) -> JsonMap:

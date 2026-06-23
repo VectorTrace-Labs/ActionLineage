@@ -150,6 +150,16 @@ def _score_fingerprint(score: Mapping[str, Any]) -> JsonMap:
             detail_fingerprint = {"capabilities": details.get("capabilities", [])}
         elif name == "replayability":
             detail_fingerprint = {"missing": details.get("missing", [])}
+        elif name == "run_isolation":
+            detail_fingerprint = {
+                "child_run_ids": details.get("child_run_ids", []),
+                "coordinator_tool_events": details.get("coordinator_tool_events", []),
+                "cross_run_evidence_links": details.get("cross_run_evidence_links", []),
+                "interleaving_transitions": details.get("interleaving_transitions", 0),
+                "missing_lifecycle": details.get("missing_lifecycle", {}),
+                "projection_event_counts": details.get("projection_event_counts", {}),
+                "tool_request_run_ids": details.get("tool_request_run_ids", []),
+            }
     return {
         "details": detail_fingerprint,
         "failure_class": score.get("failure_class"),

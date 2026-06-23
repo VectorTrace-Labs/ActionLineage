@@ -114,6 +114,20 @@ Current baseline-freshness slice:
 4. Fail on semantic evidence drift or eval-relevant input drift unless the
    committed baseline is refreshed in the same change.
 
+Current concurrent-run-isolation slice:
+
+1. Add `AVL-012 concurrent-run-isolation` as a deterministic no-model scenario
+   with two labeled child runs and interleaved tool calls.
+2. Preserve a single journal sequence while recording distinct child run IDs,
+   source instances, lifecycle events, and evidence links.
+3. Add a `run_isolation` scorer that verifies child-run lifecycle coverage,
+   interleaving, absence of coordinator-owned tool events, absence of cross-run
+   evidence links, and projection readback for each child run.
+4. Refresh semantic capability coverage so `multi_agent_concurrency` is covered
+   and no longer listed as a known gap.
+5. Regenerate the committed no-model public baseline for 12 scorecards and
+   48/48 declared capabilities.
+
 Acceptance commands for this phase:
 
 ```bash
@@ -198,6 +212,7 @@ Implemented artifacts:
 - `evals/scenarios/AVL-009.yaml`
 - `evals/scenarios/AVL-010.yaml`
 - `evals/scenarios/AVL-011.yaml`
+- `evals/scenarios/AVL-012.yaml`
 - `evals/regressions/README.md`
 - `evals/actionlineage_evals/`
 - `evals/docker/`
@@ -469,6 +484,7 @@ Implemented eval runner:
 - `AVL-010` passes as a deterministic expected agent-failure scenario.
 - `AVL-011` passes as a deterministic expected product-failure oracle-mismatch
   scenario.
+- `AVL-012` passes as a deterministic concurrent child-run isolation scenario.
 - `AVL-001` replay passes from a captured replay bundle.
 - Replay-artifact runs include replay-equivalence scorecards.
 - Run artifacts include provenance hashes and pass `audit-artifacts`.

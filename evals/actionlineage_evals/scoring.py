@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+from itertools import pairwise
 from pathlib import Path
 
 from actionlineage.contracts import (
@@ -22,7 +23,7 @@ from actionlineage.detection import (
 from actionlineage.domain import EventEnvelope
 from actionlineage.domain.events import event_type_value
 from actionlineage.journal import LocalJournal, VerificationResult
-from actionlineage.projection import rebuild_projection
+from actionlineage.projection import query_timeline, rebuild_projection
 from actionlineage_evals.models import (
     FailureClass,
     JsonMap,
@@ -61,6 +62,8 @@ def score_run(
     scores.append(score_detections(scenario, detection_matches))
     scores.append(score_redaction(paths.run_dir, canary_values=canary_values))
     scores.append(score_capability_coverage(scenario))
+    if scenario.scenario_id == "AVL-012":
+        scores.append(score_run_isolation(paths, events))
     scores.append(score_replayability(paths))
     return tuple(scores)
 
@@ -232,6 +235,90 @@ def score_replayability(paths: RunPaths) -> ScoreResult:
         ok=ok,
         details={"missing": missing, "required": [str(path) for path in required]},
         failure_class=None if ok else FailureClass.HARNESS,
+    )
+
+
+def score_run_isolation(paths: RunPaths, events: tuple[EventEnvelope, ...]) -> ScoreResult:
+    """Score interleaved child-run attribution across journal and projection evidence."""
+
+    event_by_id = {event.event_id: event for event in events}
+    child_run_ids = sorted(
+        {event.correlation.run_id for event in events if _is_concurrent_child_run_started(event)}
+    )
+    tool_request_run_ids = [
+        event.correlation.run_id
+        for event in events
+        if event_type_value(event.event_type) == "tool.execution.requested"
+        and event.correlation.run_id in child_run_ids
+    ]
+    run_event_types = {
+        run_id: [
+            event_type_value(event.event_type)
+            for event in events
+            if event.correlation.run_id == run_id
+        ]
+        for run_id in child_run_ids
+    }
+    projection_event_counts: dict[str, int] = {}
+    projection_errors: dict[str, str] = {}
+    for run_id in child_run_ids:
+        try:
+            projection_event_counts[run_id] = len(
+                query_timeline(paths.projection_path, run_id=run_id).events
+            )
+        except Exception as exc:
+            projection_errors[run_id] = f"{type(exc).__name__}: {exc}"
+
+    missing_lifecycle = {
+        run_id: sorted(
+            {
+                "agent.run.started",
+                "tool.execution.requested",
+                "tool.execution.acknowledged",
+                "side_effect.verified",
+                "agent.run.completed",
+            }
+            - set(event_types)
+        )
+        for run_id, event_types in run_event_types.items()
+    }
+    missing_lifecycle = {
+        run_id: missing for run_id, missing in missing_lifecycle.items() if missing
+    }
+    cross_run_evidence_links = _cross_run_evidence_links(events, event_by_id, child_run_ids)
+    coordinator_tool_events = [
+        event.event_id
+        for event in events
+        if event_type_value(event.event_type).startswith("tool.execution.")
+        and event.correlation.run_id not in child_run_ids
+    ]
+    interleaving_transitions = sum(
+        1 for left, right in pairwise(tool_request_run_ids) if left != right
+    )
+    ok = (
+        len(child_run_ids) == 2
+        and len(tool_request_run_ids) >= 4
+        and interleaving_transitions >= 2
+        and not missing_lifecycle
+        and not cross_run_evidence_links
+        and not coordinator_tool_events
+        and not projection_errors
+        and all(count > 0 for count in projection_event_counts.values())
+    )
+    return ScoreResult(
+        name="run_isolation",
+        ok=ok,
+        details={
+            "child_run_ids": child_run_ids,
+            "coordinator_tool_events": coordinator_tool_events,
+            "cross_run_evidence_links": cross_run_evidence_links,
+            "interleaving_transitions": interleaving_transitions,
+            "missing_lifecycle": missing_lifecycle,
+            "projection_event_counts": projection_event_counts,
+            "projection_errors": projection_errors,
+            "tool_request_run_ids": tool_request_run_ids,
+        },
+        failure_class=None if ok else FailureClass.PRODUCT,
     )
 
 
@@ -458,3 +545,49 @@ def _verification_status(event: EventEnvelope) -> str | None:
     if isinstance(status, str):
         return status
     return None
+
+
+def _is_concurrent_child_run_started(event: EventEnvelope) -> bool:
+    if event_type_value(event.event_type) != "agent.run.started":
+        return False
+    run = event.payload.get("run")
+    return isinstance(run, dict) and run.get("concurrent_child") is True
+
+
+def _cross_run_evidence_links(
+    events: tuple[EventEnvelope, ...],
+    event_by_id: dict[str, EventEnvelope],
+    child_run_ids: list[str],
+) -> list[JsonMap]:
+    child_run_id_set = set(child_run_ids)
+    links: list[JsonMap] = []
+    for event in events:
+        if event.correlation.run_id not in child_run_id_set:
+            continue
+        evidence_link = event.payload.get("evidence_link")
+        if not isinstance(evidence_link, dict):
+            continue
+        subject_event_id = evidence_link.get("subject_event_id")
+        evidence_event_id = evidence_link.get("evidence_event_id")
+        subject_run_id = _linked_event_run_id(subject_event_id, event_by_id)
+        evidence_run_id = _linked_event_run_id(evidence_event_id, event_by_id)
+        linked_run_ids = {run_id for run_id in (subject_run_id, evidence_run_id) if run_id}
+        if linked_run_ids and linked_run_ids != {event.correlation.run_id}:
+            links.append(
+                {
+                    "event_id": event.event_id,
+                    "evidence_event_id": evidence_event_id,
+                    "evidence_run_id": evidence_run_id,
+                    "event_run_id": event.correlation.run_id,
+                    "subject_event_id": subject_event_id,
+                    "subject_run_id": subject_run_id,
+                }
+            )
+    return links
+
+
+def _linked_event_run_id(value: object, event_by_id: dict[str, EventEnvelope]) -> str | None:
+    if not isinstance(value, str):
+        return None
+    linked = event_by_id.get(value)
+    return linked.correlation.run_id if linked is not None else None

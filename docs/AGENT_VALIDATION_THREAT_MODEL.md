@@ -159,6 +159,9 @@ Controls:
 - Negative control scenarios intentionally induce oracle mismatches.
 - `AVL-011` intentionally induces a missing verified oracle condition and must
   classify it as `product_failure` with no agent, provider, or harness error.
+- `AVL-012` intentionally interleaves two child runs and must keep run IDs,
+  evidence links, and projection readbacks isolated from the coordinator and
+  from each other.
 - Replays must run without model calls and produce deterministic scorer output.
 - Replay-equivalence checks compare source and replay scorecard essentials so a
   replay cannot silently drift while still reporting a local pass.
