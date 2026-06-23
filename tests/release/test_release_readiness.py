@@ -568,6 +568,7 @@ def test_release_workflow_builds_attests_and_uses_trusted_publishing() -> None:
     assert "name: Dependency license check" in workflow
     assert "name: Generate dependency license report" in workflow
     assert "build/release/actionlineage-license-report.json" in workflow
+    assert "build/release/actionlineage-release-provenance.json" in workflow
     assert "name: Generate offline release consistency report" in workflow
     assert "--output build/release/release-consistency-offline.json" in workflow
     assert "name: Generate release candidate manifest" in workflow
