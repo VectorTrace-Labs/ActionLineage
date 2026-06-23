@@ -9,8 +9,9 @@ access. Codex must not perform these actions without explicit approval.
 
 - Review `docs/RELEASE_CANDIDATE_AUDIT.md`.
 - Review generated artifacts under `build/release-candidate/`.
-- Confirm the release-candidate manifest at
-  `build/release-candidate/manifest.json`.
+- Generate or confirm the release-candidate manifest at
+  `build/release-candidate/manifest.json` with
+  `scripts/write_release_candidate_manifest.py`.
 - Generate and review `build/release-candidate/REVIEW_INDEX.md` from the
   manifest so artifact hashes, local gates, and owner/external gates are visible
   in one place.

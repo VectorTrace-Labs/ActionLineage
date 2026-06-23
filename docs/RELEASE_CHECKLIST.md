@@ -126,6 +126,7 @@ docker run --rm -v "$PWD/build/docker-ci:/artifacts" \
 - SBOM JSON.
 - Dependency license report JSON.
 - Local release provenance JSON.
+- Release-candidate manifest JSON generated from local artifact evidence.
 - Release proof review index Markdown generated from the local
   release-candidate manifest.
 - SHA256 checksum file.
@@ -151,10 +152,17 @@ uv run python scripts/generate_release_provenance.py \
   --output /tmp/actionlineage-provenance.json
 ```
 
-When a release-candidate manifest exists, generate a reviewer index and verify
-that the manifest-listed artifacts still match their recorded hashes:
+When the release-candidate artifact directory is populated, generate the local
+manifest from the artifact bytes and evidence summaries, then generate a
+reviewer index that verifies the manifest-listed artifacts still match their
+recorded hashes. Repeat `--gate "name|STATUS|evidence"` for audited gate rows
+that should appear in the manifest:
 
 ```bash
+uv run python scripts/write_release_candidate_manifest.py \
+  --artifact-root build/release-candidate \
+  --gate "ruff_check|PASS|uv run ruff check ." \
+  --output build/release-candidate/manifest.json
 uv run python scripts/write_release_review_index.py \
   --manifest build/release-candidate/manifest.json \
   --output build/release-candidate/REVIEW_INDEX.md

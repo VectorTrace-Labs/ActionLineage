@@ -214,6 +214,7 @@ def test_external_review_docs_prepare_review_without_claiming_validation() -> No
         "docs/evidence/agent-validation-baseline.json",
         "scripts/check_claims_language.py",
         "scripts/secret_scan.py",
+        "scripts/write_release_candidate_manifest.py",
         "build/release-candidate/REVIEW_INDEX.md",
         "actionlineage doctor",
         'pipx run --pip-args="--pre"',
@@ -307,6 +308,8 @@ def test_release_candidate_audit_prepares_without_publishing() -> None:
     normalized = combined.lower()
 
     assert "build/release-candidate/manifest.json" in audit
+    assert "scripts/write_release_candidate_manifest.py" in audit
+    assert "Release-candidate manifest generation" in audit
     assert "build/release-candidate/REVIEW_INDEX.md" in audit
     assert "Release proof review index" in audit
     assert "4bf6246fcfbfd1ff497842c68f4214d3efc6bb67" in audit
@@ -391,6 +394,9 @@ def test_release_checklist_covers_required_gates() -> None:
         "uv build --out-dir /tmp/actionlineage-dist",
         "scripts/generate_release_provenance.py",
         "--dist-dir /tmp/actionlineage-dist",
+        "scripts/write_release_candidate_manifest.py",
+        "--artifact-root build/release-candidate",
+        '--gate "ruff_check|PASS|uv run ruff check ."',
         "scripts/write_release_review_index.py",
         "--manifest build/release-candidate/manifest.json",
         "--output build/release-candidate/REVIEW_INDEX.md",

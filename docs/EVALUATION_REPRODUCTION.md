@@ -103,10 +103,16 @@ These commands prove local release readiness only. Creating GitHub Releases,
 publishing packages, pushing containers, changing repository settings, and
 claiming external validation remain owner or external-validation gates.
 
-For the full release-candidate audit bundle, the local manifest can be turned
-into a reviewer-facing proof index after the artifacts have been generated:
+For the full release-candidate audit bundle, the local manifest can be generated
+from artifact bytes and then turned into a reviewer-facing proof index after the
+artifacts have been generated. Repeat `--gate "name|STATUS|evidence"` for
+audited gate rows that should appear in the manifest:
 
 ```bash
+uv run python scripts/write_release_candidate_manifest.py \
+  --artifact-root build/release-candidate \
+  --gate "ruff_check|PASS|uv run ruff check ." \
+  --output build/release-candidate/manifest.json
 uv run python scripts/write_release_review_index.py \
   --manifest build/release-candidate/manifest.json \
   --output build/release-candidate/REVIEW_INDEX.md

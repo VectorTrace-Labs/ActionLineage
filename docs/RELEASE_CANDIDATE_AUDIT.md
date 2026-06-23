@@ -53,6 +53,7 @@ are not committed source files.
 | Dependency license report | PASS | `build/release-candidate/actionlineage-license-report.json` |
 | Release provenance generation | PASS | 2 artifact subjects |
 | SHA256 checksums | PASS | `build/release-candidate/SHA256SUMS.txt` |
+| Release-candidate manifest generation | PASS | `scripts/write_release_candidate_manifest.py` generates `build/release-candidate/manifest.json` from local artifact bytes and evidence summaries |
 | Release proof review index | PASS | `build/release-candidate/REVIEW_INDEX.md` generated from the local manifest; manifest-listed artifact hashes verified |
 | Release consistency, offline | PASS | 0 failures, 0 unknowns |
 | Release consistency, online via Python urllib | PASS with UNKNOWNs | 0 failures, 10 unknowns due local Python certificate-store failure |

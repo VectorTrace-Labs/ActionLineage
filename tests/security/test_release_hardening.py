@@ -5,6 +5,7 @@ import importlib.util
 import json
 import string
 import sys
+from datetime import UTC, datetime
 from pathlib import Path
 from types import ModuleType
 
@@ -380,6 +381,143 @@ def test_release_provenance_hashes_dist_artifacts_without_signing_claims(tmp_pat
             "size_bytes": 11,
         }
     ]
+
+
+def test_release_candidate_manifest_summarizes_local_proof_artifacts(tmp_path: Path) -> None:
+    writer = _load_script("write_release_candidate_manifest")
+    project_path = tmp_path / "pyproject.toml"
+    project_path.write_text(
+        '[project]\nname = "actionlineage"\nversion = "0.1.0a3"\n',
+        encoding="utf-8",
+    )
+    artifact_root = tmp_path / "build" / "release-candidate"
+    dist_dir = artifact_root / "dist"
+    dist_dir.mkdir(parents=True)
+    wheel = dist_dir / "actionlineage-0.1.0a3-py3-none-any.whl"
+    sdist = dist_dir / "actionlineage-0.1.0a3.tar.gz"
+    wheel.write_bytes(b"wheel")
+    sdist.write_bytes(b"sdist")
+    (artifact_root / "actionlineage-sbom.json").write_text(
+        json.dumps({"packages": [{"name": "pydantic"}, {"name": "typer"}]}),
+        encoding="utf-8",
+    )
+    (artifact_root / "actionlineage-license-report.json").write_text(
+        json.dumps(
+            {
+                "allowed_licenses": ["Apache-2.0", "MIT"],
+                "issues": [],
+                "packages_checked": 2,
+            }
+        ),
+        encoding="utf-8",
+    )
+    (artifact_root / "actionlineage-release-provenance.json").write_text(
+        "{}",
+        encoding="utf-8",
+    )
+    (artifact_root / "SHA256SUMS.txt").write_text("checksums\n", encoding="utf-8")
+    (artifact_root / "coverage.xml").write_text("<coverage />", encoding="utf-8")
+    (artifact_root / "pypi.json").write_text(
+        json.dumps(
+            {
+                "info": {
+                    "project_urls": None,
+                    "requires_python": ">=3.12",
+                    "version": "0.1.0a3",
+                }
+            }
+        ),
+        encoding="utf-8",
+    )
+    (artifact_root / "github-tags.json").write_text(
+        json.dumps([{"ref": "refs/tags/v0.1.0a3"}]),
+        encoding="utf-8",
+    )
+    (artifact_root / "github-release-v0.1.0a3.json").write_text(
+        json.dumps({"message": "Not Found"}),
+        encoding="utf-8",
+    )
+    (artifact_root / "github-releases.json").write_text(
+        json.dumps([{"tag_name": "v0.1.0a2"}]),
+        encoding="utf-8",
+    )
+
+    result = writer.build_release_candidate_manifest(
+        project_path=project_path,
+        artifact_root=artifact_root,
+        repository_root=tmp_path,
+        audited_implementation_commit="abc123",
+        generated_at=datetime(2026, 6, 23, tzinfo=UTC),
+        gates=(
+            {
+                "name": "ruff_check",
+                "status": "PASS",
+                "evidence": "uv run ruff check .",
+            },
+        ),
+    )
+    manifest = result.manifest
+
+    assert result.ok
+    assert result.issues == ()
+    assert manifest["schema_version"] == "actionlineage.dev/release-candidate-manifest-v0"
+    assert manifest["generated_at"] == "2026-06-23T00:00:00Z"
+    assert manifest["release"] == "0.1.0a3"
+    assert manifest["artifact_root"] == "build/release-candidate"
+    assert manifest["audited_implementation_commit"] == "abc123"
+    assert manifest["sbom_package_count"] == 2
+    assert manifest["license_report"] == {
+        "allowed_licenses": ["Apache-2.0", "MIT"],
+        "issue_count": 0,
+        "packages_checked": 2,
+    }
+    assert manifest["public_state"]["pypi"] == {
+        "project_urls": None,
+        "requires_python": ">=3.12",
+        "version": "0.1.0a3",
+    }
+    assert manifest["public_state"]["github"] == {
+        "published_release_tags": ["v0.1.0a2"],
+        "release_lookup_message": "Not Found",
+        "tag_refs": ["refs/tags/v0.1.0a3"],
+    }
+    artifacts = {row["path"]: row for row in manifest["artifacts"]}
+    assert (
+        artifacts["build/release-candidate/dist/actionlineage-0.1.0a3-py3-none-any.whl"]["sha256"]
+        == hashlib.sha256(b"wheel").hexdigest()
+    )
+    assert artifacts["build/release-candidate/dist/actionlineage-0.1.0a3.tar.gz"]["size_bytes"] == 5
+    assert "build/release-candidate/coverage.xml" in artifacts
+    assert manifest["gates"] == [
+        {
+            "name": "ruff_check",
+            "status": "PASS",
+            "evidence": "uv run ruff check .",
+        }
+    ]
+
+
+def test_release_candidate_manifest_requires_core_release_artifacts(tmp_path: Path) -> None:
+    writer = _load_script("write_release_candidate_manifest")
+    project_path = tmp_path / "pyproject.toml"
+    project_path.write_text(
+        '[project]\nname = "actionlineage"\nversion = "0.1.0a3"\n',
+        encoding="utf-8",
+    )
+    artifact_root = tmp_path / "build" / "release-candidate"
+    artifact_root.mkdir(parents=True)
+
+    result = writer.build_release_candidate_manifest(
+        project_path=project_path,
+        artifact_root=artifact_root,
+        repository_root=tmp_path,
+        audited_implementation_commit="abc123",
+        generated_at=datetime(2026, 6, 23, tzinfo=UTC),
+    )
+
+    assert not result.ok
+    assert {issue["code"] for issue in result.issues} == {"required_artifact_missing"}
+    assert len(result.issues) == 6
 
 
 def test_release_review_index_verifies_manifest_artifacts(tmp_path: Path) -> None:

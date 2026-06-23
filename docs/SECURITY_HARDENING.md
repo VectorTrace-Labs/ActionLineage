@@ -30,14 +30,19 @@ local manifest with artifact hashes. The `release.yml` workflow builds release
 artifacts in GitHub Actions and generates GitHub artifact attestations;
 package-index publication uses the configured Trusted Publisher records
 described in `docs/PUBLISHING.md`.
-The release review index is generated from local release-candidate manifest
-evidence and verifies listed artifact hashes; it is a navigation aid for
-reviewers, not a signed attestation or publication event.
+The release-candidate manifest is generated from local artifact bytes and
+evidence summaries. The release review index is generated from that manifest and
+verifies listed artifact hashes; it is a navigation aid for reviewers, not a
+signed attestation or publication event.
 
-After `build/release-candidate/manifest.json` exists, generate the reviewer
-index with:
+After the release-candidate artifact directory exists, generate the manifest and
+reviewer index with explicit gate rows for the audit evidence you want listed:
 
 ```bash
+uv run python scripts/write_release_candidate_manifest.py \
+  --artifact-root build/release-candidate \
+  --gate "ruff_check|PASS|uv run ruff check ." \
+  --output build/release-candidate/manifest.json
 uv run python scripts/write_release_review_index.py \
   --manifest build/release-candidate/manifest.json \
   --output build/release-candidate/REVIEW_INDEX.md
@@ -85,6 +90,7 @@ cloud credentials, model providers, or internet access.
 - Generate a dependency license report and fail on unknown or denied direct
   dependency licenses.
 - Generate a local release provenance manifest for built artifacts.
+- Generate a release-candidate manifest from the local artifact bundle.
 - Generate a release proof review index from the local candidate manifest.
 - Generate GitHub artifact attestations from the release workflow before
   describing release assets as attested.

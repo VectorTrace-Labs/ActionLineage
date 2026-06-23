@@ -74,6 +74,7 @@ data, not universal performance guarantees.
 | PALPHA-008 | P2 | Service-mode verification emitted Starlette/FastAPI test-client deprecation warnings unless the dev-only `httpx2` backend was installed. | FIXED_IN_TEST_CLIENT_SLICE |
 | PALPHA-009 | P2 | Local release proof documented license review expectations but lacked an executable dependency license report gate. | FIXED_IN_LICENSE_GATE_SLICE |
 | PALPHA-010 | P2 | Local release-candidate artifacts had hashes and a manifest, but lacked a generated reviewer index that verifies artifact bytes and collects owner/external gates in one place. | FIXED_IN_REVIEW_INDEX_SLICE |
+| PALPHA-011 | P2 | Local release-candidate manifest contents were documented but manifest generation itself was not a committed, repeatable script. | FIXED_IN_MANIFEST_GENERATOR_SLICE |
 
 ## Phase Plan
 
@@ -87,8 +88,8 @@ data, not universal performance guarantees.
 | 5 | Visible quality and security evidence | In progress: baseline captured; CI now runs repository-local Markdown link checking, dependency license reporting, an 85 percent branch-enabled total coverage floor, and a concise quality/security evidence summary |
 | 6 | Agent Validation Lab public evidence | In progress: deterministic no-model baseline report is generated into `docs/evidence/agent-validation-baseline.*` from 11 scorecards; scheduled no-model artifacts run on trusted default-branch code; optional live-model execution is gated on `GH_MODELS_TOKEN` and remains separate |
 | 7 | Reliability and adversarial hardening | In progress: SQLite projection handles close under warning-as-error coverage; static console context bounds and CSP added; verified-prefix recovery rejects in-place overwrite and streams output; journal verification rejects newline-less truncated final records; ambiguous HTTP observer matches remain unverified with fixture coverage; service-mode tests use a dev-only `httpx2` test-client backend so release proof remains warning-free without adding runtime TCB |
-| 8 | External review and community readiness | In progress: review guides, reproduction docs, structured feedback templates, and generated release-proof review index command added; real review remains external-validation |
-| 9 | Release-candidate audit | In progress: local candidate audit refreshed against implementation commit `4bf6246fcfbfd1ff497842c68f4214d3efc6bb67`; draft notes, owner checklist, generated manifest, review index, artifact smoke, dependency license report, and external gates are documented; publication remains owner-gated |
+| 8 | External review and community readiness | In progress: review guides, reproduction docs, structured feedback templates, generated manifest command, and generated release-proof review index command added; real review remains external-validation |
+| 9 | Release-candidate audit | In progress: local candidate audit refreshed against implementation commit `4bf6246fcfbfd1ff497842c68f4214d3efc6bb67`; draft notes, owner checklist, generated manifest script, review index, artifact smoke, dependency license report, and external gates are documented; publication remains owner-gated |
 
 ## Owner Gates
 
