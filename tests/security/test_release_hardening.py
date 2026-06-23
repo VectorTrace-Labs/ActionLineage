@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 import importlib.util
 import json
 import string
@@ -379,6 +380,129 @@ def test_release_provenance_hashes_dist_artifacts_without_signing_claims(tmp_pat
             "size_bytes": 11,
         }
     ]
+
+
+def test_release_review_index_verifies_manifest_artifacts(tmp_path: Path) -> None:
+    writer = _load_script("write_release_review_index")
+    artifact_root = tmp_path / "build" / "release-candidate"
+    dist_dir = artifact_root / "dist"
+    dist_dir.mkdir(parents=True)
+    wheel = dist_dir / "actionlineage-0.1.0a3-py3-none-any.whl"
+    sbom = artifact_root / "actionlineage-sbom.json"
+    wheel.write_bytes(b"wheel")
+    sbom.write_text("{}", encoding="utf-8")
+    manifest_path = artifact_root / "manifest.json"
+    manifest_path.write_text(
+        json.dumps(
+            {
+                "schema_version": "actionlineage.dev/release-candidate-manifest-v0",
+                "release": "0.1.0a3",
+                "audited_implementation_commit": "abc123",
+                "generated_at": "2026-06-23T00:00:00Z",
+                "artifacts": [
+                    {
+                        "path": str(wheel.relative_to(tmp_path)),
+                        "sha256": hashlib.sha256(b"wheel").hexdigest(),
+                        "size_bytes": 5,
+                    },
+                    {
+                        "path": str(sbom.relative_to(tmp_path)),
+                        "sha256": hashlib.sha256(b"{}").hexdigest(),
+                        "size_bytes": 2,
+                    },
+                ],
+                "gates": [
+                    {
+                        "name": "ruff_check",
+                        "status": "PASS",
+                        "evidence": "uv run ruff check .",
+                    },
+                    {
+                        "name": "github_release_object",
+                        "status": "BLOCKED_ON_OWNER",
+                        "evidence": "Release object is absent.",
+                    },
+                ],
+                "license_report": {
+                    "allowed_licenses": ["Apache-2.0", "MIT"],
+                    "issue_count": 0,
+                    "packages_checked": 2,
+                },
+                "public_state": {
+                    "pypi": {
+                        "version": "0.1.0a3",
+                        "requires_python": ">=3.12",
+                        "project_urls": None,
+                    },
+                    "testpypi": {
+                        "version": "0.1.0a3",
+                        "requires_python": ">=3.12",
+                        "project_urls": None,
+                    },
+                    "github": {
+                        "published_release_tags": ["v0.1.0a2"],
+                        "release_lookup_message": "Not Found",
+                    },
+                },
+                "sbom_package_count": 2,
+            },
+            indent=2,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
+    result = writer.build_review_index(manifest_path, repository_root=tmp_path)
+
+    assert result.ok
+    assert result.issues == ()
+    assert "ActionLineage Release Proof Review Index" in result.markdown
+    assert "not publication evidence" in result.markdown
+    assert "Artifacts verified locally | `2/2`" in result.markdown
+    assert "| `build/release-candidate/dist/actionlineage-0.1.0a3-py3-none-any.whl` | `PASS`" in (
+        result.markdown
+    )
+    assert "| Dependency licenses checked | `2` |" in result.markdown
+    assert "BLOCKED_ON_OWNER" in result.markdown
+    assert "shasum -a 256 -c build/release-candidate/SHA256SUMS.txt" in result.markdown
+
+
+def test_release_review_index_fails_on_artifact_hash_mismatch(tmp_path: Path) -> None:
+    writer = _load_script("write_release_review_index")
+    artifact_root = tmp_path / "build" / "release-candidate"
+    artifact_root.mkdir(parents=True)
+    artifact = artifact_root / "actionlineage-sbom.json"
+    artifact.write_text("changed", encoding="utf-8")
+    manifest_path = artifact_root / "manifest.json"
+    manifest_path.write_text(
+        json.dumps(
+            {
+                "schema_version": "actionlineage.dev/release-candidate-manifest-v0",
+                "release": "0.1.0a3",
+                "artifacts": [
+                    {
+                        "path": str(artifact.relative_to(tmp_path)),
+                        "sha256": "0" * 64,
+                        "size_bytes": 7,
+                    }
+                ],
+                "gates": [],
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    result = writer.build_review_index(manifest_path, repository_root=tmp_path)
+
+    assert not result.ok
+    assert result.issues == (
+        {
+            "code": "hash_mismatch",
+            "path": "build/release-candidate/actionlineage-sbom.json",
+            "message": "artifact verification status HASH_MISMATCH",
+        },
+    )
+    assert "HASH_MISMATCH" in result.markdown
 
 
 def test_demo_evidence_map_is_deterministic_and_checkable(tmp_path: Path) -> None:

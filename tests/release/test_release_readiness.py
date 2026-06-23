@@ -214,6 +214,7 @@ def test_external_review_docs_prepare_review_without_claiming_validation() -> No
         "docs/evidence/agent-validation-baseline.json",
         "scripts/check_claims_language.py",
         "scripts/secret_scan.py",
+        "build/release-candidate/REVIEW_INDEX.md",
         "actionlineage doctor",
         'pipx run --pip-args="--pre"',
         "python -m pip install --pre actionlineage==0.1.0a3",
@@ -306,6 +307,8 @@ def test_release_candidate_audit_prepares_without_publishing() -> None:
     normalized = combined.lower()
 
     assert "build/release-candidate/manifest.json" in audit
+    assert "build/release-candidate/REVIEW_INDEX.md" in audit
+    assert "Release proof review index" in audit
     assert "4bf6246fcfbfd1ff497842c68f4214d3efc6bb67" in audit
     assert "Do not republish immutable PyPI/TestPyPI files" in audit
     assert "298 passed" in audit
@@ -339,6 +342,8 @@ def test_release_candidate_audit_prepares_without_publishing() -> None:
     assert "ambiguous HTTP correlation as unverified evidence" in draft_notes
     assert "No external audit, external adoption, production use, independent review" in draft_notes
     assert "Codex must not perform these actions without explicit approval" in owner_checklist
+    assert "build/release-candidate/REVIEW_INDEX.md" in owner_checklist
+    assert "not as an attestation or external validation" in owner_checklist
     assert (
         "Do not republish or attempt to overwrite existing PyPI/TestPyPI files" in owner_checklist
     )
@@ -386,6 +391,9 @@ def test_release_checklist_covers_required_gates() -> None:
         "uv build --out-dir /tmp/actionlineage-dist",
         "scripts/generate_release_provenance.py",
         "--dist-dir /tmp/actionlineage-dist",
+        "scripts/write_release_review_index.py",
+        "--manifest build/release-candidate/manifest.json",
+        "--output build/release-candidate/REVIEW_INDEX.md",
         "docker build -f deploy/docker/Dockerfile -t actionlineage:ci .",
         "docker run --rm actionlineage:ci version",
         "actionlineage:ci demo run",

@@ -25,7 +25,8 @@ exports.
   instead of selecting a plausible match without enough proof.
 - Local release proof includes Ruff, mypy, pytest, branch coverage, claim scan,
   secret scan, dependency license check, dependency audit, SBOM, provenance,
-  wheel/sdist build, artifact smoke tests, and Agent Validation no-model checks.
+  wheel/sdist build, artifact smoke tests, generated release proof review index,
+  and Agent Validation no-model checks.
 - Agent Validation Lab remains a development-only, no-model evaluation surface
   with 11 scripted scorecards and 47/47 declared capabilities covered.
 
@@ -61,6 +62,7 @@ release-candidate process:
 - `actionlineage-0.1.0a3-py3-none-any.whl`;
 - `actionlineage-0.1.0a3.tar.gz`;
 - `SHA256SUMS.txt`;
+- `REVIEW_INDEX.md`;
 - SBOM JSON;
 - dependency license report JSON;
 - release provenance JSON;

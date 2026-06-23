@@ -50,7 +50,8 @@ evidence and limitations.
   onboarding and visual review; canonical evidence remains the local journal.
 - Release hardening scripts for claim language, secret scanning, SBOM,
   dependency license reporting, local provenance, dependency audit,
-  repository-local Markdown link checking, and release consistency.
+  repository-local Markdown link checking, release consistency, and generated
+  release proof review indexes.
 - CI release-proof gates for branch-enabled total coverage, wheel/sdist build,
   first-time-user artifact smoke, SBOM, dependency license checks, dependency
   audit, unsigned local provenance generation, and concise GitHub job-summary
@@ -60,7 +61,9 @@ evidence and limitations.
 - External review guides, reproduction commands, and feedback templates that
   make review easier without claiming review has happened.
 - Release-candidate audit artifacts and owner publication checklist that prepare
-  publication decisions without performing owner-gated actions.
+  publication decisions without performing owner-gated actions. Generated
+  review indexes are local navigation and hash-verification aids, not hosted
+  releases or external validation.
 
 ## Preview Surface
 

@@ -85,9 +85,12 @@ uv run mypy src
 uv run pytest
 uv run pytest --cov=actionlineage --cov-branch --cov-report=term
 uv run python scripts/check_claims_language.py .
+uv run python scripts/check_markdown_links.py .
 uv run python scripts/secret_scan.py .
 uv build --out-dir build/release-proof/dist
 uv run python scripts/generate_sbom.py --output build/release-proof/actionlineage-sbom.json
+uv run python scripts/check_dependency_licenses.py \
+  --output build/release-proof/actionlineage-license-report.json
 uv run python scripts/generate_release_provenance.py \
   --dist-dir build/release-proof/dist \
   --output build/release-proof/actionlineage-release-provenance.json
@@ -99,6 +102,15 @@ uv run pip-audit
 These commands prove local release readiness only. Creating GitHub Releases,
 publishing packages, pushing containers, changing repository settings, and
 claiming external validation remain owner or external-validation gates.
+
+For the full release-candidate audit bundle, the local manifest can be turned
+into a reviewer-facing proof index after the artifacts have been generated:
+
+```bash
+uv run python scripts/write_release_review_index.py \
+  --manifest build/release-candidate/manifest.json \
+  --output build/release-candidate/REVIEW_INDEX.md
+```
 
 ## Minimized Failure Bundles
 

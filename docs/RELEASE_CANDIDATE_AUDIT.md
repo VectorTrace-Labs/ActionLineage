@@ -15,6 +15,7 @@ settings.
 | Candidate version | `0.1.0a3` |
 | Recommendation | Do not republish immutable PyPI/TestPyPI files for `0.1.0a3`; create or repair the GitHub Release object only after owner review. |
 | Generated local manifest | `build/release-candidate/manifest.json` |
+| Generated review index | `build/release-candidate/REVIEW_INDEX.md` |
 
 Generated artifacts under `build/release-candidate/` are local release proof and
 are not committed source files.
@@ -52,6 +53,7 @@ are not committed source files.
 | Dependency license report | PASS | `build/release-candidate/actionlineage-license-report.json` |
 | Release provenance generation | PASS | 2 artifact subjects |
 | SHA256 checksums | PASS | `build/release-candidate/SHA256SUMS.txt` |
+| Release proof review index | PASS | `build/release-candidate/REVIEW_INDEX.md` generated from the local manifest; manifest-listed artifact hashes verified |
 | Release consistency, offline | PASS | 0 failures, 0 unknowns |
 | Release consistency, online via Python urllib | PASS with UNKNOWNs | 0 failures, 10 unknowns due local Python certificate-store failure |
 | Public state via curl | PASS / BLOCKED | PyPI/TestPyPI expose `0.1.0a3`; GitHub tag exists; GitHub Release object for `v0.1.0a3` is absent |

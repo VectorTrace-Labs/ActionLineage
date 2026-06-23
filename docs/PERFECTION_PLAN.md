@@ -101,6 +101,9 @@ Codex-executable work:
 - Keep deployment docs preview-labeled.
 - Generate local wheel, sdist, SBOM, dependency license report, and unsigned
   provenance.
+- Generate a local release proof review index from the release-candidate
+  manifest so reviewers can verify artifact hashes and gate status from one
+  file.
 - Build release artifacts in GitHub Actions.
 - Generate GitHub artifact attestations for release artifacts.
 - Prepare manual TestPyPI/PyPI Trusted Publishing jobs without package-index
@@ -126,7 +129,8 @@ Acceptance tests:
 - Security and agent-platform review checklists preserve maturity labels and
   product invariants.
 - Evaluation reproduction commands cover public package, repository demo,
-  Agent Validation, and local release proof without requiring credentials.
+  Agent Validation, local release proof, and the generated release proof review
+  index without requiring credentials.
 - Issue templates collect reproducible, minimized feedback without requesting
   secrets or private data.
 

@@ -84,6 +84,11 @@ Use `docs/EVALUATION_REPRODUCTION.md` for exact command bundles covering:
 - deterministic no-model Agent Validation Lab;
 - release proof gates that can run without credentials.
 
+When a maintainer provides a local release-candidate bundle, start with
+`build/release-candidate/REVIEW_INDEX.md` if present. It is generated from the
+candidate manifest and verifies listed artifact hashes, but it is still local
+proof rather than a hosted release, signed attestation, or independent review.
+
 Use `docs/AGENT_VALIDATION_EVIDENCE.md` plus
 `docs/evidence/agent-validation-baseline.md` and
 `docs/evidence/agent-validation-baseline.json` for the current generated

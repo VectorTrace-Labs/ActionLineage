@@ -11,6 +11,9 @@ access. Codex must not perform these actions without explicit approval.
 - Review generated artifacts under `build/release-candidate/`.
 - Confirm the release-candidate manifest at
   `build/release-candidate/manifest.json`.
+- Generate and review `build/release-candidate/REVIEW_INDEX.md` from the
+  manifest so artifact hashes, local gates, and owner/external gates are visible
+  in one place.
 - Confirm no generated proof artifacts should be committed.
 - Confirm the public version posture remains `0.1.0a3` and
   `Development Status :: 3 - Alpha`.
@@ -25,6 +28,8 @@ access. Codex must not perform these actions without explicit approval.
   available.
 - If local artifacts are attached, verify `SHA256SUMS.txt` and document that
   local provenance is supplemental, unsigned release proof.
+- If `REVIEW_INDEX.md` is attached, label it as local reviewer navigation and
+  hash-verification evidence, not as an attestation or external validation.
 - Link `docs/DRAFT_RELEASE_NOTES_0.1.0a3.md` only after removing any text that
   is not intended for public release notes.
 
