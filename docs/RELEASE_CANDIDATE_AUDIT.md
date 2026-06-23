@@ -2,6 +2,12 @@
 
 Last reviewed: 2026-06-23.
 
+Historical snapshot: this document evaluated the `0.1.0a5` release candidate
+before the `v0.1.0a5` tag and package publication completed. Its point-in-time
+release-state findings are preserved for auditability and may be stale. Current
+release status lives in `README.md`, `docs/PUBLISHING.md`, and
+`docs/QUALITY_SCORECARD.md`.
+
 This audit prepares the current public-alpha candidate for owner review. It does
 not publish, tag, push, upload, create a GitHub Release, or modify repository
 settings.

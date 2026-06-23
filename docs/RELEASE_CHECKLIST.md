@@ -21,16 +21,16 @@ uv run python scripts/generate_demo_evidence_map.py --demo-dir /tmp/actionlineag
 uv run python scripts/check_claims_language.py .
 uv run python scripts/check_markdown_links.py .
 uv run python scripts/secret_scan.py .
-uv run python scripts/generate_sbom.py --output build/actionlineage-sbom.json
-uv run python scripts/check_dependency_licenses.py \
+uv run --all-extras python scripts/generate_sbom.py --output build/actionlineage-sbom.json
+uv run --all-extras python scripts/check_dependency_licenses.py \
   --output build/actionlineage-license-report.json
 uv run pip-audit
 uv build --out-dir dist
 uv run python scripts/smoke_public_quickstart.py \
-  --package-spec dist/actionlineage-0.1.0a5-py3-none-any.whl \
+  --package-spec dist/actionlineage-0.1.0a6-py3-none-any.whl \
   --output-dir build/wheel-quickstart-smoke
 uv run python scripts/smoke_public_quickstart.py \
-  --package-spec dist/actionlineage-0.1.0a5.tar.gz \
+  --package-spec dist/actionlineage-0.1.0a6.tar.gz \
   --output-dir build/sdist-quickstart-smoke
 uv run python scripts/generate_release_provenance.py \
   --dist-dir dist \
@@ -148,9 +148,9 @@ Generate local alpha artifacts without committing them:
 rm -rf build/release-candidate
 mkdir -p build/release-candidate
 uv build --out-dir build/release-candidate/dist
-uv run python scripts/generate_sbom.py \
+uv run --all-extras python scripts/generate_sbom.py \
   --output build/release-candidate/actionlineage-sbom.json
-uv run python scripts/check_dependency_licenses.py \
+uv run --all-extras python scripts/check_dependency_licenses.py \
   --output build/release-candidate/actionlineage-license-report.json
 uv run python scripts/generate_release_provenance.py \
   --dist-dir build/release-candidate/dist \
@@ -231,9 +231,9 @@ Required workflow properties:
 Verify downloaded release artifacts after the workflow runs:
 
 ```bash
-gh attestation verify actionlineage-0.1.0a5-py3-none-any.whl \
+gh attestation verify actionlineage-0.1.0a6-py3-none-any.whl \
   --repo VectorTrace-Labs/ActionLineage
-gh attestation verify actionlineage-0.1.0a5.tar.gz \
+gh attestation verify actionlineage-0.1.0a6.tar.gz \
   --repo VectorTrace-Labs/ActionLineage
 shasum -a 256 -c SHA256SUMS.txt
 ```
@@ -243,9 +243,9 @@ See `docs/PUBLISHING.md` for the Trusted Publisher setup values.
 After package publication, verify the current public package from PyPI:
 
 ```bash
-uvx --prerelease allow --from actionlineage==0.1.0a5 actionlineage version
-uvx --prerelease allow --from actionlineage==0.1.0a5 actionlineage demo run --output-dir /tmp/actionlineage-demo
-uvx --prerelease allow --from actionlineage==0.1.0a5 actionlineage journal verify /tmp/actionlineage-demo/evidence.jsonl
+uvx --prerelease allow --from actionlineage==0.1.0a6 actionlineage version
+uvx --prerelease allow --from actionlineage==0.1.0a6 actionlineage demo run --output-dir /tmp/actionlineage-demo
+uvx --prerelease allow --from actionlineage==0.1.0a6 actionlineage journal verify /tmp/actionlineage-demo/evidence.jsonl
 ```
 
 ## Package Manager Channels

@@ -28,9 +28,9 @@ external-validation surfaces until they are externally validated.
 | Lineage Contracts, sequence detections, Lineage Lab | Local-proof | Contract, detection, and replay tests |
 | Agent Validation Lab | Local-proof | Development-only eval group, scenario fixtures, no-model CI lanes |
 | MCP, policy, OpenTelemetry, service, Postgres, cloud/Kubernetes fixtures | Preview | Optional extras and local fixture tests |
-| GitHub release artifacts and attestations | External-validation-required | `v0.1.0a5` tag and GitHub Release object are owner-gated; `v0.1.0a4` did not produce release artifacts |
-| PyPI/TestPyPI package publication | Alpha-supported | `0.1.0a5` is the corrective release-prep version; `0.1.0a3` fresh install/demo smoke passed; `0.1.0a4` was not published |
-| GHCR container publication | Preview | Tag-gated release workflow path |
+| GitHub release artifacts and attestations | Alpha-supported / External-validation-required | `v0.1.0a5` GitHub Release is published with 13 release assets; `0.1.0a6` is the next prepared hardening release |
+| PyPI/TestPyPI package publication | Alpha-supported | PyPI latest is `0.1.0a5`; `0.1.0a6` is prepared but not published until owner approval |
+| GHCR container publication | Preview / external-validation-required | Anonymous GHCR registry and GitHub package checks did not expose a public image on 2026-06-23; release workflow prepares digest capture, signing, and attestations after publication |
 | Homebrew tap, external audits, production history | Planned or external-validation-required | See `docs/DECISIONS_REQUIRED.md` |
 
 Full claim mapping lives in
@@ -40,17 +40,17 @@ Full claim mapping lives in
 
 Prerequisites:
 
-- Python 3.12 or newer
+- Python 3.12, 3.13, or 3.14
 - `uv`
 
-Run the public-alpha package from PyPI after the owner-approved `0.1.0a5`
-publication. Because `0.1.0a5` is a prerelease, `uvx` needs an explicit
+Run the public-alpha package from PyPI after the owner-approved `0.1.0a6`
+publication. Because `0.1.0a6` is a prerelease, `uvx` needs an explicit
 prerelease flag:
 
 ```bash
-uvx --prerelease allow --from actionlineage==0.1.0a5 actionlineage version
-uvx --prerelease allow --from actionlineage==0.1.0a5 actionlineage demo run --output-dir /tmp/actionlineage-demo
-uvx --prerelease allow --from actionlineage==0.1.0a5 actionlineage journal verify /tmp/actionlineage-demo/evidence.jsonl
+uvx --prerelease allow --from actionlineage==0.1.0a6 actionlineage version
+uvx --prerelease allow --from actionlineage==0.1.0a6 actionlineage demo run --output-dir /tmp/actionlineage-demo
+uvx --prerelease allow --from actionlineage==0.1.0a6 actionlineage journal verify /tmp/actionlineage-demo/evidence.jsonl
 ```
 
 The demo requires no model API key, cloud account, or external service. The
@@ -247,7 +247,7 @@ journal_path = Path("build/example/evidence.jsonl")
 journal = LocalJournal(journal_path)
 normalizer = EvidenceNormalizer(
     correlation=Correlation(trace_id="trace_example", run_id="run_example"),
-    source=Source(component="example_adapter", instance_id="local", version="0.1.0a5"),
+    source=Source(component="example_adapter", instance_id="local", version="0.1.0a6"),
     principal=Principal(principal_id="agent_example", principal_type=PrincipalType.AGENT),
     classification=Classification(sensitivity=Sensitivity.INTERNAL),
     clock=FixedClock(datetime(2026, 1, 1, tzinfo=UTC)),
@@ -383,14 +383,14 @@ Core dependencies are intentionally small: Pydantic and Typer. Optional extras
 hold MCP, OpenTelemetry, SQLAlchemy, FastAPI, JWT, and related integration
 dependencies.
 
-`actionlineage` `0.1.0a5` is the corrective public-alpha release-prep version
-for PyPI and TestPyPI Trusted Publishing. The `v0.1.0a4` tag exists but did not
-complete release artifact upload, package publication, or GitHub Release
-creation; the `v0.1.0a5` tag, package upload, GitHub Release object, and hosted
-release-artifact page remain owner-gated until release. The release workflow is
-prepared to publish preview GHCR images for version tags, while Homebrew and
-additional package-manager channels remain gated on external setup and
-validation. See
+`actionlineage` `0.1.0a6` is the next corrective public-alpha hardening version
+prepared from this source tree. PyPI and the GitHub Release currently publish
+`0.1.0a5`; the already published `0.1.0a5` PyPI long description cannot be
+changed in place, so corrected package text appears with the next owner-approved
+upload. The release workflow is prepared to publish preview GHCR images for
+version tags, capture the OCI digest, and sign/attest that digest, while
+Homebrew and additional package-manager channels remain gated on external setup
+and validation. See
 [docs/PACKAGE_MANAGERS.md](docs/PACKAGE_MANAGERS.md).
 
 ## Security Model In One Paragraph

@@ -22,17 +22,21 @@ from actionlineage.contracts import (
 )
 from actionlineage.demo import run_demo
 from actionlineage.detection import built_in_sequence_rules, evaluate_sequence_rule
-from actionlineage.journal import LocalJournal
+from actionlineage.journal import LocalJournal, VerifiedJournalSnapshot
 
 runner = CliRunner()
 
 
-def demo_journal_events(tmp_path: Path):
+def demo_journal_snapshot(tmp_path: Path) -> VerifiedJournalSnapshot:
     result = run_demo(tmp_path / "demo")
-    return tuple(LocalJournal(result.journal_path).iter_events())
+    return LocalJournal(result.journal_path).verified_snapshot()
 
 
-def evidence_contract() -> LineageContract:
+def demo_journal_events(tmp_path: Path):
+    return demo_journal_snapshot(tmp_path).events
+
+
+def evidence_contract(*, hash_chain_required: bool = True) -> LineageContract:
     return LineageContract(
         name="demo-evidence-contract",
         events=(
@@ -100,12 +104,17 @@ def evidence_contract() -> LineageContract:
             {"conflicting", "observed", "verified", "unverified"}
         ),
         required_verification_status="verified",
-        hash_chain_required=True,
+        hash_chain_required=hash_chain_required,
     )
 
 
 def test_contract_accepts_demo_evidence_and_control_dependencies(tmp_path: Path) -> None:
-    result = validate_contract(demo_journal_events(tmp_path), evidence_contract())
+    snapshot = demo_journal_snapshot(tmp_path)
+    result = validate_contract(
+        snapshot.events,
+        evidence_contract(),
+        journal_verification=snapshot.verification,
+    )
 
     assert result.ok
     assert result.violations == ()
@@ -120,7 +129,7 @@ def test_contract_reports_missing_required_evidence_link(tmp_path: Path) -> None
     )
     events[verified_index] = events[verified_index].model_copy(update={"payload": {}})
 
-    result = validate_contract(tuple(events), evidence_contract())
+    result = validate_contract(tuple(events), evidence_contract(hash_chain_required=False))
 
     assert not result.ok
     assert any(violation.code == "required_field_missing" for violation in result.violations)
@@ -143,7 +152,7 @@ def test_contract_reports_broken_control_dependency_reference(tmp_path: Path) ->
         update={"payload": broken_payload}
     )
 
-    result = validate_contract(tuple(events), evidence_contract())
+    result = validate_contract(tuple(events), evidence_contract(hash_chain_required=False))
 
     assert not result.ok
     assert any(violation.code == "relationship_missing" for violation in result.violations)
@@ -162,7 +171,7 @@ def test_contract_reports_broken_evidence_link_reference(tmp_path: Path) -> None
     broken_payload["evidence_link"] = evidence_link
     events[verified_index] = events[verified_index].model_copy(update={"payload": broken_payload})
 
-    result = validate_contract(tuple(events), evidence_contract())
+    result = validate_contract(tuple(events), evidence_contract(hash_chain_required=False))
 
     assert not result.ok
     assert any(
@@ -181,7 +190,7 @@ def test_contract_reports_latency_breach(tmp_path: Path) -> None:
         update={"occurred_at": events[acknowledged_index].occurred_at.replace(minute=55)}
     )
 
-    result = validate_contract(tuple(events), evidence_contract())
+    result = validate_contract(tuple(events), evidence_contract(hash_chain_required=False))
 
     assert not result.ok
     assert any(violation.code == "latency_breach" for violation in result.violations)
@@ -200,7 +209,7 @@ def test_contract_reports_missing_descriptor_identity(tmp_path: Path) -> None:
     payload["tool_identity"] = tool_identity
     events[requested_index] = events[requested_index].model_copy(update={"payload": payload})
 
-    result = validate_contract(tuple(events), evidence_contract())
+    result = validate_contract(tuple(events), evidence_contract(hash_chain_required=False))
 
     assert not result.ok
     assert any(violation.code == "descriptor_identity_missing" for violation in result.violations)
@@ -293,3 +302,38 @@ def test_contract_cli_init_explain_and_validate(tmp_path: Path) -> None:
     assert explain_result.exit_code == 0
     assert validate_result.exit_code == 0
     assert "contract cli-contract: ok" in validate_result.stdout
+
+
+def test_contract_cli_rejects_tampered_journal_hash_chain(tmp_path: Path) -> None:
+    demo = run_demo(tmp_path / "demo")
+    _tamper_record_three(demo.journal_path)
+    contract_path = tmp_path / "contract.json"
+    contract_path.write_text(json.dumps(contract_to_dict(evidence_contract())), encoding="utf-8")
+
+    verify_result = runner.invoke(app, ["journal", "verify", str(demo.journal_path)])
+    validate_result = runner.invoke(
+        app,
+        ["contract", "validate", str(contract_path), str(demo.journal_path)],
+    )
+    verify_data = json.loads(verify_result.stdout)
+    validate_data = json.loads(validate_result.stdout)
+
+    assert verify_result.exit_code == 1
+    assert verify_data["issues"][0]["code"] == "event_hash_mismatch"
+    assert validate_result.exit_code == 1
+    assert validate_data["ok"] is False
+    assert validate_data["violations"][0]["code"] == "journal_integrity_violation"
+    assert "event_hash_mismatch" in validate_data["violations"][0]["message"]
+
+
+def test_hash_chain_required_rejects_unverified_event_tuples(tmp_path: Path) -> None:
+    result = validate_contract(demo_journal_events(tmp_path), evidence_contract())
+
+    assert not result.ok
+    assert result.violations[0].code == "journal_integrity_unverified"
+
+
+def _tamper_record_three(journal_path: Path) -> None:
+    lines = journal_path.read_bytes().splitlines()
+    lines[2] = lines[2].replace(b'"requested_state":"requested"', b'"requested_state":"tampered"')
+    journal_path.write_bytes(b"\n".join(lines) + b"\n")

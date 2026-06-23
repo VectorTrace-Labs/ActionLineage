@@ -1,0 +1,25 @@
+{
+  "name": "actionlineage-site",
+  "version": "0.1.0a6",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build:site": "vite build",
+    "typecheck:site": "tsc --noEmit",
+    "cdk": "cdk",
+    "cdk:diff": "npm run build:site && npm run cdk -- diff ActionLineageDnsStack ActionLineageSiteStack",
+    "cdk:diff:site": "npm run build:site && npm run cdk -- diff ActionLineageSiteStack",
+    "deploy:site": "npm run build:site && npm run cdk -- deploy ActionLineageSiteStack --exclusively --require-approval never",
+    "cdk:diff:dns": "npm run cdk -- diff ActionLineageDnsStack",
+    "deploy:dns": "npm run cdk -- deploy ActionLineageDnsStack --require-approval never"
+  },
+  "devDependencies": {
+    "@types/node": "25.0.6",
+    "aws-cdk": "2.1128.1",
+    "aws-cdk-lib": "2.260.0",
+    "constructs": "10.6.0",
+    "tsx": "4.22.4",
+    "typescript": "6.0.3",
+    "vite": "8.1.0"
+  }
+}

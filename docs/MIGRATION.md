@@ -24,6 +24,18 @@ Migration steps:
 databases are disposable and may be rebuilt. If a future envelope migration is
 required, it must include an ADR, fixtures, and a reader compatibility test.
 
+## Service Provenance And Health
+
+Events ingested through service mode in `0.1.0a6` may include
+`payload.ingested_by`, a server-controlled provenance object. Existing journals
+without this payload key remain valid; readers must treat those records as
+legacy records without authenticated ingestion provenance rather than inventing
+an identity.
+
+`/live` is now process liveness. `/ready` is readiness and fails closed when the
+internal journal is malformed, locked beyond the configured timeout, or
+hash-corrupted. `/health` remains available as a readiness-compatible alias.
+
 ## Package Extras
 
 - Core install: event model, journal, projection, ingestion, detection,

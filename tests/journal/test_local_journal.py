@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import os
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
@@ -11,7 +12,12 @@ from typer.testing import CliRunner
 import actionlineage.journal.local as local_journal_module
 from actionlineage.cli import app
 from actionlineage.domain import EventEnvelope, EventType, RedactionPolicy
-from actionlineage.journal import JournalAppendError, JournalLockError, LocalJournal, verify_journal
+from actionlineage.journal import (
+    JournalAppendError,
+    JournalLockError,
+    LocalJournal,
+    verify_journal,
+)
 from tests.domain.test_events import build_event
 
 runner = CliRunner()
@@ -53,6 +59,16 @@ def replace_journal_lines(path: Path, lines: list[bytes]) -> None:
     path.write_bytes(b"\n".join(lines) + b"\n")
 
 
+def write_private_bytes(path: Path, payload: bytes) -> None:
+    path.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
+    fd = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+    try:
+        os.write(fd, payload)
+        os.fsync(fd)
+    finally:
+        os.close(fd)
+
+
 def assert_failed_at(result_code: str, path: Path, record_number: int) -> None:
     result = verify_journal(path)
 
@@ -77,6 +93,37 @@ def test_valid_journal_verifies_successfully(tmp_path: Path) -> None:
     assert events[0].integrity.event_hash is not None
     assert events[1].integrity.previous_event_hash == events[0].integrity.event_hash
     assert events[2].integrity.previous_event_hash == events[1].integrity.event_hash
+
+
+def test_append_creates_private_storage_under_default_umask(tmp_path: Path) -> None:
+    if os.name != "posix":
+        pytest.skip("POSIX mode-bit assertions do not apply on this platform")
+    path = tmp_path / "storage" / "events.jsonl"
+    original_umask = os.umask(0o022)
+    try:
+        LocalJournal(path).append(make_event(0))
+    finally:
+        os.umask(original_umask)
+
+    assert path.parent.stat().st_mode & 0o777 == 0o700
+    assert path.stat().st_mode & 0o777 == 0o600
+    assert path.with_suffix(f"{path.suffix}.lock").stat().st_mode & 0o777 == 0o600
+
+
+def test_verified_snapshot_is_immutable_after_source_file_changes(tmp_path: Path) -> None:
+    path = tmp_path / "events.jsonl"
+    journal = write_valid_journal(path)
+    snapshot = journal.verified_snapshot()
+    original_events = snapshot.events
+    original_terminal_hash = snapshot.terminal_hash
+
+    journal.append(make_event(3))
+
+    assert snapshot.ok
+    assert snapshot.events == original_events
+    assert snapshot.record_count == 3
+    assert snapshot.terminal_hash == original_terminal_hash
+    assert journal.verified_snapshot().record_count == 4
 
 
 def test_mutating_one_byte_fails_at_the_affected_record(tmp_path: Path) -> None:
@@ -220,13 +267,38 @@ def append_or_return_error(
         return exc
 
 
-def test_lock_contention_fails_visibly(tmp_path: Path) -> None:
+def test_stale_lock_metadata_does_not_block_next_writer(tmp_path: Path) -> None:
     path = tmp_path / "events.jsonl"
     lock_path = path.with_suffix(f"{path.suffix}.lock")
     lock_path.write_text("held", encoding="utf-8")
+    if os.name == "posix":
+        lock_path.chmod(0o600)
+
+    journal = LocalJournal(path, lock_timeout_seconds=0.01, lock_poll_seconds=0.001)
+    persisted = journal.append(make_event(0))
+
+    assert persisted.event_id == "evt_0"
+    assert journal.verify().ok
+    assert lock_path.exists()
+    if os.name == "posix":
+        assert lock_path.stat().st_mode & 0o777 == 0o600
+
+
+def test_active_lock_contention_fails_visibly(tmp_path: Path) -> None:
+    path = tmp_path / "events.jsonl"
+    lock_path = path.with_suffix(f"{path.suffix}.lock")
     journal = LocalJournal(path, lock_timeout_seconds=0.01, lock_poll_seconds=0.001)
 
-    with pytest.raises(JournalLockError):
+    with (
+        local_journal_module._journal_lock(
+            lock_path,
+            mode="exclusive",
+            operation="test",
+            timeout_seconds=0.01,
+            poll_seconds=0.001,
+        ),
+        pytest.raises(JournalLockError),
+    ):
         journal.append(make_event(0))
 
 
@@ -241,14 +313,14 @@ def test_append_preflight_io_failure_is_bounded_and_releases_lock(
     def fail_preflight(*_args: object, **_kwargs: object) -> object:
         raise OSError(f"permission denied while reading {raw_secret}")
 
-    monkeypatch.setattr(local_journal_module, "verify_journal", fail_preflight)
+    monkeypatch.setattr(local_journal_module, "verified_journal_snapshot", fail_preflight)
 
     with pytest.raises(JournalAppendError) as error:
         LocalJournal(path).append(event)
 
     assert str(error.value) == "failed to verify existing journal before append"
     assert raw_secret not in str(error.value)
-    assert not path.with_suffix(f"{path.suffix}.lock").exists()
+    assert path.with_suffix(f"{path.suffix}.lock").exists()
     assert not path.exists()
 
 
@@ -270,7 +342,7 @@ def test_append_write_io_failure_is_bounded_and_releases_lock(
 
     assert str(error.value) == "failed to append event to journal"
     assert raw_secret not in str(error.value)
-    assert not path.with_suffix(f"{path.suffix}.lock").exists()
+    assert path.with_suffix(f"{path.suffix}.lock").exists()
     assert not path.exists()
 
 
@@ -332,11 +404,13 @@ def test_cli_verify_reports_truncated_final_record(tmp_path: Path) -> None:
 def test_journal_verify_parse_error_does_not_echo_raw_payload(tmp_path: Path) -> None:
     path = tmp_path / "events.jsonl"
     raw_secret = "Bearer journal-parse-secret-value"
-    path.write_text(
-        '{"spec_version":"actionlineage.dev/v1alpha1",'
-        f'"payload":{{"authorization":"{raw_secret}"}},'
-        '"event_type":"agent.run.started"}\n',
-        encoding="utf-8",
+    write_private_bytes(
+        path,
+        (
+            '{"spec_version":"actionlineage.dev/v1alpha1",'
+            f'"payload":{{"authorization":"{raw_secret}"}},'
+            '"event_type":"agent.run.started"}\n'
+        ).encode(),
     )
 
     result = verify_journal(path)

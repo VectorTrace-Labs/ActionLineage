@@ -10,8 +10,8 @@ Run these checks in CI and before release:
 ```bash
 uv run python scripts/check_claims_language.py .
 uv run python scripts/secret_scan.py .
-uv run python scripts/generate_sbom.py --output build/actionlineage-sbom.json
-uv run python scripts/check_dependency_licenses.py \
+uv run --all-extras python scripts/generate_sbom.py --output build/actionlineage-sbom.json
+uv run --all-extras python scripts/check_dependency_licenses.py \
   --output build/actionlineage-license-report.json
 uv run python scripts/generate_release_provenance.py \
   --dist-dir dist \

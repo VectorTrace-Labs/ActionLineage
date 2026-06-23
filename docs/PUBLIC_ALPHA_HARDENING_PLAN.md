@@ -2,6 +2,12 @@
 
 Last reviewed: 2026-06-23.
 
+Historical snapshot: this plan records the public-alpha hardening baseline from
+commit `0e500d65d90fbda691d13e63ab58091e85083525` before later `0.1.0a5` and
+`0.1.0a6` release-state changes. Preserve its point-in-time findings; use
+`README.md`, `docs/PUBLISHING.md`, and `docs/QUALITY_SCORECARD.md` for current
+release status.
+
 This plan records the measured hardening baseline for ActionLineage public
 alpha work. It is intentionally scoped to release integrity, onboarding proof,
 quality evidence, security and reliability hardening, and external-review

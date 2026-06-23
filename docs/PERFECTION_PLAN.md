@@ -19,7 +19,7 @@ Stop condition: any public claim cannot be labeled or mapped to evidence.
 
 ## Phase 1: Public Truth And Alpha Scope
 
-Status: implemented for the corrective `0.1.0a5` release-prep branch.
+Status: implemented for the corrective `0.1.0a6` release-prep branch.
 
 Acceptance tests:
 

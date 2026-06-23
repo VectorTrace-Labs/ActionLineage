@@ -8,8 +8,8 @@ validated yet.
 
 | Channel | Status | Notes |
 | --- | --- | --- |
-| GitHub Releases | External-validation-required | Release workflow can build, checksum, and attest artifacts; the `v0.1.0a5` tag and GitHub Release object remain owner-gated. |
-| PyPI/TestPyPI | Alpha-supported | `actionlineage` `0.1.0a5` is the corrective release-prep version; `0.1.0a3` fresh install/demo smoke passed from both indexes. |
+| GitHub Releases | External-validation-required | Release workflow can build, checksum, and attest artifacts; the `v0.1.0a6` tag and GitHub Release object remain owner-gated. |
+| PyPI/TestPyPI | Alpha-supported | `actionlineage` `0.1.0a5` is the current public package; `0.1.0a6` is the corrective release-prep version. |
 | GHCR container image | Preview | The release workflow can build, smoke-test, and publish tagged images with `GITHUB_TOKEN`; public package visibility still requires external validation. |
 | Homebrew tap | Planned | A tap and formula should be created after Python package publication or a validated source formula path. |
 | conda-forge | Planned | Defer until PyPI publication and at least one public alpha feedback cycle. |
@@ -41,25 +41,27 @@ are easier to audit and avoid implying production stability.
 
 ## PyPI And TestPyPI
 
-PyPI is the primary Python package channel for the public alpha. Version
-`0.1.0a5` is the corrective Python 3.12-compatible alpha release candidate for:
+PyPI is the primary Python package channel for the public alpha. PyPI and
+TestPyPI currently publish `0.1.0a5` with `Requires-Python: >=3.12`; `0.1.0a6`
+is the corrective Python 3.12/3.13/3.14 alpha release candidate for:
 
 - `https://pypi.org/project/actionlineage/`
 - `https://test.pypi.org/project/actionlineage/`
 
 Use PyPI for normal evaluation on Python 3.12 or newer after the owner-approved
-`0.1.0a5` publication. Because `0.1.0a5` is a prerelease, `uvx` needs an
+`0.1.0a6` publication. Because `0.1.0a6` is a prerelease, `uvx` needs an
 explicit prerelease flag:
 
 ```bash
-uvx --prerelease allow --from actionlineage==0.1.0a5 actionlineage version
-uvx --prerelease allow --from actionlineage==0.1.0a5 actionlineage demo run --output-dir /tmp/actionlineage-demo
-uvx --prerelease allow --from actionlineage==0.1.0a5 actionlineage journal verify /tmp/actionlineage-demo/evidence.jsonl
+uvx --prerelease allow --from actionlineage==0.1.0a6 actionlineage version
+uvx --prerelease allow --from actionlineage==0.1.0a6 actionlineage demo run --output-dir /tmp/actionlineage-demo
+uvx --prerelease allow --from actionlineage==0.1.0a6 actionlineage journal verify /tmp/actionlineage-demo/evidence.jsonl
 ```
 
-Previous package-publication proof remains available for `0.1.0a2`; that
-release used the prior package metadata and should not be used as the Python
-3.12 compatibility proof.
+Previous package-publication proof remains available for `0.1.0a5`, but the
+already published package long description cannot be changed in place. Corrected
+release-state, health, provenance, and Python-support wording appears in the
+next owner-approved package upload.
 
 The release workflow publishes through Trusted Publishing and GitHub OIDC with
 the `testpypi` and `pypi` environments. Do not add long-lived PyPI API tokens

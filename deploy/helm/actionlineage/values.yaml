@@ -1,6 +1,7 @@
 image:
   repository: ghcr.io/vectortrace-labs/actionlineage
-  tag: "0.1.0a3"
+  tag: "0.1.0a6"
+  digest: ""
   pullPolicy: IfNotPresent
 
 replicaCount: 1

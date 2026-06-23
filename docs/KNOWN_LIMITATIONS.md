@@ -1,6 +1,6 @@
 # Known Limitations
 
-Last reviewed: 2026-06-22.
+Last reviewed: 2026-06-23.
 
 This page collects public-alpha limitations that reviewers should keep in view.
 The maturity model in `docs/MATURITY.md` remains the source of truth for
@@ -48,12 +48,17 @@ supported, local-proof, preview, planned, and external-validation labels.
 
 ## Release And External Validation
 
-- The `v0.1.0a5` tag, GitHub Release object, and package uploads remain
-  owner-gated external release actions. The earlier `v0.1.0a4` tag exists, but
-  its release artifact workflow failed before artifact upload or package
-  publication and must not be treated as the public package release.
-- Existing public `0.1.0a3` package metadata project URLs require the
-  owner-approved `0.1.0a5` package release to appear on PyPI/TestPyPI.
+- The `v0.1.0a5` tag, GitHub Release object, PyPI package, and TestPyPI package
+  are public as of 2026-06-23. The already published `0.1.0a5` PyPI/TestPyPI
+  long descriptions cannot be changed in place; corrected release-state,
+  service-health, provenance, Python-support, and container wording requires the
+  next owner-approved package upload.
+- The `0.1.0a6` source tree is a prepared hardening candidate until the owner
+  approves the tag, release workflow, package uploads, container publication,
+  and GitHub Release object.
+- Anonymous checks on 2026-06-23 did not expose a public GHCR package page for
+  `ghcr.io/vectortrace-labs/actionlineage`; GHCR remains preview and externally
+  validated.
 - Authenticated GitHub reads confirmed branch protection, secret scanning, push
   protection, private vulnerability reporting, a repository security policy,
   Dependabot security updates, 0 Dependabot alerts, 0 secret-scanning alerts, 0

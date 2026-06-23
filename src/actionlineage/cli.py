@@ -18,6 +18,7 @@ from actionlineage.console import (
 )
 from actionlineage.contracts import (
     ContractResult,
+    ContractViolation,
     contract_result_annotations,
     explain_contract,
     load_contract,
@@ -39,6 +40,7 @@ from actionlineage.journal import (
     ExternalAttestationType,
     JournalAnchorError,
     LocalJournal,
+    VerificationResult,
     append_journal_anchor_log,
     create_external_anchor_attestation,
     create_git_anchor_statement,
@@ -239,6 +241,8 @@ def contract_validate_command(
         built_in_detections=built_in_detections,
     )
     _echo_contract_result(result, output_format=output_format)
+    if not result.ok:
+        raise typer.Exit(1)
 
 
 @contract_app.command("test")
@@ -276,12 +280,44 @@ def _validate_contract_from_files(
 ) -> ContractResult:
     try:
         contract = load_contract(contract_path)
-        events = tuple(LocalJournal(journal_path).iter_events())
     except ActionLineageValidationError as exc:
         typer.echo(json.dumps({"ok": False, "error": str(exc)}, sort_keys=True))
         raise typer.Exit(1) from None
+    snapshot = LocalJournal(journal_path).verified_snapshot()
+    if not snapshot.ok:
+        return _contract_integrity_result(contract.name, snapshot.verification)
+    events = snapshot.events
     detection_results = _evaluate_built_in_detections(events) if built_in_detections else ()
-    return validate_contract(events, contract, detection_results=detection_results)
+    return validate_contract(
+        events,
+        contract,
+        detection_results=detection_results,
+        journal_verification=snapshot.verification,
+    )
+
+
+def _contract_integrity_result(
+    contract_name: str,
+    verification: VerificationResult,
+) -> ContractResult:
+    issue = verification.issues[0] if verification.issues else None
+    return ContractResult(
+        contract_name=contract_name,
+        ok=False,
+        violations=(
+            ContractViolation(
+                code="journal_integrity_violation",
+                message=(
+                    "contract requires a verified journal hash chain"
+                    + (f"; verifier reported {issue.code}" if issue is not None else "")
+                ),
+                field="journal.integrity",
+                remediation="run actionlineage journal verify and repair or replace the journal",
+                severity="error",
+                event_id=issue.event_id if issue is not None else None,
+            ),
+        ),
+    )
 
 
 def _evaluate_built_in_detections(events: tuple[EventEnvelope, ...]) -> tuple[DetectionMatch, ...]:
@@ -327,12 +363,24 @@ def detection_explain_sequence_command(
 
     try:
         rules = load_sequence_rules(rule_path)
-        events = tuple(LocalJournal(journal_path).iter_events())
     except (ActionLineageValidationError, DetectionRuleLoadError) as exc:
         typer.echo(json.dumps({"ok": False, "error": str(exc)}, sort_keys=True))
         raise typer.Exit(1) from None
+    snapshot = LocalJournal(journal_path).verified_snapshot()
+    if not snapshot.ok:
+        typer.echo(
+            json.dumps(
+                {
+                    "ok": False,
+                    "error": "journal_integrity_error",
+                    "verification": snapshot.verification.as_dict(),
+                },
+                sort_keys=True,
+            )
+        )
+        raise typer.Exit(1)
 
-    explanations = [explain_sequence_rule(events, rule).as_dict() for rule in rules]
+    explanations = [explain_sequence_rule(snapshot.events, rule).as_dict() for rule in rules]
     typer.echo(json.dumps({"ok": True, "rules": explanations}, sort_keys=True))
 
 

@@ -14,25 +14,25 @@ Prerequisites:
 - `uv`.
 - Internet access for the first package install.
 
-Run the published public-alpha package after the owner-approved `0.1.0a5`
+Run the published public-alpha package after the owner-approved `0.1.0a6`
 publication:
 
 ```bash
-uvx --prerelease allow --from actionlineage==0.1.0a5 actionlineage version
-uvx --prerelease allow --from actionlineage==0.1.0a5 actionlineage demo run --output-dir actionlineage-review-demo
-uvx --prerelease allow --from actionlineage==0.1.0a5 actionlineage journal verify actionlineage-review-demo/evidence.jsonl
+uvx --prerelease allow --from actionlineage==0.1.0a6 actionlineage version
+uvx --prerelease allow --from actionlineage==0.1.0a6 actionlineage demo run --output-dir actionlineage-review-demo
+uvx --prerelease allow --from actionlineage==0.1.0a6 actionlineage journal verify actionlineage-review-demo/evidence.jsonl
 ```
 
 Expected results after publication:
 
-- `actionlineage version` prints `0.1.0a5`.
+- `actionlineage version` prints `0.1.0a6`.
 - `demo run` creates `evidence.jsonl`, `projection.sqlite`, `timeline.json`,
   and `incident.json`.
 - `journal verify` reports a verified local journal hash chain.
 
-Until that publication gate is complete, `0.1.0a3` remains the latest public
+Until that publication gate is complete, `0.1.0a5` remains the latest public
 package and reviewers should use the source-checkout path below for the
-`0.1.0a5` candidate.
+`0.1.0a6` candidate.
 
 The demo itself is deterministic and credential-free after installation. It
 does not need a model API key, cloud account, live MCP server, or internet

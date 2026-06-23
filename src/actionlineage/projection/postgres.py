@@ -15,7 +15,7 @@ from typing import Protocol
 
 from actionlineage.domain import EventEnvelope, serialize_event
 from actionlineage.domain.events import event_type_value
-from actionlineage.journal import iter_events, verify_journal
+from actionlineage.journal import verified_journal_snapshot
 from actionlineage.projection.sqlite import (
     PROJECTION_SCHEMA_VERSION,
     ProjectionRebuildError,
@@ -67,9 +67,9 @@ def rebuild_postgres_projection(
 
     journal_path = Path(journal_path)
     safe_table = _safe_identifier(table_name)
-    verification = verify_journal(journal_path)
-    if not verification.ok:
-        raise ProjectionVerificationError(journal_path, verification)
+    snapshot = verified_journal_snapshot(journal_path)
+    if not snapshot.ok:
+        raise ProjectionVerificationError(journal_path, snapshot.verification)
 
     indexed_count = 0
     try:
@@ -77,16 +77,15 @@ def rebuild_postgres_projection(
         for statement in postgres_schema_statements(table_name=safe_table):
             executor.execute(statement)
         executor.execute(f"DELETE FROM {safe_table}")
-        for record_number, event in enumerate(iter_events(journal_path), start=1):
+        for record_number, event in enumerate(snapshot.events, start=1):
             executor.execute(
                 postgres_insert_statement(table_name=safe_table),
                 _event_projection_parameters(event, journal_record_number=record_number),
             )
             indexed_count += 1
-        if indexed_count != verification.records_verified:
+        if indexed_count != snapshot.record_count:
             raise ProjectionRebuildError(
-                "journal changed while rebuilding PostgreSQL projection; indexed record count "
-                "does not match verification result"
+                "indexed record count does not match verified journal snapshot"
             )
         executor.execute(
             f"""
@@ -102,7 +101,7 @@ def rebuild_postgres_projection(
                 "schema_version": str(POSTGRES_PROJECTION_SCHEMA_VERSION),
                 "source_journal_path": str(journal_path),
                 "records_indexed": str(indexed_count),
-                "last_event_hash": verification.last_event_hash or "",
+                "last_event_hash": snapshot.terminal_hash or "",
             },
         )
         executor.execute("COMMIT")
@@ -116,7 +115,7 @@ def rebuild_postgres_projection(
         journal_path=journal_path,
         table_name=safe_table,
         records_indexed=indexed_count,
-        last_event_hash=verification.last_event_hash,
+        last_event_hash=snapshot.terminal_hash,
     )
 
 

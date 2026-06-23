@@ -6,7 +6,7 @@ from dataclasses import dataclass
 from enum import StrEnum
 from pathlib import Path
 
-from actionlineage.journal import verify_journal
+from actionlineage.journal import JournalError, verify_journal
 
 
 class HealthState(StrEnum):
@@ -22,9 +22,10 @@ class HealthIssue:
 
     code: str
     message: str
+    details: dict[str, object] | None = None
 
     def as_dict(self) -> dict[str, object]:
-        return {"code": self.code, "message": self.message}
+        return {"code": self.code, "message": self.message, "details": self.details or {}}
 
 
 @dataclass(frozen=True, slots=True)
@@ -50,12 +51,23 @@ def check_local_health(*, journal_path: Path, database_path: Path | None = None)
     """Check local journal and projection health without mutating state."""
 
     issues: list[HealthIssue] = []
-    verification = verify_journal(journal_path)
-    if not verification.ok:
+    try:
+        verification = verify_journal(journal_path)
+    except JournalError as exc:
         issues.append(
             HealthIssue(
-                code="journal_degraded",
+                code="journal_unavailable",
+                message="local journal could not be locked or read for verification",
+                details={"error_type": type(exc).__name__},
+            )
+        )
+        verification = None
+    if verification is not None and not verification.ok:
+        issues.append(
+            HealthIssue(
+                code="journal_integrity_error",
                 message="local journal verification failed",
+                details={"verification": verification.as_dict()},
             )
         )
     if database_path is not None and not Path(database_path).exists():

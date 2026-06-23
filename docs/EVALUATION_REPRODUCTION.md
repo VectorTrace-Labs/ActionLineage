@@ -1,6 +1,6 @@
 # Evaluation Reproduction
 
-Last reviewed: 2026-06-22.
+Last reviewed: 2026-06-23.
 
 This page collects reproducible public-alpha evaluation commands. Generated
 artifacts belong under `build/`, `dist/`, or a temporary directory and are not
@@ -11,16 +11,16 @@ blocks these commands, see `docs/TROUBLESHOOTING.md`.
 
 ## Published Package Smoke
 
-After the owner-approved `0.1.0a5` publication, run:
+After the owner-approved `0.1.0a6` publication, run:
 
 ```bash
-uvx --prerelease allow --from actionlineage==0.1.0a5 actionlineage version
-uvx --prerelease allow --from actionlineage==0.1.0a5 actionlineage demo run --output-dir actionlineage-pypi-demo
-uvx --prerelease allow --from actionlineage==0.1.0a5 actionlineage journal verify actionlineage-pypi-demo/evidence.jsonl
+uvx --prerelease allow --from actionlineage==0.1.0a6 actionlineage version
+uvx --prerelease allow --from actionlineage==0.1.0a6 actionlineage demo run --output-dir actionlineage-pypi-demo
+uvx --prerelease allow --from actionlineage==0.1.0a6 actionlineage journal verify actionlineage-pypi-demo/evidence.jsonl
 ```
 
-Expected package version after publication: `0.1.0a5`. Until that owner gate
-is complete, `0.1.0a3` remains the latest public package and the source checkout
+Expected package version after publication: `0.1.0a6`. Until that owner gate
+is complete, `0.1.0a5` remains the latest public package and the source checkout
 commands below are the deterministic evaluation path for this branch.
 
 ## Repository Demo And Visual Proof
@@ -92,8 +92,8 @@ uv run python scripts/check_claims_language.py .
 uv run python scripts/check_markdown_links.py .
 uv run python scripts/secret_scan.py .
 uv build --out-dir build/release-proof/dist
-uv run python scripts/generate_sbom.py --output build/release-proof/actionlineage-sbom.json
-uv run python scripts/check_dependency_licenses.py \
+uv run --all-extras python scripts/generate_sbom.py --output build/release-proof/actionlineage-sbom.json
+uv run --all-extras python scripts/check_dependency_licenses.py \
   --output build/release-proof/actionlineage-license-report.json
 uv run python scripts/generate_release_provenance.py \
   --dist-dir build/release-proof/dist \

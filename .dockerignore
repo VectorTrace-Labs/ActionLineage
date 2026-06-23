@@ -1,0 +1,14 @@
+.git
+.hypothesis
+.mypy_cache
+.pytest_cache
+.ruff_cache
+.tox
+.venv
+__pycache__
+*.pyc
+build
+cdk.out
+dist
+node_modules
+npm-debug.log*

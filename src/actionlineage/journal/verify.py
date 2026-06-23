@@ -14,6 +14,7 @@ type VerificationCode = Literal[
     "previous_hash_mismatch",
     "event_hash_missing",
     "event_hash_mismatch",
+    "journal_changed_during_read",
     "expected_record_count_mismatch",
     "expected_last_hash_mismatch",
 ]

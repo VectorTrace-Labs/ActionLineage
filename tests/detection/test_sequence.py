@@ -372,6 +372,33 @@ def test_cli_explain_sequence_outputs_stage_candidates(tmp_path) -> None:
     assert data["rules"][0]["matches"][0]["event_ids"] == ["evt_demo_05", "evt_demo_07"]
 
 
+def test_cli_explain_sequence_rejects_tampered_journal_before_evaluation(tmp_path) -> None:
+    journal_path = tmp_path / "demo.jsonl"
+    rule_path = tmp_path / "rules.json"
+    journal = LocalJournal(journal_path)
+    for event in build_demo_events():
+        journal.append(event)
+    lines = journal_path.read_bytes().splitlines()
+    lines[2] = lines[2].replace(b'"requested_state":"requested"', b'"requested_state":"tampered"')
+    journal_path.write_bytes(b"\n".join(lines) + b"\n")
+    rule_path.write_text(
+        json.dumps({"rules": [sequence_rule_to_dict(verified_file_read_rule())]}),
+        encoding="utf-8",
+    )
+
+    result = runner.invoke(
+        app,
+        ["detection", "explain-sequence", str(rule_path), str(journal_path)],
+    )
+    data = json.loads(result.stdout)
+
+    assert result.exit_code == 1
+    assert data["ok"] is False
+    assert data["error"] == "journal_integrity_error"
+    assert data["verification"]["issues"][0]["code"] == "event_hash_mismatch"
+    assert "rules" not in data
+
+
 def test_rule_loader_rejects_unsupported_suffix_without_payload_echo(tmp_path) -> None:
     path = tmp_path / "rules.txt"
     path.write_text("token-value", encoding="utf-8")

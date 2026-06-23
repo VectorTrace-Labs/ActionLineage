@@ -20,7 +20,9 @@ SKIPPED_DIRS: Final = {
     ".venv",
     "__pycache__",
     "build",
+    "cdk.out",
     "dist",
+    "node_modules",
 }
 SKIPPED_SUFFIXES: Final = {
     ".db",

@@ -11,7 +11,7 @@ from pathlib import Path
 
 from actionlineage.detection import SequenceRule, evaluate_sequence_rule
 from actionlineage.domain import EventEnvelope, EventType, event_to_dict
-from actionlineage.journal import LocalJournal
+from actionlineage.journal import JournalError, LocalJournal
 
 
 class MutationStrategy(StrEnum):
@@ -169,9 +169,12 @@ def load_replay_case_from_journal(
 ) -> ReplayCase:
     """Load a replay case from a canonical local journal."""
 
+    snapshot = LocalJournal(Path(journal_path)).verified_snapshot()
+    if not snapshot.ok:
+        raise JournalError("cannot load replay case from an unverified journal")
     return ReplayCase(
         name=name,
-        events=tuple(LocalJournal(Path(journal_path)).iter_events()),
+        events=snapshot.events,
         expected_match=expected_match,
     )
 

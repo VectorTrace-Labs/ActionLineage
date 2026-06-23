@@ -2,6 +2,11 @@
 
 Last reviewed: 2026-06-23.
 
+Historical snapshot: this audit records public-claim findings from the
+`0.1.0a3`/pre-`0.1.0a5` hardening window. Its release-object and package-index
+findings are retained for auditability and may be stale. Current release status
+lives in `README.md`, `docs/PUBLISHING.md`, and `docs/QUALITY_SCORECARD.md`.
+
 This audit maps public-facing claims to current implementation, tests, demo or
 fixture evidence, limitations, and remediation. A claim is safe only when it
 maps to implementation, tests, deterministic evidence, or an explicit maturity

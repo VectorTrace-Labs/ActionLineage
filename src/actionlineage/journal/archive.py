@@ -12,7 +12,7 @@ from typing import Any, Literal, cast
 from actionlineage.domain import deterministic_json_bytes
 from actionlineage.domain.events import JsonObject
 from actionlineage.journal.anchors import JournalAnchorError
-from actionlineage.journal.local import verify_journal
+from actionlineage.journal.local import verified_journal_snapshot, verify_journal
 from actionlineage.journal.verify import VerificationResult
 
 JOURNAL_ARCHIVE_MANIFEST_VERSION = "actionlineage.dev/journal-archive-manifest-v1"
@@ -113,19 +113,20 @@ def create_journal_archive_manifest(
 ) -> JournalArchiveManifest:
     """Create an archive manifest from a verified local journal."""
 
-    verification = verify_journal(journal_path)
-    if not verification.ok:
+    snapshot = verified_journal_snapshot(journal_path)
+    if not snapshot.ok:
         raise JournalAnchorError("cannot archive-manifest a journal that fails verification")
+    if snapshot.metadata_after is None or snapshot.journal_sha256 is None:
+        raise JournalAnchorError("cannot archive-manifest a missing journal file")
     if not object_uri:
         raise JournalAnchorError("archive manifest object_uri is required")
-    stat = journal_path.stat()
     return JournalArchiveManifest(
         journal_path=str(journal_path),
         object_uri=object_uri,
-        journal_sha256=_file_sha256(journal_path),
-        size_bytes=stat.st_size,
-        record_count=verification.records_verified,
-        last_event_hash=verification.last_event_hash,
+        journal_sha256=snapshot.journal_sha256,
+        size_bytes=snapshot.metadata_after.size,
+        record_count=snapshot.record_count,
+        last_event_hash=snapshot.terminal_hash,
         created_at=created_at or datetime.now(UTC),
         retention_mode=retention_mode,
         storage_class=storage_class,

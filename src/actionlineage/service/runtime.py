@@ -34,11 +34,13 @@ def create_service_app_from_env() -> object:
     export_root = Path(os.environ.get("ACTIONLINEAGE_EXPORT_ROOT", str(DEFAULT_EXPORT_ROOT)))
     principal_id = os.environ.get("ACTIONLINEAGE_SERVICE_PRINCIPAL", "service-admin")
     roles = _roles_from_env(os.environ.get("ACTIONLINEAGE_SERVICE_ROLES", "admin"))
+    service_instance_id = os.environ.get("ACTIONLINEAGE_SERVICE_INSTANCE_ID", "local_service")
 
     return create_app(
         journal_path=journal_path,
         database_path=database_path,
         export_root=export_root,
+        service_instance_id=service_instance_id,
         authenticator=StaticTokenAuthenticator(
             tokens={
                 token: ServicePrincipal(

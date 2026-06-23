@@ -6,6 +6,44 @@ All notable changes will be documented here.
 
 No unreleased changes.
 
+## 0.1.0a6 - 2026-06-23
+
+### Security
+
+- Require same-pass verified journal snapshots for contract validation,
+  detection explanation/evaluation, service journal reads, idempotency scanning,
+  projection rebuilds, and replay loading.
+- Add server-controlled service ingestion provenance under `payload.ingested_by`
+  and reject client-supplied provenance.
+- Reject ordinary write-role attempts to assert `trust=trusted`; admin
+  authorization is required for trusted evidence assertions.
+- Split service liveness and readiness so corrupted journals fail closed on
+  `/ready`, `/health`, and journal-dependent endpoints without triggering
+  endless liveness restarts.
+- Create new journal, projection, lock, and demo evidence files with private
+  POSIX modes and replace stale lock sentinels with advisory locks plus
+  diagnostic metadata.
+
+### Release
+
+- Align deployment image tags, Helm `appVersion`, documentation examples, and
+  release metadata with `0.1.0a6`.
+- Add Helm digest image rendering, digest-pinned Kubernetes manifest generation
+  during release, and container signing/attestation steps for trusted tag
+  releases.
+- Pin `uv`, pin the Python container base image by digest, install runtime
+  dependencies from the committed lockfile, and install the project from a built
+  wheel in the runtime container.
+- Bound Python support to `>=3.12,<3.15` and add Python 3.14 to CI, release
+  smoke, post-publication verification, classifiers, and docs.
+
+### Compatibility
+
+- `actionlineage.dev/v1alpha1` journals remain readable.
+- Older service events without `payload.ingested_by` are treated as legacy
+  records without invented authenticated transport identities.
+- `/health` remains available for compatibility but follows readiness status.
+
 ## 0.1.0a5 - 2026-06-23
 
 ### Changed

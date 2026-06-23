@@ -21,7 +21,7 @@ from actionlineage.detection import (
 )
 from actionlineage.domain import EventEnvelope
 from actionlineage.domain.events import event_type_value
-from actionlineage.journal import LocalJournal
+from actionlineage.journal import LocalJournal, VerificationResult
 from actionlineage.projection import rebuild_projection
 from actionlineage_evals.models import (
     FailureClass,
@@ -43,13 +43,21 @@ def score_run(
     """Run all authoritative scorers for one scenario."""
 
     journal = LocalJournal(paths.journal_path)
-    events = tuple(journal.iter_events())
+    snapshot = journal.verified_snapshot()
+    events = snapshot.events
     scores: list[ScoreResult] = []
     scores.append(score_lifecycle(scenario, events))
-    scores.append(score_integrity(journal, expected_record_count=len(events)))
+    scores.append(score_integrity(journal, expected_record_count=snapshot.record_count))
     scores.append(score_projection(paths, expected_record_count=len(events)))
     detection_matches = evaluate_detections(events)
-    scores.append(score_contracts(scenario, events, detection_matches))
+    scores.append(
+        score_contracts(
+            scenario,
+            events,
+            detection_matches,
+            journal_verification=snapshot.verification,
+        )
+    )
     scores.append(score_detections(scenario, detection_matches))
     scores.append(score_redaction(paths.run_dir, canary_values=canary_values))
     scores.append(score_capability_coverage(scenario))
@@ -119,11 +127,18 @@ def score_contracts(
     scenario: ScenarioDefinition,
     events: tuple[EventEnvelope, ...],
     detection_matches: tuple[DetectionMatch, ...],
+    *,
+    journal_verification: VerificationResult,
 ) -> ScoreResult:
     """Validate scenario-specific Lineage Contract requirements."""
 
     contract = contract_for_scenario(scenario)
-    result = validate_contract(events, contract, detection_results=detection_matches)
+    result = validate_contract(
+        events,
+        contract,
+        detection_results=detection_matches,
+        journal_verification=journal_verification,
+    )
     return ScoreResult(
         name="contract",
         ok=result.ok,

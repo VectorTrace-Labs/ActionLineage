@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import os
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
@@ -100,7 +101,7 @@ def run_demo(output_dir: Path) -> DemoResult:
     """Run the deterministic local demo and write journal/projection artifacts."""
 
     output_dir = Path(output_dir)
-    output_dir.mkdir(parents=True, exist_ok=True)
+    output_dir.mkdir(mode=0o700, parents=True, exist_ok=True)
     journal_path = output_dir / "evidence.jsonl"
     database_path = output_dir / "projection.sqlite"
     timeline_path = output_dir / "timeline.json"
@@ -117,7 +118,8 @@ def run_demo(output_dir: Path) -> DemoResult:
     projection = rebuild_projection(journal_path, database_path)
     incident = export_incident(database_path, trace_id=DEMO_TRACE_ID)
 
-    timeline_path.write_bytes(
+    _write_private_bytes(
+        timeline_path,
         deterministic_json_bytes(
             cast(
                 JsonObject,
@@ -127,9 +129,9 @@ def run_demo(output_dir: Path) -> DemoResult:
                     "events": [event.event_id for event in incident.timeline.events],
                 },
             )
-        )
+        ),
     )
-    incident_path.write_bytes(deterministic_json_bytes(_json_object(incident.as_dict())))
+    _write_private_bytes(incident_path, deterministic_json_bytes(_json_object(incident.as_dict())))
 
     return DemoResult(
         output_dir=output_dir,
@@ -143,6 +145,19 @@ def run_demo(output_dir: Path) -> DemoResult:
         projection=projection,
         incident=incident,
     )
+
+
+def _write_private_bytes(path: Path, data: bytes) -> None:
+    fd = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_TRUNC | getattr(os, "O_CLOEXEC", 0), 0o600)
+    try:
+        with os.fdopen(fd, "wb") as handle:
+            fd = -1
+            handle.write(data)
+            handle.flush()
+            os.fsync(handle.fileno())
+    finally:
+        if fd >= 0:
+            os.close(fd)
 
 
 def build_demo_events() -> tuple[EventEnvelope, ...]:

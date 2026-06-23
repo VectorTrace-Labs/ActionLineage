@@ -14,7 +14,7 @@ from dataclasses import asdict, dataclass
 from pathlib import Path
 
 DEFAULT_TRACE_ID = "trace_demo_evidence_plane"
-DEFAULT_EXPECTED_VERSION = "0.1.0a5"
+DEFAULT_EXPECTED_VERSION = "0.1.0a6"
 DEFAULT_STEP_TIMEOUT_SECONDS = 120.0
 
 
@@ -245,7 +245,7 @@ def _parse_args(argv: Sequence[str]) -> argparse.Namespace:
         "--package-spec",
         help=(
             "Package spec or artifact path used with uvx --from, such as a "
-            "wheel, sdist, or actionlineage==0.1.0a5."
+            "wheel, sdist, or actionlineage==0.1.0a6."
         ),
     )
     parser.add_argument(
