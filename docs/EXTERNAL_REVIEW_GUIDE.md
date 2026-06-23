@@ -1,6 +1,6 @@
 # External Review Guide
 
-Last reviewed: 2026-06-22.
+Last reviewed: 2026-06-23.
 
 This guide helps an outside engineer evaluate ActionLineage public alpha without
 private maintainer guidance. It is a review aid, not evidence that an external
@@ -135,23 +135,11 @@ ready. They are not automatically opened by this document.
 - Improve troubleshooting text for one failed quickstart prerequisite.
 - Add a synthetic static-console hostile-input fixture with no real secrets.
 
-## Announcement Draft
+## Outreach Drafts
 
-Title: Acknowledgement is not verification
-
-Outline:
-
-1. Agents can report that a tool call returned, but that is not the same as
-   proving a side effect occurred.
-2. ActionLineage records intent, identity, tool execution, observed effects,
-   verification links, and explicit uncertainty in a local journal.
-3. The public alpha is for local evaluation and fixture-backed integrations,
-   with service and cloud surfaces labeled preview.
-4. The five-minute demo and no-model Agent Validation baseline are reproducible
-   without credentials.
-5. Feedback requested: semantics, redaction boundaries, journal recovery,
-   adapter fit, and ambiguous evidence cases.
-
-Do not publish an announcement that claims external audit, external adoption,
+`docs/REVIEW_OUTREACH_DRAFTS.md` contains a short release/evaluation
+announcement draft and a technical article outline centered on
+acknowledgement versus verification. They are prepared for maintainer review
+only. Do not publish outreach that claims external audit, external adoption,
 production use, independent review, or community validation until real evidence
 exists.

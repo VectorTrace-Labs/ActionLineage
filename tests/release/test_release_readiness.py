@@ -158,6 +158,8 @@ def test_readme_quickstart_uses_demo_aligned_contract() -> None:
     assert "demo-evidence-map.svg" in readme
     assert "canonical evidence remains `evidence.jsonl`" in readme
     assert "External review guide" in readme
+    assert "Review outreach drafts" in readme
+    assert "docs/REVIEW_OUTREACH_DRAFTS.md" in readme
     assert "Evaluation reproduction" in readme
     assert "Troubleshooting" in readme
     assert "docs/TROUBLESHOOTING.md" in readme
@@ -180,6 +182,7 @@ def test_external_review_docs_prepare_review_without_claiming_validation() -> No
         ),
         "hardening": (PROJECT_ROOT / "docs/SECURITY_HARDENING.md").read_text(encoding="utf-8"),
         "troubleshooting": (PROJECT_ROOT / "docs/TROUBLESHOOTING.md").read_text(encoding="utf-8"),
+        "outreach": (PROJECT_ROOT / "docs/REVIEW_OUTREACH_DRAFTS.md").read_text(encoding="utf-8"),
         "case_study": (PROJECT_ROOT / "docs/ADOPTION_CASE_STUDY_TEMPLATE.md").read_text(
             encoding="utf-8"
         ),
@@ -202,6 +205,13 @@ def test_external_review_docs_prepare_review_without_claiming_validation() -> No
     assert "release-consistency-offline.json" in docs["reproduction"]
     assert "review index summarizes the report counts" in docs["reproduction"]
     assert "release-consistency-*.json" in docs["external"]
+    assert "Outreach Drafts" in docs["external"]
+    assert "Release And Evaluation Announcement Draft" in docs["outreach"]
+    assert "Technical Article Outline" in docs["outreach"]
+    assert "Acknowledgement is not verification" in docs["outreach"]
+    assert "Tool return values are component acknowledgements" in docs["outreach"]
+    assert "docs/OWNER_PUBLICATION_CHECKLIST.md" in docs["outreach"]
+    assert "current no-model Agent Validation baseline" in docs["outreach"]
     assert "offline release-consistency report" in docs["hardening"]
     assert "This is a template" in docs["case_study"]
     assert "Known Limitations" in docs["limitations"]
@@ -222,6 +232,7 @@ def test_external_review_docs_prepare_review_without_claiming_validation() -> No
         "scripts/check_release_consistency.py",
         "scripts/write_release_candidate_manifest.py",
         "build/release-candidate/REVIEW_INDEX.md",
+        "docs/REVIEW_OUTREACH_DRAFTS.md",
         "actionlineage doctor",
         'pipx run --pip-args="--pre"',
         "python -m pip install --pre actionlineage==0.1.0a3",
@@ -672,7 +683,9 @@ def test_public_claim_audit_tracks_package_description_drift() -> None:
     assert "PALPHA-013" in hardening_plan
     assert "PALPHA-014" in hardening_plan
     assert "PALPHA-015" in hardening_plan
+    assert "PALPHA-016" in hardening_plan
     assert "FIXED_IN_POST_PUBLICATION_VERIFY_SLICE" in hardening_plan
+    assert "FIXED_IN_OUTREACH_DRAFTS_SLICE" in hardening_plan
     assert "MITIGATED_WITH_CURL_FALLBACK" in hardening_plan
     assert "3ff4185b199fc74474f65dfa86d72441728a010d" in hardening_plan
     assert "Public package long descriptions can lag" in hardening_plan

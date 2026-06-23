@@ -315,6 +315,8 @@ reference.
   no-model eval baseline and limitations.
 - [External review guide](docs/EXTERNAL_REVIEW_GUIDE.md): five-minute review
   path, semantics to challenge, and safe feedback routes.
+- [Review outreach drafts](docs/REVIEW_OUTREACH_DRAFTS.md): announcement and
+  technical article outlines for maintainer review.
 - [Evaluation reproduction](docs/EVALUATION_REPRODUCTION.md): exact commands
   for public-package, demo, Agent Validation, and local release proof.
 - [Troubleshooting](docs/TROUBLESHOOTING.md): first-time install, demo, path,
