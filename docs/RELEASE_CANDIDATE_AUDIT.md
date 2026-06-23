@@ -97,10 +97,12 @@ Read-only `curl` checks showed:
 
 - PyPI version: `0.1.0a3`.
 - PyPI `Requires-Python`: `>=3.12`.
-- PyPI project URLs: absent until a future owner-approved package release.
+- PyPI project URLs and corrected long description: absent until a future
+  owner-approved package release.
 - TestPyPI version: `0.1.0a3`.
 - TestPyPI `Requires-Python`: `>=3.12`.
-- TestPyPI project URLs: absent until a future owner-approved package release.
+- TestPyPI project URLs and corrected long description: absent until a future
+  owner-approved package release.
 - GitHub tag: `refs/tags/v0.1.0a3`.
 - GitHub releases listed: `v0.1.0a2`, `v0.1.0a1`.
 - GitHub Release object for `v0.1.0a3`: absent.
@@ -133,8 +135,8 @@ uvx --from build/release-candidate/dist/actionlineage-0.1.0a3.tar.gz actionlinea
 
 - The GitHub Release object for `v0.1.0a3` remains the main release-integrity
   blocker.
-- Existing public PyPI/TestPyPI metadata lacks project URLs until a later
-  owner-approved package upload.
+- Existing public PyPI/TestPyPI metadata lacks project URLs and may retain stale
+  long-description wording until a later owner-approved package upload.
 - Python `urllib` cannot complete HTTPS checks in this local environment, while
   `curl` can. The audit records both paths.
 - External repository security settings and third-party review cannot be

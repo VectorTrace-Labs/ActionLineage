@@ -76,6 +76,7 @@ data, not universal performance guarantees.
 | PALPHA-010 | P2 | Local release-candidate artifacts had hashes and a manifest, but lacked a generated reviewer index that verifies artifact bytes and collects owner/external gates in one place. | FIXED_IN_REVIEW_INDEX_SLICE |
 | PALPHA-011 | P2 | Local release-candidate manifest contents were documented but manifest generation itself was not a committed, repeatable script. | FIXED_IN_MANIFEST_GENERATOR_SLICE |
 | PALPHA-012 | P2 | The GitHub release artifact bundle did not yet generate or smoke-check the release-candidate manifest and review index produced by the local proof scripts. | FIXED_IN_RELEASE_WORKFLOW_PROOF_SLICE |
+| PALPHA-013 | P1 | Public package long descriptions can lag the corrected source README and still contain stale owner-gated GitHub Release wording until the next owner-approved package upload. | BLOCKED_ON_RELEASE |
 
 ## Phase Plan
 

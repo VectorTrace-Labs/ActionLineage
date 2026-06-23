@@ -330,6 +330,7 @@ def test_release_candidate_audit_prepares_without_publishing() -> None:
     assert "docs/evidence/agent-validation-baseline.md" in audit
     assert "docs/evidence/agent-validation-baseline.json" in audit
     assert "GitHub Release object for `v0.1.0a3`: absent" in audit
+    assert "corrected long description" in audit
     assert "e3460120c7d85cfe8fa46f3bf5e8dc66f7e3ecb899979967d662b0072f800cae" in audit
     assert "488ff0ebf8bee34426ec9787d8aaacf829f2f5efc146073a0ba4eaa2b73bcbb6" in audit
     assert "3c69f5f1bec06abd9c260cc748a010cebfa22a1cea9a6b7ed8e7c0555cfb072a" in audit
@@ -604,8 +605,24 @@ def test_publishing_docs_record_package_publication_and_remaining_gates() -> Non
     assert "package ownership transfer to the organization account" in maturity
     assert "GHCR container-image publication" in maturity
     assert "PyPI/TestPyPI organization ownership transfer" in decisions
+    assert "corrected long description wording" in decisions
     assert "GHCR package visibility" in decisions
     assert "Homebrew tap" in decisions
+
+
+def test_public_claim_audit_tracks_package_description_drift() -> None:
+    audit = (PROJECT_ROOT / "docs/PUBLIC_CLAIM_AUDIT.md").read_text(encoding="utf-8")
+    hardening_plan = (PROJECT_ROOT / "docs/PUBLIC_ALPHA_HARDENING_PLAN.md").read_text(
+        encoding="utf-8"
+    )
+    scorecard = (PROJECT_ROOT / "docs/QUALITY_SCORECARD.md").read_text(encoding="utf-8")
+
+    assert "CLAIM-007" in audit
+    assert "stale GitHub Release or pending-publication claims" in audit
+    assert "scripts/check_release_consistency.py" in audit
+    assert "PALPHA-013" in hardening_plan
+    assert "Public package long descriptions can lag" in hardening_plan
+    assert "online checker detects known stale package-description claims" in scorecard
 
 
 def test_review_process_keeps_ai_review_advisory() -> None:

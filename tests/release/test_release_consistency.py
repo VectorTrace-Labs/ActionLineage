@@ -60,6 +60,31 @@ def test_release_consistency_rejects_sdist_local_state(tmp_path: Path) -> None:
     assert checks["dist.sdist.actionlineage-0.1.0a3.tar.gz.version"]["status"] == "PASS"
 
 
+def test_release_consistency_flags_stale_public_description_claims() -> None:
+    checker = _load_checker()
+
+    check = checker._check_public_description_claims(
+        prefix="online.pypi",
+        description=(
+            "| GitHub release artifacts and attestations | Local-proof |\n"
+            "Public alpha artifacts are attached to GitHub Releases.\n"
+            "After the `0.1.0a3` Trusted Publishing run completes, run the package."
+        ),
+        expected_version="0.1.0a3",
+    )
+
+    assert check.status == "FAIL"
+    assert check.id == "online.pypi.description_claims"
+    assert check.severity == "P1"
+    assert check.details == {
+        "stale_claims": [
+            "github_release_artifacts_attached",
+            "github_release_artifacts_local_proof",
+            "trusted_publishing_run_pending",
+        ]
+    }
+
+
 def _load_checker() -> ModuleType:
     script_path = PROJECT_ROOT / "scripts" / "check_release_consistency.py"
     spec = importlib.util.spec_from_file_location("check_release_consistency", script_path)

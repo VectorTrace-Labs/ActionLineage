@@ -19,6 +19,16 @@ from typing import Any
 PASS = "PASS"
 FAIL = "FAIL"
 UNKNOWN = "UNKNOWN"
+STALE_PACKAGE_DESCRIPTION_CLAIMS = (
+    (
+        "github_release_artifacts_attached",
+        "Public alpha artifacts are attached to GitHub Releases",
+    ),
+    (
+        "github_release_artifacts_local_proof",
+        "| GitHub release artifacts and attestations | Local-proof |",
+    ),
+)
 
 
 @dataclass(frozen=True)
@@ -451,7 +461,7 @@ def _check_package_index(
     info = data.get("info", {})
     urls = data.get("urls", [])
     filenames = [str(item.get("filename")) for item in urls]
-    return [
+    checks = [
         _compare(
             f"{prefix}.version",
             expected_version,
@@ -486,6 +496,43 @@ def _check_package_index(
             severity="P1",
         ),
     ]
+    checks.append(
+        _check_public_description_claims(
+            prefix=prefix,
+            description=info.get("description"),
+            expected_version=expected_version,
+        )
+    )
+    return checks
+
+
+def _check_public_description_claims(
+    *, prefix: str, description: object, expected_version: str
+) -> Check:
+    if not isinstance(description, str):
+        return Check(
+            id=f"{prefix}.description_claims",
+            status=UNKNOWN,
+            summary="public package long description could not be inspected",
+            expected="description string",
+            actual=type(description).__name__,
+            severity="P1",
+        )
+    stale_claims = [
+        claim_id for claim_id, needle in STALE_PACKAGE_DESCRIPTION_CLAIMS if needle in description
+    ]
+    pending_publish_phrase = f"After the `{expected_version}` Trusted Publishing run completes"
+    if pending_publish_phrase in description:
+        stale_claims.append("trusted_publishing_run_pending")
+    return Check(
+        id=f"{prefix}.description_claims",
+        status=PASS if not stale_claims else FAIL,
+        summary="public package long description avoids stale owner-gated release claims",
+        expected="no known stale GitHub Release or pending-publication wording",
+        actual=", ".join(stale_claims) or "none",
+        severity="P1",
+        details={"stale_claims": stale_claims} if stale_claims else None,
+    )
 
 
 def _check_github(repository: str, expected_version: str, timeout_seconds: float) -> list[Check]:
