@@ -358,6 +358,8 @@ def test_release_candidate_audit_prepares_without_publishing() -> None:
     assert "no warning summary" in audit
     assert "23 package entries" in audit
     assert "23 direct dependencies checked, 0 issues" in audit
+    assert "Fresh `git archive HEAD` snapshot passed `317 passed, 1 skipped`" in audit
+    assert "optional eval-only `inspect_ai` import check" in audit
     assert "actionlineage-license-report.json" in audit
     assert "Release workflow artifact proof" in audit
     assert "build/release/release-consistency-offline.json" in audit

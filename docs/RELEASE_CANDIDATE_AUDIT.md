@@ -39,7 +39,7 @@ commit changes the source archive.
 | Dependency license check | PASS | 23 direct dependencies checked, 0 issues |
 | Dependency audit | PASS | `uv run pip-audit`, no known vulnerabilities |
 | Local Markdown link check | PASS | 45 links checked across 101 files; repository-relative links and heading fragments resolved |
-| Clean tracked snapshot from prior candidate bundle | PASS | Earlier `git archive HEAD` snapshot passed `297 passed, 1 skipped` with `uv run --all-extras pytest`; current full-suite and artifact-smoke results are recorded above |
+| Clean tracked snapshot | PASS | Fresh `git archive HEAD` snapshot passed `317 passed, 1 skipped` with `uv run --all-extras pytest`; the skip was the optional eval-only `inspect_ai` import check |
 | Wheel and sdist build | PASS | `uv build --out-dir build/release-candidate/dist` |
 | Built wheel metadata | PASS | Version `0.1.0a3`, `Requires-Python: >=3.12`, six project URLs |
 | Built sdist metadata | PASS | Version `0.1.0a3`, `Requires-Python: >=3.12`, six project URLs, no local cache entries |
