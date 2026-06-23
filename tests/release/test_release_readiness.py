@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import tomllib
+from fnmatch import fnmatch
 from pathlib import Path
 
 from typer.testing import CliRunner
@@ -10,6 +11,19 @@ from actionlineage.cli import app
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 PYPROJECT = PROJECT_ROOT / "pyproject.toml"
+LOCAL_ONLY_DOCS = (
+    "docs/DECISIONS_REQUIRED.md",
+    "docs/PERFECTION_PLAN.md",
+    "docs/OWNER_PUBLICATION_CHECKLIST.md",
+    "docs/RELEASE_CANDIDATE_AUDIT.md",
+    "docs/DRAFT_RELEASE_NOTES_0.1.0a3.md",
+    "docs/DRAFT_RELEASE_NOTES_0.1.0a5.md",
+    "docs/DRAFT_RELEASE_NOTES_0.1.0a6.md",
+    "docs/PUBLIC_ALPHA_HARDENING_PLAN.md",
+    "docs/PUBLIC_CLAIM_AUDIT.md",
+    "docs/REVIEW_OUTREACH_DRAFTS.md",
+    "docs/RESOURCES.md",
+)
 
 
 def test_package_metadata_is_public_alpha_ready() -> None:
@@ -81,11 +95,6 @@ def test_release_docs_are_present() -> None:
         "docs/MIGRATION.md",
         "docs/FAQ.md",
         "docs/RELEASE_CHECKLIST.md",
-        "docs/RELEASE_CANDIDATE_AUDIT.md",
-        "docs/DRAFT_RELEASE_NOTES_0.1.0a3.md",
-        "docs/DRAFT_RELEASE_NOTES_0.1.0a5.md",
-        "docs/DRAFT_RELEASE_NOTES_0.1.0a6.md",
-        "docs/OWNER_PUBLICATION_CHECKLIST.md",
         "docs/PACKAGE_MANAGERS.md",
         "docs/REVIEW_PROCESS.md",
         "docs/EXTERNAL_REVIEW_GUIDE.md",
@@ -100,9 +109,7 @@ def test_release_docs_are_present() -> None:
         "docs/AGENT_VALIDATION_EVIDENCE.md",
         "docs/evidence/agent-validation-baseline.json",
         "docs/evidence/agent-validation-baseline.md",
-        "docs/PERFECTION_PLAN.md",
         "docs/MATURITY.md",
-        "docs/DECISIONS_REQUIRED.md",
         "docs/PUBLISHING.md",
         "SECURITY.md",
         "docs/PRIVACY.md",
@@ -111,6 +118,25 @@ def test_release_docs_are_present() -> None:
     missing = [path for path in required_docs if not (PROJECT_ROOT / path).exists()]
 
     assert missing == []
+
+
+def test_local_release_planning_docs_are_ignored_and_not_linked_publicly() -> None:
+    gitignore = (PROJECT_ROOT / ".gitignore").read_text(encoding="utf-8")
+    ignore_patterns = tuple(
+        line.strip() for line in gitignore.splitlines() if line.strip() and not line.startswith("#")
+    )
+    readme = (PROJECT_ROOT / "README.md").read_text(encoding="utf-8")
+    scorecard = (PROJECT_ROOT / "docs/QUALITY_SCORECARD.md").read_text(encoding="utf-8")
+    external_review = (PROJECT_ROOT / "docs/EXTERNAL_REVIEW_GUIDE.md").read_text(encoding="utf-8")
+    public_reference_text = "\n".join((readme, scorecard, external_review))
+
+    for path in LOCAL_ONLY_DOCS:
+        assert any(fnmatch(path, pattern) for pattern in ignore_patterns)
+        assert path not in public_reference_text
+
+    assert "Release workflow prepares owner-review artifacts without publishing" in scorecard
+    assert "Review outreach drafts" not in readme
+    assert "Decisions required" not in readme
 
 
 def test_specialized_issue_templates_are_present() -> None:
@@ -163,14 +189,12 @@ def test_readme_quickstart_uses_demo_aligned_contract() -> None:
     assert "External review guide" in readme
     assert "Good first issue candidates" in readme
     assert "docs/GOOD_FIRST_ISSUES.md" in readme
-    assert "Review outreach drafts" in readme
-    assert "docs/REVIEW_OUTREACH_DRAFTS.md" in readme
     assert "Evaluation reproduction" in readme
     assert "Troubleshooting" in readme
     assert "docs/TROUBLESHOOTING.md" in readme
     assert "Known limitations" in readme
-    assert "Release-candidate audit" in readme
-    assert "Owner publication checklist" in readme
+    for local_only_doc in LOCAL_ONLY_DOCS:
+        assert local_only_doc not in readme
 
 
 def test_external_review_docs_prepare_review_without_claiming_validation() -> None:
@@ -188,7 +212,6 @@ def test_external_review_docs_prepare_review_without_claiming_validation() -> No
         "hardening": (PROJECT_ROOT / "docs/SECURITY_HARDENING.md").read_text(encoding="utf-8"),
         "good_first": (PROJECT_ROOT / "docs/GOOD_FIRST_ISSUES.md").read_text(encoding="utf-8"),
         "troubleshooting": (PROJECT_ROOT / "docs/TROUBLESHOOTING.md").read_text(encoding="utf-8"),
-        "outreach": (PROJECT_ROOT / "docs/REVIEW_OUTREACH_DRAFTS.md").read_text(encoding="utf-8"),
         "case_study": (PROJECT_ROOT / "docs/ADOPTION_CASE_STUDY_TEMPLATE.md").read_text(
             encoding="utf-8"
         ),
@@ -224,13 +247,6 @@ def test_external_review_docs_prepare_review_without_claiming_validation() -> No
     assert "Suggested verification" in docs["good_first"]
     assert "Out of scope" in docs["good_first"]
     assert "They are not automatically opened" in docs["good_first"]
-    assert "Outreach Drafts" in docs["external"]
-    assert "Release And Evaluation Announcement Draft" in docs["outreach"]
-    assert "Technical Article Outline" in docs["outreach"]
-    assert "Acknowledgement is not verification" in docs["outreach"]
-    assert "Tool return values are component acknowledgements" in docs["outreach"]
-    assert "docs/OWNER_PUBLICATION_CHECKLIST.md" in docs["outreach"]
-    assert "current no-model Agent Validation baseline" in docs["outreach"]
     assert "offline release-consistency report" in docs["hardening"]
     assert "This is a template" in docs["case_study"]
     assert "Known Limitations" in docs["limitations"]
@@ -253,7 +269,6 @@ def test_external_review_docs_prepare_review_without_claiming_validation() -> No
         "build/release-candidate/REVIEW_INDEX.md",
         "Version tag matches audited commit",
         "docs/GOOD_FIRST_ISSUES.md",
-        "docs/REVIEW_OUTREACH_DRAFTS.md",
         "actionlineage doctor",
         'pipx run --pip-args="--pre"',
         "python -m pip install --pre actionlineage==0.1.0a6",
@@ -339,123 +354,6 @@ def test_external_review_issue_templates_collect_safe_repro_context() -> None:
         "authorization headers",
     ):
         assert required in combined
-
-
-def test_release_candidate_audit_prepares_without_publishing() -> None:
-    audit = (PROJECT_ROOT / "docs/RELEASE_CANDIDATE_AUDIT.md").read_text(encoding="utf-8")
-    draft_notes = (PROJECT_ROOT / "docs/DRAFT_RELEASE_NOTES_0.1.0a3.md").read_text(encoding="utf-8")
-    historical_a5_notes = (PROJECT_ROOT / "docs/DRAFT_RELEASE_NOTES_0.1.0a5.md").read_text(
-        encoding="utf-8"
-    )
-    next_draft_notes = (PROJECT_ROOT / "docs/DRAFT_RELEASE_NOTES_0.1.0a6.md").read_text(
-        encoding="utf-8"
-    )
-    owner_checklist = (PROJECT_ROOT / "docs/OWNER_PUBLICATION_CHECKLIST.md").read_text(
-        encoding="utf-8"
-    )
-    combined = "\n".join(
-        (audit, draft_notes, historical_a5_notes, next_draft_notes, owner_checklist)
-    )
-    normalized = combined.lower()
-
-    assert "build/release-candidate/manifest.json" in audit
-    assert "scripts/write_release_candidate_manifest.py" in audit
-    assert "Release-candidate manifest generation" in audit
-    assert "build/release-candidate/REVIEW_INDEX.md" in audit
-    assert "Release proof review index" in audit
-    assert "Recorded in generated manifest field `audited_implementation_commit`" in audit
-    assert "Version tag alignment" in audit
-    assert (
-        "do not attach local artifacts to a tag release when this field is `false` or `unknown`"
-        in audit
-    )
-    assert "rerun after any source or documentation commit before publication" in audit
-    assert "Do not republish immutable PyPI/TestPyPI files" in audit
-    assert "new owner-approved `0.1.0a5` release" in audit
-    assert "`v0.1.0a4` exists as a tag" in audit
-    assert "failed before artifact upload" in audit
-    assert "135 files already formatted" in audit
-    assert "319 passed" in audit
-    assert "86.14 percent total coverage" in audit
-    assert "no warning summary" in audit
-    assert "23 package entries" in audit
-    assert "23 direct dependencies checked, 0 issues" in audit
-    assert "Fresh `git archive HEAD` snapshot passed `317 passed, 1 skipped`" in audit
-    assert "optional eval-only `inspect_ai` import check" in audit
-    assert "actionlineage-license-report.json" in audit
-    assert "Release workflow artifact proof" in audit
-    assert "build/release/release-consistency-offline.json" in audit
-    assert "release-consistency reports are summarized when present" in audit
-    assert "build/release/manifest.json" in audit
-    assert "build/release/REVIEW_INDEX.md" in audit
-    assert "bounded read-only `curl`" in audit
-    assert "`fail_count=8`, `unknown_count=1`" in audit
-    assert "Project URL HEAD reachability | PASS" in audit
-    assert "PASS / AUTHENTICATED READ" in audit
-    assert "CodeQL analysis" in audit
-    assert "private vulnerability reporting enabled" in audit
-    assert "Latest `main` `codeql` workflow run" in audit
-    assert "contract validate, case export, and static console export" in audit
-    assert "47/47 declared capabilities covered" in audit
-    assert "236 files scanned, 0 leaks" in audit
-    assert "docs/evidence/agent-validation-baseline.md" in audit
-    assert "docs/evidence/agent-validation-baseline.json" in audit
-    assert "GitHub Release object for `v0.1.0a5`: not created before owner release" in audit
-    assert "corrected long description" in audit
-    assert "Exact hashes for a local proof run are generated into" in audit
-    assert "build/release-candidate/SHA256SUMS.txt" in audit
-    assert "actionlineage-0.1.0a5-py3-none-any.whl" in audit
-    assert "actionlineage-0.1.0a5.tar.gz" in audit
-
-    for status in (
-        "PASS",
-        "PASS / AUTHENTICATED READ",
-        "BLOCKED_ON_OWNER",
-        "BLOCKED_ON_EXTERNAL_VALIDATION",
-        "NOT_IN_RELEASE_SCOPE",
-    ):
-        assert status in audit
-
-    assert "not a request to republish immutable package-index artifacts" in draft_notes
-    assert "ambiguous HTTP correlation as unverified evidence" in draft_notes
-    assert "318 tests passed, 86.14 percent total coverage" in draft_notes
-    assert "8 artifact rows, 23 gate rows" in draft_notes
-    assert "No external audit, external adoption, production use, independent review" in draft_notes
-    assert "Release assets must be built from the same commit resolved by the release tag" in (
-        draft_notes
-    )
-    assert "Historical snapshot" in historical_a5_notes
-    assert "ActionLineage `0.1.0a6` hardens the public alpha" in next_draft_notes
-    assert "Contract and detection consumers now require a verified journal snapshot" in (
-        next_draft_notes
-    )
-    assert "Service-created events may include `payload.ingested_by`" in next_draft_notes
-    assert "Python support is explicitly bounded to `>=3.12,<3.15`" in next_draft_notes
-    assert "Codex must not perform these actions without explicit approval" in owner_checklist
-    assert "build/release-candidate/REVIEW_INDEX.md" in owner_checklist
-    assert "Version tag matches audited commit" in owner_checklist
-    assert "not as an attestation or external validation" in owner_checklist
-    assert "recommended alpha-hardening repair is a" in owner_checklist
-    assert "owner-approved `0.1.0a6` release" in owner_checklist
-    assert "gh release create v0.1.0a6" in owner_checklist
-    assert "--verify-tag" in owner_checklist
-    assert "--draft" in owner_checklist
-    assert "--notes-file /tmp/actionlineage-v0.1.0a6-release-notes.md" in owner_checklist
-    assert "Review the draft in the GitHub UI before publishing" in owner_checklist
-    assert (
-        "Do not republish or attempt to overwrite existing PyPI/TestPyPI files" in owner_checklist
-    )
-    assert "recommended corrective package release" in owner_checklist
-
-    unsupported_claims = (
-        "release has been published by this audit",
-        "production ready",
-        "externally audited",
-        "independent review completed",
-        "community validated",
-    )
-    for claim in unsupported_claims:
-        assert claim not in normalized
 
 
 def test_release_checklist_covers_required_gates() -> None:
@@ -709,7 +607,6 @@ def test_publishing_docs_record_package_publication_and_remaining_gates() -> Non
     publishing = (PROJECT_ROOT / "docs/PUBLISHING.md").read_text(encoding="utf-8")
     package_managers = (PROJECT_ROOT / "docs/PACKAGE_MANAGERS.md").read_text(encoding="utf-8")
     maturity = (PROJECT_ROOT / "docs/MATURITY.md").read_text(encoding="utf-8")
-    decisions = (PROJECT_ROOT / "docs/DECISIONS_REQUIRED.md").read_text(encoding="utf-8")
 
     assert "Trusted Publisher records" in publishing
     assert "Do not add PyPI API tokens" in publishing
@@ -736,44 +633,19 @@ def test_publishing_docs_record_package_publication_and_remaining_gates() -> Non
     assert "PyPI and TestPyPI package publication" in maturity
     assert "package ownership transfer to the organization account" in maturity
     assert "GHCR container-image publication" in maturity
-    assert "PyPI/TestPyPI organization ownership transfer" in decisions
-    assert "corrected long-description text" in decisions
-    assert "GHCR package visibility" in decisions
-    assert "Homebrew tap" in decisions
+    assert "Transfer package ownership to the organization" in package_managers
+    assert "public GHCR package visibility" in package_managers
+    assert "Homebrew tap repository" in package_managers
 
 
-def test_public_claim_audit_tracks_package_description_drift() -> None:
-    audit = (PROJECT_ROOT / "docs/PUBLIC_CLAIM_AUDIT.md").read_text(encoding="utf-8")
-    hardening_plan = (PROJECT_ROOT / "docs/PUBLIC_ALPHA_HARDENING_PLAN.md").read_text(
-        encoding="utf-8"
-    )
+def test_quality_scorecard_tracks_package_description_drift() -> None:
     scorecard = (PROJECT_ROOT / "docs/QUALITY_SCORECARD.md").read_text(encoding="utf-8")
 
-    assert "CLAIM-007" in audit
-    assert "stale GitHub Release or pending-publication claims" in audit
-    assert "scripts/check_release_consistency.py" in audit
-    assert "PALPHA-013" in hardening_plan
-    assert "PALPHA-014" in hardening_plan
-    assert "PALPHA-015" in hardening_plan
-    assert "PALPHA-016" in hardening_plan
-    assert "PALPHA-017" in hardening_plan
-    assert "PALPHA-018" in hardening_plan
-    assert "PALPHA-024" in hardening_plan
-    assert "FIXED_IN_POST_PUBLICATION_VERIFY_SLICE" in hardening_plan
-    assert "FIXED_IN_OUTREACH_DRAFTS_SLICE" in hardening_plan
-    assert "FIXED_IN_GOOD_FIRST_ISSUES_SLICE" in hardening_plan
-    assert "FIXED_IN_MARKDOWN_FRAGMENT_CHECK_SLICE" in hardening_plan
-    assert "FIXED_IN_JOURNAL_IO_FAILURE_SLICE" in hardening_plan
-    assert "MITIGATED_WITH_CURL_FALLBACK" in hardening_plan
-    assert "Done locally; external review pending" in hardening_plan
-    assert "Done locally; rerun after any new commit" in hardening_plan
-    assert "Public package long descriptions can lag" in hardening_plan
-    assert "Local release-proof reproduction docs mixed" in hardening_plan
-    assert "bounded read-only `curl` fallback" in audit
     assert "bounded read-only `curl` fallback" in scorecard
     assert "Local Python certificate stores can block online release checks" in scorecard
-    assert "recommended repair version is `0.1.0a5`" in audit
+    assert "Public package long descriptions can lag" in scorecard
     assert "recommended repair version is `0.1.0a6`" in scorecard
+    assert "Release workflow prepares owner-review artifacts without publishing" in scorecard
 
 
 def test_review_process_keeps_ai_review_advisory() -> None:

@@ -58,3 +58,14 @@ Uplift.md
 codex/
 .codex/
 prompts/
+
+# Local release planning, owner gates, and assistant-generated review artifacts.
+docs/DECISIONS_REQUIRED.md
+docs/PERFECTION_PLAN.md
+docs/OWNER_PUBLICATION_CHECKLIST.md
+docs/RELEASE_CANDIDATE_AUDIT.md
+docs/DRAFT_RELEASE_NOTES_*.md
+docs/PUBLIC_ALPHA_HARDENING_PLAN.md
+docs/PUBLIC_CLAIM_AUDIT.md
+docs/REVIEW_OUTREACH_DRAFTS.md
+docs/RESOURCES.md

@@ -31,7 +31,7 @@ external-validation surfaces until they are externally validated.
 | GitHub release artifacts and attestations | Alpha-supported / External-validation-required | `v0.1.0a5` GitHub Release is published with 13 release assets; `0.1.0a6` is the next prepared hardening release |
 | PyPI/TestPyPI package publication | Alpha-supported | PyPI latest is `0.1.0a5`; `0.1.0a6` is prepared but not published until owner approval |
 | GHCR container publication | Preview / external-validation-required | Anonymous GHCR registry and GitHub package checks did not expose a public image on 2026-06-23; release workflow prepares digest capture, signing, and attestations after publication |
-| Homebrew tap, external audits, production history | Planned or external-validation-required | See `docs/DECISIONS_REQUIRED.md` |
+| Homebrew tap, external audits, production history | Planned or external-validation-required | External validation has not been completed; Homebrew remains planned |
 
 Full claim mapping lives in
 [docs/QUALITY_SCORECARD.md](docs/QUALITY_SCORECARD.md).
@@ -318,8 +318,6 @@ reference.
   path, semantics to challenge, and safe feedback routes.
 - [Good first issue candidates](docs/GOOD_FIRST_ISSUES.md):
   maintainer-ready issue drafts with bounded acceptance criteria.
-- [Review outreach drafts](docs/REVIEW_OUTREACH_DRAFTS.md): announcement and
-  technical article outlines for maintainer review.
 - [Evaluation reproduction](docs/EVALUATION_REPRODUCTION.md): exact commands
   for public-package, demo, Agent Validation, and local release proof.
 - [Troubleshooting](docs/TROUBLESHOOTING.md): first-time install, demo, path,
@@ -356,17 +354,12 @@ reference.
 - [Operations](docs/OPERATIONS.md): service mode, health, storage, and deployment
   notes.
 - [Release checklist](docs/RELEASE_CHECKLIST.md): public release gates.
-- [Release-candidate audit](docs/RELEASE_CANDIDATE_AUDIT.md): latest local
-  candidate proof, blockers, and generated manifest path.
 - [Publishing](docs/PUBLISHING.md): GitHub release workflow, artifact
   attestations, and Trusted Publishing setup.
-- [Owner publication checklist](docs/OWNER_PUBLICATION_CHECKLIST.md): actions
-  that require owner approval.
 - [Package managers](docs/PACKAGE_MANAGERS.md): GHCR, PyPI, Homebrew,
   conda-forge, and deferred channel plan.
 - [Review process](docs/REVIEW_PROCESS.md): required checks, advisory AI
   review, and solo-maintainer merge policy.
-- [Decisions required](docs/DECISIONS_REQUIRED.md): owner and external gates.
 
 ## Packages and Extras
 

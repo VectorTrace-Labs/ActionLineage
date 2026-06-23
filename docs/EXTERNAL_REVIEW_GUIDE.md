@@ -140,12 +140,3 @@ For sensitive vulnerabilities, follow `SECURITY.md` and report privately.
 candidates with suggested scope, acceptance criteria, verification commands,
 and out-of-scope boundaries. They are not automatically opened by this
 document.
-
-## Outreach Drafts
-
-`docs/REVIEW_OUTREACH_DRAFTS.md` contains a short release/evaluation
-announcement draft and a technical article outline centered on
-acknowledgement versus verification. They are prepared for maintainer review
-only. Do not publish outreach that claims external audit, external adoption,
-production use, independent review, or community validation until real evidence
-exists.
