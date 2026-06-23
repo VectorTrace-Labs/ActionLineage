@@ -158,32 +158,29 @@ Out of scope:
 - Adding a new package manager support claim.
 - Adding screenshots or generated artifacts.
 
-## Candidate 5: Add A Run-ID Static-Console Export Fixture
+## Candidate 5: Add Static-Console Selector Exclusivity Coverage
 
 Suggested labels: `good first issue`, `tests`, `console`.
 
 Why it helps:
 
-The static console is an onboarding and review artifact. Trace-ID exports are
-well covered; a run-ID fixture would keep the alternate public selector path
-equally easy to review.
+The static console is an onboarding and review artifact. Successful trace-ID,
+run-ID, and empty-selector exports are covered; a failure-path fixture would
+keep selector mistakes easy to diagnose.
 
 Suggested scope:
 
 - Add a focused case to `tests/console/test_static_console.py`.
 - Run the deterministic demo and call the `projection export-console` CLI with
-  `--run-id`.
-- Assert the generated HTML includes the expected demo events and verification
-  matrix content.
+  both `--trace-id` and `--run-id`.
+- Assert the command exits nonzero with a clear JSON error.
 
 Acceptance criteria:
 
-- The CLI exits successfully and writes the requested static HTML file.
-- The result `event_count` matches the deterministic demo timeline.
-- The generated HTML includes verified, unverified, and conflicting statuses.
-- Wording still does not treat missing observations as evidence that no action
-  occurred.
-- The output still includes the restrictive Content Security Policy.
+- The error names that exactly one selector is required.
+- No static console file is written for the invalid selector combination.
+- The test does not change projection selector semantics.
+- No new dependency or runtime surface is added.
 
 Suggested verification:
 

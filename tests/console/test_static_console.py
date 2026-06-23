@@ -74,6 +74,38 @@ def test_console_cli_exports_static_html(tmp_path: Path) -> None:
     assert output_path.exists()
 
 
+def test_console_cli_exports_static_html_by_run_id(tmp_path: Path) -> None:
+    demo = run_demo(tmp_path / "demo")
+    output_path = tmp_path / "run-console.html"
+
+    result = runner.invoke(
+        app,
+        [
+            "projection",
+            "export-console",
+            str(demo.database_path),
+            str(output_path),
+            "--run-id",
+            demo.run_id,
+        ],
+    )
+    payload = json.loads(result.stdout)
+    html = output_path.read_text(encoding="utf-8")
+
+    assert result.exit_code == 0
+    assert payload["ok"] is True
+    assert payload["event_count"] == demo.verification.records_verified
+    assert output_path.exists()
+    assert "Selector<strong>run_id</strong>" in html
+    assert f"Value<strong>{demo.run_id}</strong>" in html
+    assert "evidence:corroborates: evt_demo_05 -&gt; evt_demo_06" in html
+    assert "verified" in html
+    assert "unverified" in html
+    assert "conflicting" in html
+    assert "Content-Security-Policy" in html
+    assert "proof " + "of absence" not in html.lower()
+
+
 def test_console_cli_exports_empty_selector_html_without_absence_claims(
     tmp_path: Path,
 ) -> None:

@@ -70,6 +70,8 @@ uv run actionlineage --help
   not overwritten.
 - `actionlineage projection export-console projection.sqlite console.html --trace-id trace_123`:
   render the static investigation console.
+- `actionlineage projection export-console projection.sqlite console.html --run-id run_123`:
+  render the static investigation console by run ID.
 - `actionlineage projection export-console projection.sqlite console.html --trace-id trace_123 --case-context context.json`:
   render the console with redacted analyst notes and saved view hints.
 - `actionlineage projection export-desktop-bundle projection.sqlite ./desktop --trace-id trace_123`:

@@ -22,6 +22,10 @@ uv run actionlineage projection export-console \
 
 Open `build/actionlineage-demo/console.html` in a browser.
 
+Use exactly one selector when exporting a console: `--trace-id` or `--run-id`.
+For the deterministic demo, `--run-id run_demo_evidence_plane` selects the same
+events as the trace ID.
+
 To include analyst annotations and saved view hints, provide a JSON context file:
 
 ```json
