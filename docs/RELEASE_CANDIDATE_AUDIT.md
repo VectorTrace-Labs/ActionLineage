@@ -54,8 +54,8 @@ are not committed source files.
 | Release provenance generation | PASS | 2 artifact subjects |
 | SHA256 checksums | PASS | `build/release-candidate/SHA256SUMS.txt` |
 | Release-candidate manifest generation | PASS | `scripts/write_release_candidate_manifest.py` generates `build/release-candidate/manifest.json` from local artifact bytes and evidence summaries |
-| Release proof review index | PASS | `build/release-candidate/REVIEW_INDEX.md` generated from the local manifest; manifest-listed artifact hashes verified |
-| Release workflow artifact proof | PASS | `.github/workflows/release.yml` generates `build/release/manifest.json` and `build/release/REVIEW_INDEX.md`, includes both in checksums and attestations, and smoke-checks both after artifact download |
+| Release proof review index | PASS | `build/release-candidate/REVIEW_INDEX.md` generated from the local manifest; manifest-listed artifact hashes verified; release-consistency reports are summarized when present |
+| Release workflow artifact proof | PASS | `.github/workflows/release.yml` generates `build/release/release-consistency-offline.json`, `build/release/manifest.json`, and `build/release/REVIEW_INDEX.md`, includes them in checksums and attestations, and smoke-checks the bundle after artifact download |
 | Release consistency, offline | PASS | 0 failures, 0 unknowns |
 | Release consistency, online JSON metadata | FAIL / OWNER-GATED | `fail_count=5`, `unknown_count=7`; package and GitHub JSON checks fall back from Python `urllib` to bounded read-only `curl` after local URL/TLS failures; this detects known public package metadata drift and the missing GitHub Release object |
 | Project URL HEAD reachability | UNKNOWN in local TLS-constrained environments | Lower-priority URL HEAD checks still use Python `urllib` and may remain environment-sensitive |

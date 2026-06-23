@@ -36,6 +36,31 @@ class ReviewIndexResult:
     issues: tuple[dict[str, str], ...]
 
 
+@dataclass(frozen=True, slots=True)
+class ReleaseConsistencyCheckSummary:
+    """One non-passing release-consistency check rendered for reviewers."""
+
+    report_path: str
+    check_id: str
+    status: str
+    severity: str
+    summary: str
+    actual: str
+
+
+@dataclass(frozen=True, slots=True)
+class ReleaseConsistencyReportSummary:
+    """Compact summary of one release-consistency JSON report."""
+
+    path: str
+    mode: str
+    ok: str
+    fail_count: str
+    unknown_count: str
+    expected_version: str
+    non_passing_checks: tuple[ReleaseConsistencyCheckSummary, ...]
+
+
 def build_review_index(
     manifest_path: Path,
     *,
@@ -58,10 +83,17 @@ def build_review_index(
 
     artifact_checks = _check_artifacts(manifest, manifest_path=manifest_path, root=root)
     issues.extend(_artifact_issues(artifact_checks))
+    release_consistency_reports, release_consistency_issues = _release_consistency_reports(
+        artifact_checks,
+        manifest_path=manifest_path,
+        root=root,
+    )
+    issues.extend(release_consistency_issues)
     markdown = _render_markdown(
         manifest_path=manifest_path,
         manifest=manifest,
         checks=artifact_checks,
+        release_consistency_reports=release_consistency_reports,
     )
     return ReviewIndexResult(ok=not issues, markdown=markdown, issues=tuple(issues))
 
@@ -199,6 +231,7 @@ def _render_markdown(
     manifest_path: Path,
     manifest: Mapping[str, Any],
     checks: Sequence[ArtifactCheck],
+    release_consistency_reports: Sequence[ReleaseConsistencyReportSummary],
 ) -> str:
     release = _string_value(manifest, "release") or "unknown"
     commit = _string_value(manifest, "audited_implementation_commit") or "unknown"
@@ -250,6 +283,7 @@ def _render_markdown(
             f"{_md_cell(row['evidence'])} |"
         )
     lines.extend(_supply_chain_section(manifest))
+    lines.extend(_release_consistency_section(release_consistency_reports))
     lines.extend(_public_state_section(manifest))
     lines.extend(
         [
@@ -269,6 +303,109 @@ def _render_markdown(
         ]
     )
     return "\n".join(lines)
+
+
+def _release_consistency_reports(
+    checks: Sequence[ArtifactCheck],
+    *,
+    manifest_path: Path,
+    root: Path,
+) -> tuple[tuple[ReleaseConsistencyReportSummary, ...], list[dict[str, str]]]:
+    reports: list[ReleaseConsistencyReportSummary] = []
+    issues: list[dict[str, str]] = []
+    manifest_dir = manifest_path.parent.resolve()
+    for artifact in checks:
+        if not _is_release_consistency_artifact(artifact.path):
+            continue
+        artifact_path = _resolve_artifact_path(artifact.path, manifest_dir=manifest_dir, root=root)
+        try:
+            report = _load_json_object(artifact_path)
+        except (OSError, ValueError, json.JSONDecodeError) as exc:
+            issues.append(
+                {
+                    "code": "malformed_release_consistency_report",
+                    "path": artifact.path,
+                    "message": str(exc),
+                }
+            )
+            continue
+        reports.append(_release_consistency_report_summary(artifact.path, report))
+    return tuple(reports), issues
+
+
+def _is_release_consistency_artifact(path: str) -> bool:
+    name = Path(path).name
+    return name.startswith("release-consistency-") and name.endswith(".json")
+
+
+def _release_consistency_report_summary(
+    path: str, report: Mapping[str, Any]
+) -> ReleaseConsistencyReportSummary:
+    checks = report.get("checks")
+    non_passing = []
+    if isinstance(checks, list):
+        for check in checks:
+            if not isinstance(check, dict):
+                continue
+            status = _string_value(check, "status") or "UNKNOWN"
+            if status == "PASS":
+                continue
+            non_passing.append(
+                ReleaseConsistencyCheckSummary(
+                    report_path=path,
+                    check_id=_string_value(check, "id") or "unknown",
+                    status=status,
+                    severity=_string_value(check, "severity") or "unknown",
+                    summary=_string_value(check, "summary") or "",
+                    actual=_compact_json_value(check.get("actual")),
+                )
+            )
+    return ReleaseConsistencyReportSummary(
+        path=path,
+        mode=_string_value(report, "mode") or "unknown",
+        ok=_bool_or_unknown(report.get("ok")),
+        fail_count=_int_or_unknown(report.get("fail_count")),
+        unknown_count=_int_or_unknown(report.get("unknown_count")),
+        expected_version=_string_value(report, "expected_version") or "unknown",
+        non_passing_checks=tuple(non_passing),
+    )
+
+
+def _release_consistency_section(
+    reports: Sequence[ReleaseConsistencyReportSummary],
+) -> list[str]:
+    if not reports:
+        return []
+    lines = [
+        "",
+        "## Release Consistency Reports",
+        "",
+        "| Report | Mode | OK | Failures | Unknowns | Expected version |",
+        "| --- | --- | --- | --- | --- | --- |",
+    ]
+    for report in reports:
+        lines.append(
+            f"| `{_md_cell(report.path)}` | `{_md_cell(report.mode)}` | `{report.ok}` | "
+            f"`{report.fail_count}` | `{report.unknown_count}` | "
+            f"`{_md_cell(report.expected_version)}` |"
+        )
+    non_passing = [check for report in reports for check in report.non_passing_checks]
+    if not non_passing:
+        return lines
+    lines.extend(
+        [
+            "",
+            "| Report | Check | Status | Severity | Summary | Actual |",
+            "| --- | --- | --- | --- | --- | --- |",
+        ]
+    )
+    for check in non_passing:
+        lines.append(
+            f"| `{_md_cell(check.report_path)}` | `{_md_cell(check.check_id)}` | "
+            f"`{_md_cell(check.status)}` | `{_md_cell(check.severity)}` | "
+            f"{_md_cell(check.summary)} | `{_md_cell(check.actual)}` |"
+        )
+    return lines
 
 
 def _reviewer_commands(
@@ -405,6 +542,21 @@ def _int_value(row: Mapping[str, Any], key: str) -> int | None:
 
 def _int_or_unknown(value: object) -> str:
     return str(value) if isinstance(value, int) else "unknown"
+
+
+def _bool_or_unknown(value: object) -> str:
+    if isinstance(value, bool):
+        return "true" if value else "false"
+    return "unknown"
+
+
+def _compact_json_value(value: object) -> str:
+    if value is None:
+        return ""
+    text = value if isinstance(value, str) else json.dumps(value, sort_keys=True)
+    if len(text) <= 180:
+        return text
+    return text[:177] + "..."
 
 
 def _md_cell(value: str) -> str:

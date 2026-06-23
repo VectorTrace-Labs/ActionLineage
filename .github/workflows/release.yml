@@ -84,6 +84,11 @@ jobs:
           uv run python scripts/generate_release_provenance.py \
             --dist-dir dist \
             --output build/release/actionlineage-provenance.json
+      - name: Generate offline release consistency report
+        run: |
+          uv run python scripts/check_release_consistency.py \
+            --dist-dir dist \
+            --output build/release/release-consistency-offline.json
       - name: Generate release candidate manifest
         run: |
           uv run python scripts/write_release_candidate_manifest.py \
@@ -134,6 +139,7 @@ jobs:
           sha256sum -c build/release/SHA256SUMS.txt
           test -n "$(find dist -maxdepth 1 -name '*.whl' -print -quit)"
           test -n "$(find dist -maxdepth 1 -name '*.tar.gz' -print -quit)"
+          test -f build/release/release-consistency-offline.json
           test -f build/release/manifest.json
           test -f build/release/REVIEW_INDEX.md
           grep -q "actionlineage.dev/release-candidate-manifest-v0" build/release/manifest.json

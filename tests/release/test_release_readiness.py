@@ -323,6 +323,8 @@ def test_release_candidate_audit_prepares_without_publishing() -> None:
     assert "23 direct dependencies checked, 0 issues" in audit
     assert "actionlineage-license-report.json" in audit
     assert "Release workflow artifact proof" in audit
+    assert "build/release/release-consistency-offline.json" in audit
+    assert "release-consistency reports are summarized when present" in audit
     assert "build/release/manifest.json" in audit
     assert "build/release/REVIEW_INDEX.md" in audit
     assert "bounded read-only `curl`" in audit
@@ -387,6 +389,8 @@ def test_release_checklist_covers_required_gates() -> None:
         "scripts/check_markdown_links.py",
         "scripts/secret_scan.py",
         "scripts/generate_sbom.py",
+        "scripts/check_release_consistency.py",
+        "--output build/release-candidate/release-consistency-offline.json",
         "scripts/check_dependency_licenses.py",
         "--license-report build/actionlineage-license-report.json",
         "uv run pip-audit",
@@ -480,6 +484,8 @@ def test_release_workflow_builds_attests_and_uses_trusted_publishing() -> None:
     assert "name: Dependency license check" in workflow
     assert "name: Generate dependency license report" in workflow
     assert "build/release/actionlineage-license-report.json" in workflow
+    assert "name: Generate offline release consistency report" in workflow
+    assert "--output build/release/release-consistency-offline.json" in workflow
     assert "name: Generate release candidate manifest" in workflow
     assert "scripts/write_release_candidate_manifest.py" in workflow
     assert "--artifact-root build/release" in workflow
@@ -504,6 +510,7 @@ def test_release_workflow_builds_attests_and_uses_trusted_publishing() -> None:
     assert 'gh run download "${GITHUB_RUN_ID}" --repo "${GITHUB_REPOSITORY}"' in workflow
     assert "actions: read" in workflow
     assert "sha256sum -c build/release/SHA256SUMS.txt" in workflow
+    assert "test -f build/release/release-consistency-offline.json" in workflow
     assert "test -f build/release/manifest.json" in workflow
     assert "test -f build/release/REVIEW_INDEX.md" in workflow
     assert "actionlineage.dev/release-candidate-manifest-v0" in workflow

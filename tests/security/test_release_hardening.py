@@ -529,8 +529,53 @@ def test_release_review_index_verifies_manifest_artifacts(tmp_path: Path) -> Non
     dist_dir.mkdir(parents=True)
     wheel = dist_dir / "actionlineage-0.1.0a3-py3-none-any.whl"
     sbom = artifact_root / "actionlineage-sbom.json"
+    offline_report = artifact_root / "release-consistency-offline.json"
+    online_report = artifact_root / "release-consistency-online.json"
     wheel.write_bytes(b"wheel")
     sbom.write_text("{}", encoding="utf-8")
+    offline_report.write_text(
+        json.dumps(
+            {
+                "checks": [{"id": "local.version.runtime", "status": "PASS"}],
+                "expected_version": "0.1.0a3",
+                "fail_count": 0,
+                "mode": "offline",
+                "ok": True,
+                "unknown_count": 0,
+            },
+            sort_keys=True,
+        ),
+        encoding="utf-8",
+    )
+    online_report.write_text(
+        json.dumps(
+            {
+                "checks": [
+                    {
+                        "actual": "HTTP 404",
+                        "id": "online.github.release",
+                        "severity": "P0",
+                        "status": "FAIL",
+                        "summary": "GitHub exposes a release object for the expected tag",
+                    },
+                    {
+                        "actual": "certificate verify failed",
+                        "id": "online.project_url.homepage",
+                        "severity": "P2",
+                        "status": "UNKNOWN",
+                        "summary": "project URL could not be checked: Homepage",
+                    },
+                ],
+                "expected_version": "0.1.0a3",
+                "fail_count": 1,
+                "mode": "online",
+                "ok": False,
+                "unknown_count": 1,
+            },
+            sort_keys=True,
+        ),
+        encoding="utf-8",
+    )
     manifest_path = artifact_root / "manifest.json"
     manifest_path.write_text(
         json.dumps(
@@ -550,6 +595,16 @@ def test_release_review_index_verifies_manifest_artifacts(tmp_path: Path) -> Non
                         "path": str(sbom.relative_to(tmp_path)),
                         "sha256": hashlib.sha256(b"{}").hexdigest(),
                         "size_bytes": 2,
+                    },
+                    {
+                        "path": str(offline_report.relative_to(tmp_path)),
+                        "sha256": hashlib.sha256(offline_report.read_bytes()).hexdigest(),
+                        "size_bytes": offline_report.stat().st_size,
+                    },
+                    {
+                        "path": str(online_report.relative_to(tmp_path)),
+                        "sha256": hashlib.sha256(online_report.read_bytes()).hexdigest(),
+                        "size_bytes": online_report.stat().st_size,
                     },
                 ],
                 "gates": [
@@ -599,11 +654,22 @@ def test_release_review_index_verifies_manifest_artifacts(tmp_path: Path) -> Non
     assert result.issues == ()
     assert "ActionLineage Release Proof Review Index" in result.markdown
     assert "not publication evidence" in result.markdown
-    assert "Artifacts verified locally | `2/2`" in result.markdown
+    assert "Artifacts verified locally | `4/4`" in result.markdown
     assert "| `build/release-candidate/dist/actionlineage-0.1.0a3-py3-none-any.whl` | `PASS`" in (
         result.markdown
     )
     assert "| Dependency licenses checked | `2` |" in result.markdown
+    assert "## Release Consistency Reports" in result.markdown
+    assert (
+        "| `build/release-candidate/release-consistency-offline.json` | `offline` | "
+        "`true` | `0` | `0` | `0.1.0a3` |" in result.markdown
+    )
+    assert (
+        "| `build/release-candidate/release-consistency-online.json` | `online` | "
+        "`false` | `1` | `1` | `0.1.0a3` |" in result.markdown
+    )
+    assert "`online.github.release` | `FAIL` | `P0`" in result.markdown
+    assert "`online.project_url.homepage` | `UNKNOWN` | `P2`" in result.markdown
     assert "BLOCKED_ON_OWNER" in result.markdown
     assert "shasum -a 256 -c build/release-candidate/SHA256SUMS.txt" in result.markdown
 
@@ -645,6 +711,41 @@ def test_release_review_index_fails_on_artifact_hash_mismatch(tmp_path: Path) ->
         },
     )
     assert "HASH_MISMATCH" in result.markdown
+
+
+def test_release_review_index_reports_malformed_release_consistency_report(
+    tmp_path: Path,
+) -> None:
+    writer = _load_script("write_release_review_index")
+    artifact_root = tmp_path / "build" / "release-candidate"
+    artifact_root.mkdir(parents=True)
+    report = artifact_root / "release-consistency-offline.json"
+    report.write_text("{", encoding="utf-8")
+    manifest_path = artifact_root / "manifest.json"
+    manifest_path.write_text(
+        json.dumps(
+            {
+                "schema_version": "actionlineage.dev/release-candidate-manifest-v0",
+                "release": "0.1.0a3",
+                "artifact_root": "build/release-candidate",
+                "artifacts": [
+                    {
+                        "path": str(report.relative_to(tmp_path)),
+                        "sha256": hashlib.sha256(b"{").hexdigest(),
+                        "size_bytes": 1,
+                    }
+                ],
+                "gates": [],
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    result = writer.build_review_index(manifest_path, repository_root=tmp_path)
+
+    assert not result.ok
+    assert result.issues[0]["code"] == "malformed_release_consistency_report"
+    assert result.issues[0]["path"] == "build/release-candidate/release-consistency-offline.json"
 
 
 def test_demo_evidence_map_is_deterministic_and_checkable(tmp_path: Path) -> None:
