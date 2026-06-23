@@ -62,6 +62,7 @@ from actionlineage_evals.scoring import (
     score_run,
     write_scorecard,
 )
+from actionlineage_evals.stateful import deterministic_stateful_counterexample
 from actionlineage_evals.summary import write_suite_summary
 from actionlineage_evals.tools import ToolHarness, WorldState
 from actionlineage_evals.triage import write_triage_report
@@ -218,6 +219,13 @@ def run_scenario(
                     recorder=recorder,
                     scenario=scenario,
                     mutation_sequence=mutation_sequence,
+                )
+                _write_stateful_mutation_artifacts(
+                    recorder=recorder,
+                    world=world,
+                    scenario=scenario,
+                    paths=paths,
+                    seed=seed,
                 )
         write_json(
             paths.mutation_sequence_path,
@@ -434,6 +442,7 @@ def _run_paths(run_dir: Path) -> RunPaths:
         replay_equivalence_path=run_dir / "replay-equivalence.json",
         minimization_report_path=run_dir / "minimization-report.json",
         minimized_transcript_path=run_dir / "minimized-transcript.json",
+        stateful_mutation_report_path=run_dir / "stateful-mutation-report.json",
         mutation_sequence_path=run_dir / "mutation-sequence.json",
         triage_path=run_dir / "triage.md",
     )
@@ -651,6 +660,58 @@ def _apply_runtime_mutations(
                 source=observer_source("mutation_oracle"),
             )
             parent_event_id = event.event_id
+
+
+def _write_stateful_mutation_artifacts(
+    *,
+    recorder: EventRecorder,
+    world: WorldState,
+    scenario: ScenarioDefinition,
+    paths: RunPaths,
+    seed: int,
+) -> None:
+    if scenario.scenario_id != "AVL-014":
+        return
+    counterexample = deterministic_stateful_counterexample(
+        seed,
+        base_scenario_id="AVL-001",
+    )
+    report = counterexample.as_report()
+    write_json(paths.stateful_mutation_report_path, report)
+    parent_event_id = recorder.events[-1].event_id if recorder.events else None
+    event = recorder.record(
+        EventType.RESOURCE_OBSERVED,
+        {
+            "observation": {
+                "counterexample_found": report["counterexample_found"],
+                "minimized_step_count": len(counterexample.minimized_steps),
+                "original_step_count": len(counterexample.generated_steps),
+                "status": "stateful_counterexample_minimized",
+            },
+            "resource": {
+                "path": str(paths.stateful_mutation_report_path),
+                "type": "eval_stateful_mutation_report",
+            },
+            "stateful_mutation": {
+                "base_scenario_id": counterexample.base_scenario_id,
+                "failure_class": counterexample.failure_class,
+                "minimized_operations": [step.operation for step in counterexample.minimized_steps],
+            },
+            "verification_status": VerificationStatus.OBSERVED.value,
+        },
+        classification=internal_local_classification(),
+        parent_event_id=parent_event_id,
+        source=observer_source("stateful_mutation_oracle"),
+    )
+    world.oracle_observations.append(
+        {
+            "event_id": event.event_id,
+            "failure_class": counterexample.failure_class,
+            "minimized_step_count": len(counterexample.minimized_steps),
+            "run_id": event.correlation.run_id,
+            "status": "stateful_counterexample_minimized",
+        }
+    )
 
 
 def _mutation_semantic_property(mutation_type: str) -> str:

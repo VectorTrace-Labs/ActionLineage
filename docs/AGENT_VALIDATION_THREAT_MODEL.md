@@ -165,6 +165,9 @@ Controls:
 - `AVL-013` intentionally injects one cross-run evidence link between child
   runs and must classify the contamination as `product_failure` through the
   `run_isolation` scorer.
+- `AVL-014` intentionally generates and minimizes a seeded lifecycle mutation
+  sequence and must classify the missing verification-status counterexample as
+  `product_failure` through the `stateful_mutation_minimization` scorer.
 - Replays must run without model calls and produce deterministic scorer output.
 - Replay-equivalence checks compare source and replay scorecard essentials so a
   replay cannot silently drift while still reporting a local pass.

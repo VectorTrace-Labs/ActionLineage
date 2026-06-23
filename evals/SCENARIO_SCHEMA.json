@@ -448,6 +448,7 @@
               "detection",
               "capability_coverage",
               "run_isolation",
+              "stateful_mutation_minimization",
               "replayability",
               "failure_classification"
             ]
@@ -619,6 +620,7 @@
               "scorecard",
               "provenance",
               "replay_equivalence",
+              "stateful_mutation_report",
               "minimization_report"
             ]
           },

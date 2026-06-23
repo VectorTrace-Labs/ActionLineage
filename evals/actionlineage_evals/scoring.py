@@ -64,6 +64,8 @@ def score_run(
     scores.append(score_capability_coverage(scenario))
     if scenario.scenario_id in {"AVL-012", "AVL-013"}:
         scores.append(score_run_isolation(paths, events))
+    if scenario.scenario_id == "AVL-014":
+        scores.append(score_stateful_mutation_minimization(paths))
     scores.append(score_replayability(paths))
     return tuple(scores)
 
@@ -235,6 +237,80 @@ def score_replayability(paths: RunPaths) -> ScoreResult:
         ok=ok,
         details={"missing": missing, "required": [str(path) for path in required]},
         failure_class=None if ok else FailureClass.HARNESS,
+    )
+
+
+def score_stateful_mutation_minimization(paths: RunPaths) -> ScoreResult:
+    """Score whether stateful generation produced a minimized counterexample."""
+
+    report_path = paths.stateful_mutation_report_path
+    if not report_path.exists():
+        return ScoreResult(
+            name="stateful_mutation_minimization",
+            ok=False,
+            details={"missing": str(report_path)},
+            failure_class=FailureClass.HARNESS,
+        )
+    try:
+        report = json.loads(report_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        return ScoreResult(
+            name="stateful_mutation_minimization",
+            ok=False,
+            details={"error": type(exc).__name__, "message": str(exc)},
+            failure_class=FailureClass.HARNESS,
+        )
+    if not isinstance(report, dict):
+        return ScoreResult(
+            name="stateful_mutation_minimization",
+            ok=False,
+            details={"error": "report must be a JSON object"},
+            failure_class=FailureClass.HARNESS,
+        )
+    generated = report.get("generated_steps", ())
+    minimized = report.get("minimized_steps", ())
+    generated_steps = generated if isinstance(generated, list) else []
+    minimized_steps = minimized if isinstance(minimized, list) else []
+    counterexample_found = report.get("counterexample_found") is True
+    reduced = report.get("reduced") is True
+    replayable = report.get("replayable") is True
+    minimized_operations = [
+        str(step.get("operation"))
+        for step in minimized_steps
+        if isinstance(step, dict) and step.get("operation") is not None
+    ]
+    expected_operation_present = "drop_required_verification_status" in minimized_operations
+    expected_failure_class = report.get("failure_class") == FailureClass.PRODUCT.value
+    details = {
+        "base_scenario_id": report.get("base_scenario_id"),
+        "counterexample_found": counterexample_found,
+        "expected_failure_class": expected_failure_class,
+        "expected_operation_present": expected_operation_present,
+        "failure_class": report.get("failure_class"),
+        "generated_step_count": len(generated_steps),
+        "minimized_operations": minimized_operations,
+        "minimized_step_count": len(minimized_steps),
+        "reduced": reduced,
+        "replayable": replayable,
+    }
+    if (
+        not counterexample_found
+        or not reduced
+        or not replayable
+        or not expected_failure_class
+        or not expected_operation_present
+    ):
+        return ScoreResult(
+            name="stateful_mutation_minimization",
+            ok=False,
+            details=details,
+            failure_class=FailureClass.HARNESS,
+        )
+    return ScoreResult(
+        name="stateful_mutation_minimization",
+        ok=False,
+        details=details,
+        failure_class=FailureClass.PRODUCT,
     )
 
 

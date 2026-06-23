@@ -533,31 +533,84 @@ scenarios:
       - artifact_redaction_audit
       - parallel_safe_docker
 
+  - id: AVL-014
+    name: stateful-lifecycle-mutation-minimization
+    maturity: development-only
+    first_slice: false
+    agent_task: generate and minimize a stateful lifecycle mutation counterexample
+    expected_failure_class_on_mismatch: product_failure
+    required_oracles:
+      - filesystem_state
+      - process_status
+      - journal_verification
+      - projection_rebuild
+      - contract_validation
+      - redaction_scan
+    required_scorers:
+      - lifecycle
+      - integrity
+      - redaction
+      - contract
+      - detection
+      - capability_coverage
+      - stateful_mutation_minimization
+      - replayability
+      - failure_classification
+    covers:
+      - intent_recorded
+      - run_started
+      - tool_descriptor_hash
+      - tool_requested
+      - tool_authorized
+      - tool_dispatched
+      - tool_acknowledged
+      - side_effect_observed
+      - side_effect_verified
+      - evidence_link_corroborates_acknowledgement
+      - process_status_oracle
+      - detection_coverage
+      - duplicate_benign_event_mutation
+      - missing_optional_field_mutation
+      - event_ordering_skew_mutation
+      - hypothesis_stateful_generation
+      - stateful_failure_minimization
+      - provider_independent_oracle
+      - product_failure_control
+      - journal_integrity
+      - projection_rebuild
+      - contract_validation
+      - transcript_replay
+      - replay_equivalence
+      - artifact_provenance
+      - artifact_redaction_audit
+      - mutation_minimization
+      - parallel_safe_docker
+
 capabilities:
   intent_recorded:
     description: Root intent is recorded with initiating principal.
-    scenarios: [AVL-001, AVL-007, AVL-008, AVL-009, AVL-010, AVL-012, AVL-013]
+    scenarios: [AVL-001, AVL-007, AVL-008, AVL-009, AVL-010, AVL-012, AVL-013, AVL-014]
   run_started:
     description: Agent run lifecycle is visible.
-    scenarios: [AVL-001, AVL-007, AVL-008, AVL-009, AVL-010, AVL-012, AVL-013]
+    scenarios: [AVL-001, AVL-007, AVL-008, AVL-009, AVL-010, AVL-012, AVL-013, AVL-014]
   tool_descriptor_hash:
     description: Tool identity includes canonical descriptor hash when descriptor data is available.
-    scenarios: [AVL-001, AVL-004, AVL-011, AVL-012, AVL-013]
+    scenarios: [AVL-001, AVL-004, AVL-011, AVL-012, AVL-013, AVL-014]
   descriptor_drift:
     description: Descriptor changes are detected instead of being treated as the same tool identity.
     scenarios: [AVL-004]
   tool_requested:
     description: Tool request is recorded before dispatch.
-    scenarios: [AVL-001, AVL-002, AVL-005, AVL-006, AVL-011, AVL-012, AVL-013]
+    scenarios: [AVL-001, AVL-002, AVL-005, AVL-006, AVL-011, AVL-012, AVL-013, AVL-014]
   tool_authorized:
     description: Optional authorization or policy allow state is distinct.
-    scenarios: [AVL-001, AVL-002, AVL-005, AVL-006, AVL-011, AVL-012, AVL-013]
+    scenarios: [AVL-001, AVL-002, AVL-005, AVL-006, AVL-011, AVL-012, AVL-013, AVL-014]
   tool_dispatched:
     description: Dispatch across the tool boundary is explicit.
-    scenarios: [AVL-001, AVL-002, AVL-005, AVL-006, AVL-011, AVL-012, AVL-013]
+    scenarios: [AVL-001, AVL-002, AVL-005, AVL-006, AVL-011, AVL-012, AVL-013, AVL-014]
   tool_acknowledged:
     description: Tool acknowledgement is recorded without implying verified side effect.
-    scenarios: [AVL-001, AVL-002, AVL-004, AVL-005, AVL-006, AVL-011, AVL-012, AVL-013]
+    scenarios: [AVL-001, AVL-002, AVL-004, AVL-005, AVL-006, AVL-011, AVL-012, AVL-013, AVL-014]
   acknowledgement_not_side_effect_evidence:
     description: A tool acknowledgement alone cannot satisfy a side-effect oracle.
     scenarios: [AVL-002, AVL-005, AVL-011, AVL-012, AVL-013]
@@ -578,16 +631,16 @@ capabilities:
     scenarios: [AVL-003]
   side_effect_observed:
     description: Independent environment evidence is recorded.
-    scenarios: [AVL-001, AVL-004, AVL-005, AVL-012, AVL-013]
+    scenarios: [AVL-001, AVL-004, AVL-005, AVL-012, AVL-013, AVL-014]
   side_effect_verified:
     description: Verification links acknowledgement to independent evidence.
-    scenarios: [AVL-001, AVL-005, AVL-012, AVL-013]
+    scenarios: [AVL-001, AVL-005, AVL-012, AVL-013, AVL-014]
   evidence_link_corroborates_acknowledgement:
     description: Independent evidence corroborates the acknowledged tool side effect.
-    scenarios: [AVL-001, AVL-005, AVL-012, AVL-013]
+    scenarios: [AVL-001, AVL-005, AVL-012, AVL-013, AVL-014]
   process_status_oracle:
     description: Process status is captured as independent environment evidence.
-    scenarios: [AVL-001, AVL-005, AVL-012]
+    scenarios: [AVL-001, AVL-005, AVL-012, AVL-014]
   side_effect_unverified:
     description: Insufficient corroboration stays unverified.
     scenarios: [AVL-002, AVL-005, AVL-006, AVL-011, AVL-012, AVL-013]
@@ -605,25 +658,25 @@ capabilities:
     scenarios: [AVL-003, AVL-006]
   provider_independent_oracle:
     description: Pass/fail evidence comes from environment or ActionLineage state, not provider output.
-    scenarios: [AVL-002, AVL-007, AVL-008, AVL-009, AVL-011, AVL-012, AVL-013]
+    scenarios: [AVL-002, AVL-007, AVL-008, AVL-009, AVL-011, AVL-012, AVL-013, AVL-014]
   journal_integrity:
     description: Journal hash-chain verification is part of scoring.
-    scenarios: [AVL-001, AVL-002, AVL-003, AVL-004, AVL-005, AVL-006, AVL-007, AVL-008, AVL-009, AVL-010, AVL-011, AVL-012, AVL-013]
+    scenarios: [AVL-001, AVL-002, AVL-003, AVL-004, AVL-005, AVL-006, AVL-007, AVL-008, AVL-009, AVL-010, AVL-011, AVL-012, AVL-013, AVL-014]
   projection_rebuild:
     description: SQLite projection rebuild is part of scoring.
-    scenarios: [AVL-001, AVL-002, AVL-003, AVL-004, AVL-005, AVL-006, AVL-007, AVL-008, AVL-009, AVL-010, AVL-011, AVL-012, AVL-013]
+    scenarios: [AVL-001, AVL-002, AVL-003, AVL-004, AVL-005, AVL-006, AVL-007, AVL-008, AVL-009, AVL-010, AVL-011, AVL-012, AVL-013, AVL-014]
   contract_validation:
     description: Lineage Contract requirements are evaluated.
-    scenarios: [AVL-001, AVL-003, AVL-005, AVL-006, AVL-007, AVL-008, AVL-009, AVL-010, AVL-011, AVL-012, AVL-013]
+    scenarios: [AVL-001, AVL-003, AVL-005, AVL-006, AVL-007, AVL-008, AVL-009, AVL-010, AVL-011, AVL-012, AVL-013, AVL-014]
   detection_coverage:
     description: Scenario-required detections are evaluated with evidence references.
-    scenarios: [AVL-003, AVL-004, AVL-005, AVL-006]
+    scenarios: [AVL-003, AVL-004, AVL-005, AVL-006, AVL-014]
   toxiproxy_fault_injection:
     description: Network fault injection is declared and recorded.
     scenarios: [AVL-002]
   transcript_replay:
     description: Dynamic run can be replayed without model calls.
-    scenarios: [AVL-001, AVL-002, AVL-003, AVL-004, AVL-005, AVL-006, AVL-007, AVL-008, AVL-009, AVL-010, AVL-011, AVL-012, AVL-013]
+    scenarios: [AVL-001, AVL-002, AVL-003, AVL-004, AVL-005, AVL-006, AVL-007, AVL-008, AVL-009, AVL-010, AVL-011, AVL-012, AVL-013, AVL-014]
   multi_tool_causal_chain:
     description: A scenario records an ordered multi-tool chain under one run.
     scenarios: [AVL-005, AVL-012, AVL-013]
@@ -641,7 +694,7 @@ capabilities:
     scenarios: [AVL-006]
   duplicate_benign_event_mutation:
     description: Duplicate benign evidence is injected without changing scenario outcome.
-    scenarios: [AVL-002, AVL-005, AVL-006]
+    scenarios: [AVL-002, AVL-005, AVL-006, AVL-014]
   provider_lifecycle:
     description: Provider failures are classified separately from product and harness failures.
     scenarios: [AVL-007]
@@ -656,31 +709,37 @@ capabilities:
     scenarios: [AVL-010]
   product_failure_control:
     description: Product evidence failures are classified separately from agent, harness, provider, and budget failures.
-    scenarios: [AVL-011, AVL-013]
+    scenarios: [AVL-011, AVL-013, AVL-014]
   oracle_mismatch_control:
     description: Missing authoritative corroboration is classified from oracle and journal evidence, not agent claims.
     scenarios: [AVL-011]
   missing_optional_field_mutation:
     description: Missing optional or required planning fields are tracked as deterministic mutation provenance.
-    scenarios: [AVL-010]
+    scenarios: [AVL-010, AVL-014]
   event_ordering_skew_mutation:
     description: Event ordering skew is recorded as deterministic mutation provenance without changing intended outcome.
-    scenarios: [AVL-011]
+    scenarios: [AVL-011, AVL-014]
+  hypothesis_stateful_generation:
+    description: Hypothesis-style stateful mutation generation is represented as replayable seeded eval evidence.
+    scenarios: [AVL-014]
+  stateful_failure_minimization:
+    description: Generated stateful mutation failures are minimized to the smallest failure-preserving sequence.
+    scenarios: [AVL-014]
   replay_equivalence:
     description: Replay runs compare semantic scorecard essentials with their source live or scripted run.
-    scenarios: [AVL-001, AVL-002, AVL-003, AVL-004, AVL-005, AVL-006, AVL-007, AVL-008, AVL-009, AVL-010, AVL-011, AVL-012, AVL-013]
+    scenarios: [AVL-001, AVL-002, AVL-003, AVL-004, AVL-005, AVL-006, AVL-007, AVL-008, AVL-009, AVL-010, AVL-011, AVL-012, AVL-013, AVL-014]
   artifact_provenance:
     description: Runs stamp scenario, schema, coverage, commit, workflow, adapter, and artifact hashes.
-    scenarios: [AVL-001, AVL-002, AVL-003, AVL-004, AVL-005, AVL-006, AVL-007, AVL-008, AVL-009, AVL-010, AVL-011, AVL-012, AVL-013]
+    scenarios: [AVL-001, AVL-002, AVL-003, AVL-004, AVL-005, AVL-006, AVL-007, AVL-008, AVL-009, AVL-010, AVL-011, AVL-012, AVL-013, AVL-014]
   artifact_redaction_audit:
     description: Generated artifacts can be scanned independently for canaries and provider credential patterns.
-    scenarios: [AVL-001, AVL-002, AVL-003, AVL-004, AVL-005, AVL-006, AVL-007, AVL-008, AVL-009, AVL-010, AVL-011, AVL-012, AVL-013]
+    scenarios: [AVL-001, AVL-002, AVL-003, AVL-004, AVL-005, AVL-006, AVL-007, AVL-008, AVL-009, AVL-010, AVL-011, AVL-012, AVL-013, AVL-014]
   mutation_minimization:
-    description: Terminal dynamic failures can emit minimized transcript artifacts for review and promotion.
-    scenarios: [AVL-010]
+    description: Terminal dynamic failures can emit minimized transcript or stateful mutation artifacts for review and promotion.
+    scenarios: [AVL-010, AVL-014]
   parallel_safe_docker:
     description: Docker Compose eval environments use per-run project names and discovered dynamic host ports.
-    scenarios: [AVL-001, AVL-002, AVL-012, AVL-013]
+    scenarios: [AVL-001, AVL-002, AVL-012, AVL-013, AVL-014]
 
 known_gaps:
   - id: cloud_observer_live

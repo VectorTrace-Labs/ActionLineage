@@ -49,7 +49,12 @@ from actionlineage_evals.scenarios import (  # noqa: E402
     validate_capability_coverage,
 )
 from actionlineage_evals.scoring import classify_failure  # noqa: E402
-from actionlineage_evals.stateful import deterministic_mutation_sequence  # noqa: E402
+from actionlineage_evals.stateful import (  # noqa: E402
+    deterministic_mutation_sequence,
+    deterministic_stateful_counterexample,
+    minimize_stateful_steps,
+    stateful_failure_predicate,
+)
 from actionlineage_evals.summary import (  # noqa: E402
     build_public_baseline_report,
     render_public_baseline_report_markdown,
@@ -81,6 +86,7 @@ def test_scenarios_and_capability_coverage_validate() -> None:
         "AVL-011",
         "AVL-012",
         "AVL-013",
+        "AVL-014",
     ]
     assert coverage["ok"] is True
     assert coverage["scenario_ids"] == [
@@ -97,6 +103,7 @@ def test_scenarios_and_capability_coverage_validate() -> None:
         "AVL-011",
         "AVL-012",
         "AVL-013",
+        "AVL-014",
     ]
     assert coverage["uncovered_capabilities"] == []
     lint = lint_scenarios(
@@ -151,7 +158,7 @@ def test_public_agent_validation_evidence_doc_matches_registry() -> None:
             "no_model": True,
         }
     ]
-    assert public_report["failure_classification"]["counts"]["product_failure"] == 2
+    assert public_report["failure_classification"]["counts"]["product_failure"] == 3
     assert public_report["failure_classification"]["expected_control_scenarios"]
     assert public_report["tool_schema_hashes"]
     assert "Source commit under evaluation" in public_report_md
@@ -364,6 +371,7 @@ def test_scripted_suite_runs_all_scenarios_and_replay(tmp_path: Path) -> None:
         "AVL-011",
         "AVL-012",
         "AVL-013",
+        "AVL-014",
     ]
     for scenario_result in result.results:
         expected_failure = {
@@ -373,6 +381,7 @@ def test_scripted_suite_runs_all_scenarios_and_replay(tmp_path: Path) -> None:
             "AVL-009": FailureClass.HARNESS,
             "AVL-010": FailureClass.AGENT,
             "AVL-013": FailureClass.PRODUCT,
+            "AVL-014": FailureClass.PRODUCT,
         }.get(scenario_result.scenario_id)
         assert scenario_result.failure_class == expected_failure
         assert scenario_result.artifacts.replay_bundle_path.exists()
@@ -520,13 +529,57 @@ def test_scripted_suite_runs_all_scenarios_and_replay(tmp_path: Path) -> None:
     assert contaminated_link["evidence_run_id"] == "run_avl-013_agent_b_0000"
     assert contaminated_run_isolation["details"]["coordinator_tool_events"] == []
 
+    avl014_scorecard = json.loads(
+        (tmp_path / "evals" / "avl-014-scripted-seed-0" / "scorecard.json").read_text(
+            encoding="utf-8"
+        )
+    )
+    assert avl014_scorecard["passed"] is True
+    assert avl014_scorecard["failure_class"] == "product_failure"
+    assert avl014_scorecard["agent_error"] is None
+    assert avl014_scorecard["provider_error"] is None
+    assert avl014_scorecard["harness_error"] is None
+    stateful_score = next(
+        score
+        for score in avl014_scorecard["scores"]
+        if score["name"] == "stateful_mutation_minimization"
+    )
+    assert stateful_score["ok"] is False
+    assert stateful_score["failure_class"] == "product_failure"
+    assert stateful_score["details"]["counterexample_found"] is True
+    assert stateful_score["details"]["expected_failure_class"] is True
+    assert stateful_score["details"]["expected_operation_present"] is True
+    assert stateful_score["details"]["generated_step_count"] == 4
+    assert stateful_score["details"]["minimized_step_count"] == 1
+    assert stateful_score["details"]["minimized_operations"] == [
+        "drop_required_verification_status"
+    ]
+
+    avl014_stateful_report = json.loads(
+        (
+            tmp_path / "evals" / "avl-014-scripted-seed-0" / "stateful-mutation-report.json"
+        ).read_text(encoding="utf-8")
+    )
+    assert avl014_stateful_report["counterexample_found"] is True
+    assert avl014_stateful_report["reduced"] is True
+    assert len(avl014_stateful_report["minimized_steps"]) == 1
+
+    avl014_manifest = json.loads(
+        (
+            tmp_path / "evals" / "avl-014-scripted-seed-0" / "replay-bundle" / "manifest.json"
+        ).read_text(encoding="utf-8")
+    )
+    assert avl014_manifest["stateful_mutation_report"] == "stateful-mutation-report.json"
+    assert avl014_manifest["artifact_hashes"]["stateful_mutation_report"].startswith("sha256:")
+
     suite_summary = json.loads((tmp_path / "evals" / "suite-summary.json").read_text())
     assert suite_summary["schema_version"] == "actionlineage.dev/eval-suite-summary/v0"
-    assert suite_summary["failure_class_counts"]["product_failure"] == 2
+    assert suite_summary["failure_class_counts"]["product_failure"] == 3
     summary_by_id = {item["scenario_id"]: item for item in suite_summary["scenarios"]}
     assert summary_by_id["AVL-001"]["failure_fingerprint"] is None
     assert summary_by_id["AVL-011"]["failure_fingerprint"].startswith("sha256:")
     assert summary_by_id["AVL-013"]["failure_fingerprint"].startswith("sha256:")
+    assert summary_by_id["AVL-014"]["failure_fingerprint"].startswith("sha256:")
 
     avl001_oracles = [
         json.loads(line)
@@ -554,7 +607,7 @@ def test_scripted_suite_runs_all_scenarios_and_replay(tmp_path: Path) -> None:
         replay_artifact_root=tmp_path / "artifact-replay",
     )
     assert replayed_artifacts.passed is True
-    assert len(replayed_artifacts.results) == 13
+    assert len(replayed_artifacts.results) == 14
     avl010_replay_scorecard = json.loads(
         (
             tmp_path
@@ -929,6 +982,24 @@ def test_tool_call_minimizer_preserves_failure_predicate() -> None:
     assert minimized[0].tool_calls[0].arguments["mode"] == "descriptor_drift_conflict"
 
 
+def test_stateful_counterexample_minimizer_preserves_failure_predicate() -> None:
+    counterexample = deterministic_stateful_counterexample(4, base_scenario_id="AVL-001")
+
+    assert counterexample.counterexample_found is True
+    assert len(counterexample.generated_steps) == 4
+    assert len(counterexample.minimized_steps) == 1
+    assert counterexample.minimized_steps[0].operation == "drop_required_verification_status"
+    assert stateful_failure_predicate(counterexample.minimized_steps) is True
+    assert counterexample.as_report()["replayable"] is True
+
+    minimized_again = minimize_stateful_steps(
+        counterexample.generated_steps,
+        still_fails=stateful_failure_predicate,
+    )
+
+    assert minimized_again == counterexample.minimized_steps
+
+
 @settings(max_examples=20, stateful_step_count=8)
 class MutationMachine(RuleBasedStateMachine):
     def __init__(self) -> None:
@@ -942,6 +1013,17 @@ class MutationMachine(RuleBasedStateMachine):
 
         assert sequence == repeated
         self.generated.append(tuple(item.as_dict() for item in sequence))
+
+    @rule(seed=st.integers(min_value=0, max_value=20))
+    def generate_stateful_counterexample(self, seed: int) -> None:
+        counterexample = deterministic_stateful_counterexample(seed, base_scenario_id="AVL-001")
+        repeated = deterministic_stateful_counterexample(seed, base_scenario_id="AVL-001")
+
+        assert counterexample == repeated
+        assert counterexample.counterexample_found is True
+        assert len(counterexample.minimized_steps) == 1
+        assert stateful_failure_predicate(counterexample.minimized_steps) is True
+        self.generated.append(tuple(step.as_dict() for step in counterexample.minimized_steps))
 
     @invariant()
     def generated_mutations_are_seeded(self) -> None:

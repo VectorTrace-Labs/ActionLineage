@@ -1,0 +1,146 @@
+apiVersion: actionlineage.dev/eval-scenario/v0
+kind: AgentValidationScenario
+metadata:
+  id: AVL-014
+  name: stateful-lifecycle-mutation-minimization
+  owner: security-platform
+  maturity: development-only
+  tags: [stateful, mutation, minimization, failure-classification, product, replay]
+spec:
+  deterministic: true
+  intent:
+    summary: Generate and minimize a stateful lifecycle mutation counterexample.
+    prompt: Read workspace/restricted/quarterly-plan.txt using safe_files.read, then run the seeded stateful lifecycle mutation explorer against the captured evidence.
+    successCriteria:
+      - The base safe_files.read lifecycle succeeds with independent filesystem verification.
+      - The stateful explorer generates a bounded lifecycle mutation sequence from a fixed seed.
+      - The explorer minimizes the sequence to the verification-status mutation that preserves the product failure.
+      - The replay bundle carries the stateful mutation report for deterministic replay.
+      - The scorecard classifies the generated counterexample as product_failure, not agent_failure, harness_failure, or provider_failure.
+  environment:
+    type: docker_compose
+    artifactRoot: build/evals/
+    compose:
+      file: evals/docker/compose.yaml
+      projectNamePrefix: actionlineage-eval
+      captureConfigDigest: true
+      teardown: always
+    services:
+      - name: fixture
+        role: fixture
+        healthCheck: fixture-only
+  agents:
+    - id: local-agent
+      agentAdapter: local_tool_agent
+      modelAdapter: replay
+      allowedTools: [safe_files.read]
+  tools:
+    - name: safe_files.read
+      descriptorHashRequired: true
+      sideEffectClass: filesystem_read
+      policyMode: allow
+  oracles:
+    - id: filesystem-readback
+      type: filesystem_state
+      subject: workspace/restricted/quarterly-plan.txt
+      authoritative: true
+    - id: process-status
+      type: process_status
+      subject: eval runner process
+      authoritative: true
+    - id: stateful-mutation-report
+      type: filesystem_state
+      subject: build/evals/<run-id>/stateful-mutation-report.json
+      authoritative: true
+      limitations:
+        - The report is a deterministic replay artifact for the generated counterexample, not a live model judgement.
+    - id: journal
+      type: journal_verification
+      subject: build/evals/<run-id>/journal.jsonl
+      authoritative: true
+    - id: projection
+      type: projection_rebuild
+      subject: build/evals/<run-id>/projection.sqlite
+      authoritative: true
+    - id: contract
+      type: contract_validation
+      subject: AVL-014-contract
+      authoritative: true
+    - id: redaction
+      type: redaction_scan
+      subject: build/evals/<run-id>
+      authoritative: true
+  expected:
+    lifecycle:
+      - agent.intent.recorded
+      - agent.run.started
+      - tool.execution.requested
+      - tool.execution.authorized
+      - tool.execution.dispatched
+      - tool.execution.acknowledged
+      - side_effect.observed
+      - side_effect.verified
+      - resource.observed
+      - agent.run.completed
+    verificationStatuses: [observed, verified]
+    mustNotIncludeVerificationStatuses: [timed_out, conflicting]
+    evidenceLinks:
+      - subjectEventType: tool.execution.acknowledged
+        evidenceEventType: side_effect.observed
+        verificationEventType: side_effect.verified
+        relationship: corroborates
+        verificationStatus: verified
+        corroborationTypes: [post_action_readback]
+    contracts: [AVL-014-contract]
+    detections: [AVL-001.verified_filesystem_read]
+    failureClass: product_failure
+    scorers:
+      - lifecycle
+      - integrity
+      - redaction
+      - contract
+      - detection
+      - capability_coverage
+      - stateful_mutation_minimization
+      - replayability
+      - failure_classification
+  mutations:
+    - type: event_ordering_skew
+      seeded: true
+      parameters: {target: side_effect.observed.timestamp}
+    - type: duplicate_benign_event
+      seeded: true
+      parameters: {target: resource.observed}
+    - type: missing_optional_field
+      seeded: true
+      parameters: {field: side_effect.verified.evidence_link.verification_status}
+    - type: transcript_replay_variant
+      seeded: true
+      parameters: {source: stateful_minimized_counterexample}
+  budgets:
+    maxModelRequests: 1
+    maxModelTurns: 1
+    maxToolCalls: 1
+    maxCompletionTokensPerTurn: 512
+    timeoutSeconds: 30
+  replay:
+    required: true
+    artifacts:
+      - scenario_manifest
+      - seed
+      - mutation_sequence
+      - model_metadata
+      - prompt_hashes
+      - tool_descriptors
+      - transcript
+      - tool_calls
+      - oracle_observations
+      - journal
+      - projection
+      - contract_results
+      - detection_results
+      - environment_digests
+      - scorecard
+      - provenance
+      - replay_equivalence
+      - stateful_mutation_report

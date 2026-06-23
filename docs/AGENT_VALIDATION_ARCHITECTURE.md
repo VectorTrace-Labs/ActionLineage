@@ -222,6 +222,8 @@ case without a model provider:
 - World-state oracle observations.
 - Journal, trusted tail metadata, projection output, contract results, detection
   results, and scorecard.
+- Stateful mutation-minimization report when a scenario generated and minimized
+  a lifecycle counterexample.
 - Docker Compose config digest, image digests, service logs, and Toxiproxy
   timeline.
 - Run provenance with scenario, schema, capability coverage, commit, workflow,

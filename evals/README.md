@@ -108,7 +108,11 @@ deterministic controls run in scripted and replay lanes rather than calling a
 live provider. `AVL-013` is a cross-run evidence contamination control: the
 harness deliberately injects one invalid evidence link between child runs, and
 the `run_isolation` scorer must classify it as `product_failure` without
-collapsing agent, provider, or harness failure classes.
+collapsing agent, provider, or harness failure classes. `AVL-014` is a
+stateful lifecycle mutation-minimization control: the harness generates a
+seeded lifecycle mutation sequence, minimizes it to the required
+`missing_optional_field` counterexample, records a dedicated stateful mutation
+report, and classifies the expected semantic break as `product_failure`.
 
 Replay runs include a `replay_equivalence` scorer. It compares semantic
 scorecard essentials from the source run with the replayed run, while ignoring

@@ -222,6 +222,7 @@ class RunPaths:
     replay_equivalence_path: Path
     minimization_report_path: Path
     minimized_transcript_path: Path
+    stateful_mutation_report_path: Path
     toxiproxy_timeline_path: Path
     mutation_sequence_path: Path
     triage_path: Path
@@ -271,6 +272,7 @@ class ScenarioResult:
                 "replay_bundle_path": str(self.artifacts.replay_bundle_path),
                 "run_dir": str(self.artifacts.run_dir),
                 "scorecard_path": str(self.artifacts.scorecard_path),
+                "stateful_mutation_report_path": str(self.artifacts.stateful_mutation_report_path),
                 "toxiproxy_timeline_path": str(self.artifacts.toxiproxy_timeline_path),
                 "tool_calls_path": str(self.artifacts.tool_calls_path),
                 "triage_path": str(self.artifacts.triage_path),

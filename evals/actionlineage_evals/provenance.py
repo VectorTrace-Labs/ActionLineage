@@ -34,6 +34,7 @@ def write_run_provenance(
             ("journal", paths.journal_path),
             ("mutation_sequence", paths.mutation_sequence_path),
             ("oracle_observations", paths.oracle_observations_path),
+            ("stateful_mutation_report", paths.stateful_mutation_report_path),
             ("toxiproxy_timeline", paths.toxiproxy_timeline_path),
             ("tool_calls", paths.tool_calls_path),
             ("transcript", paths.transcript_path),
@@ -159,6 +160,19 @@ def _score_fingerprint(score: Mapping[str, Any]) -> JsonMap:
                 "missing_lifecycle": details.get("missing_lifecycle", {}),
                 "projection_event_counts": details.get("projection_event_counts", {}),
                 "tool_request_run_ids": details.get("tool_request_run_ids", []),
+            }
+        elif name == "stateful_mutation_minimization":
+            detail_fingerprint = {
+                "base_scenario_id": details.get("base_scenario_id"),
+                "counterexample_found": details.get("counterexample_found"),
+                "expected_failure_class": details.get("expected_failure_class"),
+                "expected_operation_present": details.get("expected_operation_present"),
+                "failure_class": details.get("failure_class"),
+                "generated_step_count": details.get("generated_step_count"),
+                "minimized_operations": details.get("minimized_operations", []),
+                "minimized_step_count": details.get("minimized_step_count"),
+                "reduced": details.get("reduced"),
+                "replayable": details.get("replayable"),
             }
     return {
         "details": detail_fingerprint,

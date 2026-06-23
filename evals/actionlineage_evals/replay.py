@@ -89,6 +89,7 @@ def write_replay_bundle(
     copied_mutation_sequence = bundle_dir / "mutation-sequence.json"
     copied_oracles = bundle_dir / "oracle-observations.jsonl"
     copied_provenance = bundle_dir / "provenance.json"
+    copied_stateful_report = bundle_dir / "stateful-mutation-report.json"
     copied_triage = bundle_dir / "triage.md"
     copied_tool_calls = bundle_dir / "tool-calls.json"
     copied_toxiproxy = bundle_dir / "toxiproxy-timeline.jsonl"
@@ -104,6 +105,8 @@ def write_replay_bundle(
         shutil.copy2(paths.oracle_observations_path, copied_oracles)
     if paths.provenance_path.exists():
         shutil.copy2(paths.provenance_path, copied_provenance)
+    if paths.stateful_mutation_report_path.exists():
+        shutil.copy2(paths.stateful_mutation_report_path, copied_stateful_report)
     if paths.triage_path.exists():
         shutil.copy2(paths.triage_path, copied_triage)
     if paths.tool_calls_path.exists():
@@ -129,6 +132,9 @@ def write_replay_bundle(
             else None,
             "provenance": f"sha256:{_sha256_file(copied_provenance)}"
             if copied_provenance.exists()
+            else None,
+            "stateful_mutation_report": f"sha256:{_sha256_file(copied_stateful_report)}"
+            if copied_stateful_report.exists()
             else None,
             "tool_calls": f"sha256:{_sha256_file(copied_tool_calls)}"
             if copied_tool_calls.exists()
@@ -173,6 +179,9 @@ def write_replay_bundle(
         else None,
         "oracle_observations": str(copied_oracles.name) if copied_oracles.exists() else None,
         "provenance": str(copied_provenance.name) if copied_provenance.exists() else None,
+        "stateful_mutation_report": str(copied_stateful_report.name)
+        if copied_stateful_report.exists()
+        else None,
         "tool_calls": str(copied_tool_calls.name) if copied_tool_calls.exists() else None,
         "toxiproxy_timeline": str(copied_toxiproxy.name) if copied_toxiproxy.exists() else None,
         "triage": str(copied_triage.name) if copied_triage.exists() else None,

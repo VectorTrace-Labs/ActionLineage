@@ -128,7 +128,7 @@ Completed concurrent-run-isolation slice:
 5. Regenerate the committed no-model public baseline for 12 scorecards and
    48/48 declared capabilities.
 
-Current cross-run contamination-control slice:
+Completed cross-run contamination-control slice:
 
 1. Add `AVL-013 cross-run-evidence-contamination-control` as a deterministic
    no-model negative control that reuses the concurrent child-run shape.
@@ -142,6 +142,24 @@ Current cross-run contamination-control slice:
    `cross_run_evidence_contamination` is covered by an explicit scenario.
 5. Regenerate the committed no-model public baseline for 13 scorecards and
    49/49 declared capabilities.
+
+Current stateful lifecycle mutation-minimization slice:
+
+1. Add `AVL-014 stateful-lifecycle-mutation-minimization` as a deterministic
+   no-model product-failure control layered on the verified filesystem-read
+   shape.
+2. Generate a seeded lifecycle mutation sequence that includes event-ordering
+   skew, duplicate benign observation, missing verification status, and a
+   transcript replay variant.
+3. Minimize the sequence to the smallest replayable semantic counterexample
+   while preserving the `product_failure` classification.
+4. Persist `stateful-mutation-report.json`, include it in replay bundles and
+   provenance hashes, and make replay equivalence compare the semantic
+   minimization fields.
+5. Refresh semantic capability coverage so Hypothesis-style stateful generation
+   and stateful failure minimization are explicit covered capabilities.
+6. Regenerate the committed no-model public baseline for 14 scorecards and
+   51/51 declared capabilities.
 
 Acceptance commands for this phase:
 
@@ -229,6 +247,7 @@ Implemented artifacts:
 - `evals/scenarios/AVL-011.yaml`
 - `evals/scenarios/AVL-012.yaml`
 - `evals/scenarios/AVL-013.yaml`
+- `evals/scenarios/AVL-014.yaml`
 - `evals/regressions/README.md`
 - `evals/actionlineage_evals/`
 - `evals/docker/`
@@ -503,6 +522,8 @@ Implemented eval runner:
 - `AVL-012` passes as a deterministic concurrent child-run isolation scenario.
 - `AVL-013` passes as a deterministic expected product-failure cross-run
   evidence-contamination scenario.
+- `AVL-014` passes as a deterministic expected product-failure stateful
+  lifecycle mutation-minimization scenario.
 - `AVL-001` replay passes from a captured replay bundle.
 - Replay-artifact runs include replay-equivalence scorecards.
 - Run artifacts include provenance hashes and pass `audit-artifacts`.
