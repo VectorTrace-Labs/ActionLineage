@@ -29,6 +29,29 @@ Document:
 - Standard library `sqlite3` for the rebuildable projection.
 - Pytest, Hypothesis, Ruff, mypy, pip-audit, and jsonschema for quality checks.
 
+## Development-only test-client dependency
+
+`httpx2` is included only in the `dev` optional extra so Starlette/FastAPI
+service-mode tests use Starlette's current test-client backend without
+deprecation warnings. It is not a core, service-runtime, adapter, journal,
+projection, or CLI dependency.
+
+- Purpose: local test-client transport for optional FastAPI service tests.
+- Alternatives considered: suppressing the warning, or writing a local ASGI
+  test harness. Suppression would hide dependency drift, and a custom harness
+  would duplicate framework behavior for little release value.
+- License: BSD-3-Clause, based on current PyPI metadata.
+- Maintainer and update policy: locked by `uv.lock`, reviewed through normal
+  dependency-update PRs, SBOM generation, and `pip-audit`.
+- Transitive impact: `httpcore2` and `truststore`; shared dependencies such as
+  AnyIO, IDNA, H11, and typing extensions are already present elsewhere.
+- Security implications: used in local tests to exercise preview service
+  endpoints; it can handle test HTTP requests but does not enter the alpha
+  runtime trusted computing base.
+- Removal plan: remove once Starlette/FastAPI no longer needs the separate
+  `httpx2` test-client backend or if service tests move to a supported
+  framework-native replacement.
+
 ## Optional adapter baseline
 
 These dependencies are not part of the core trusted computing base. They belong

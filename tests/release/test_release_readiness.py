@@ -48,11 +48,27 @@ def test_optional_extras_are_split_by_release_surface() -> None:
 
     assert {"adapters", "cloud", "console", "dev", "service"} <= set(optional)
     assert "fastapi>=0.115,<1" in optional["service"]
+    assert "httpx2>=2,<3" not in optional["service"]
     assert "PyJWT[crypto]>=2.10,<3" in optional["service"]
     assert "uvicorn>=0.34,<1" in optional["service"]
     assert "mcp>=1.27,<2" in optional["adapters"]
+    assert "httpx2>=2,<3" in optional["dev"]
     assert optional["console"] == []
     assert optional["cloud"] == []
+
+
+def test_dependency_policy_documents_dev_only_test_client_dependency() -> None:
+    policy = (PROJECT_ROOT / "docs/DEPENDENCY_POLICY.md").read_text(encoding="utf-8")
+
+    assert "Development-only test-client dependency" in policy
+    assert "`httpx2` is included only in the `dev` optional extra" in policy
+    assert "Starlette/FastAPI" in policy
+    assert "service-mode tests" in policy
+    assert "BSD-3-Clause" in policy
+    assert "does not enter the alpha" in policy
+    assert "runtime trusted computing base" in policy
+    assert "httpcore2" in policy
+    assert "truststore" in policy
 
 
 def test_release_docs_are_present() -> None:
