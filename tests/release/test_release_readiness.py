@@ -82,6 +82,7 @@ def test_release_docs_are_present() -> None:
         "docs/RELEASE_CHECKLIST.md",
         "docs/RELEASE_CANDIDATE_AUDIT.md",
         "docs/DRAFT_RELEASE_NOTES_0.1.0a3.md",
+        "docs/DRAFT_RELEASE_NOTES_0.1.0a4.md",
         "docs/OWNER_PUBLICATION_CHECKLIST.md",
         "docs/PACKAGE_MANAGERS.md",
         "docs/REVIEW_PROCESS.md",
@@ -341,10 +342,13 @@ def test_external_review_issue_templates_collect_safe_repro_context() -> None:
 def test_release_candidate_audit_prepares_without_publishing() -> None:
     audit = (PROJECT_ROOT / "docs/RELEASE_CANDIDATE_AUDIT.md").read_text(encoding="utf-8")
     draft_notes = (PROJECT_ROOT / "docs/DRAFT_RELEASE_NOTES_0.1.0a3.md").read_text(encoding="utf-8")
+    next_draft_notes = (PROJECT_ROOT / "docs/DRAFT_RELEASE_NOTES_0.1.0a4.md").read_text(
+        encoding="utf-8"
+    )
     owner_checklist = (PROJECT_ROOT / "docs/OWNER_PUBLICATION_CHECKLIST.md").read_text(
         encoding="utf-8"
     )
-    combined = "\n".join((audit, draft_notes, owner_checklist))
+    combined = "\n".join((audit, draft_notes, next_draft_notes, owner_checklist))
     normalized = combined.lower()
 
     assert "build/release-candidate/manifest.json" in audit
@@ -357,6 +361,7 @@ def test_release_candidate_audit_prepares_without_publishing() -> None:
     assert "do not attach local artifacts to a tag release when this field is `false`" in audit
     assert "rerun after any source or documentation commit before publication" in audit
     assert "Do not republish immutable PyPI/TestPyPI files" in audit
+    assert "new owner-approved `0.1.0a4` release" in audit
     assert "135 files already formatted" in audit
     assert "318 passed" in audit
     assert "86.14 percent total coverage" in audit
@@ -407,18 +412,30 @@ def test_release_candidate_audit_prepares_without_publishing() -> None:
     assert "Release assets must be built from the same commit resolved by the release tag" in (
         draft_notes
     )
+    assert "recommended corrective alpha" in next_draft_notes
+    assert "Use them only after the repository version" in next_draft_notes
+    assert "A new `v0.1.0a4` tag from the reviewed hardening commit" in next_draft_notes
+    assert "No event-schema namespace change" in next_draft_notes
+    assert "no independent external review, adoption, production use, or audit is claimed" in (
+        next_draft_notes
+    )
     assert "Codex must not perform these actions without explicit approval" in owner_checklist
     assert "build/release-candidate/REVIEW_INDEX.md" in owner_checklist
     assert "Version tag matches audited commit" in owner_checklist
     assert "not as an attestation or external validation" in owner_checklist
+    assert "recommended corrective metadata/release repair is a" in owner_checklist
+    assert "new owner-approved `0.1.0a4` release" in owner_checklist
     assert "gh release create v0.1.0a3" in owner_checklist
+    assert "gh release create v0.1.0a4" in owner_checklist
     assert "--verify-tag" in owner_checklist
     assert "--draft" in owner_checklist
     assert "--notes-file /tmp/actionlineage-v0.1.0a3-release-notes.md" in owner_checklist
+    assert "--notes-file /tmp/actionlineage-v0.1.0a4-release-notes.md" in owner_checklist
     assert "Review the draft in the GitHub UI before publishing" in owner_checklist
     assert (
         "Do not republish or attempt to overwrite existing PyPI/TestPyPI files" in owner_checklist
     )
+    assert "recommended corrective package release" in owner_checklist
 
     unsupported_claims = (
         "release has been published by this audit",
@@ -738,6 +755,8 @@ def test_public_claim_audit_tracks_package_description_drift() -> None:
     assert "bounded read-only `curl` fallback" in audit
     assert "bounded read-only `curl` fallback" in scorecard
     assert "Local Python certificate stores can block online release checks" in scorecard
+    assert "recommended repair version is `0.1.0a4`" in audit
+    assert "recommended repair version is `0.1.0a4`" in scorecard
 
 
 def test_review_process_keeps_ai_review_advisory() -> None:

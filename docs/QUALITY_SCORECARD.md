@@ -17,7 +17,7 @@ and checklist wording.
 | Current alpha version | `0.1.0a3` |
 | Supported Python | Python 3.12+ |
 | Default demo | No model API key, cloud account, external service, or internet access |
-| Known release blocker | GitHub tag `v0.1.0a3` exists, but no GitHub Release object for `v0.1.0a3` was visible in read-only release listing |
+| Known release blocker | GitHub tag `v0.1.0a3` exists, but no GitHub Release object for `v0.1.0a3` was visible in read-only release listing; current post-tag hardening proof should move through a new `0.1.0a4` repair release rather than being attached to `v0.1.0a3` |
 
 ## Claim Matrix
 
@@ -87,8 +87,8 @@ and checklist wording.
 | Coverage can regress quietly while tests remain green | Weaker release evidence for critical paths | CI runs pytest with branch coverage and an 85 percent branch-enabled total coverage floor | Treat the floor as a non-regression guard, not a public coverage badge |
 | Documentation links can drift during review preparation | Broken onboarding and reproduction paths | Repository-local Markdown link and heading-fragment checker in CI and release checklist | Keep the checker local by default and treat external URL reachability as separate release/publication evidence |
 | Local hash chains can be overinterpreted | Integrity overclaim | Threat model and journal integrity docs | Continue using precise trust-limit wording |
-| GitHub Release object can drift from tags/package indexes | Broken release audit trail | Release-consistency checker and owner gate | Create/repair `v0.1.0a3` GitHub Release only with owner approval |
-| Public package long descriptions can lag source docs | Stale package-index claims after local README corrections | Online release-consistency checker detects known stale owner-gated release wording when package JSON is reachable | Publish corrected metadata only through an owner-approved release |
+| GitHub Release object can drift from tags/package indexes | Broken release audit trail | Release-consistency checker and owner gate | Use a new owner-approved `0.1.0a4` release for the current hardening proof, or rebuild exactly from `v0.1.0a3` before repairing that release |
+| Public package long descriptions can lag source docs | Stale package-index claims after local README corrections | Online release-consistency checker detects known stale owner-gated release wording when package JSON is reachable | Publish corrected metadata only through an owner-approved release; recommended repair version is `0.1.0a4` |
 | Local Python certificate stores can block online release checks | Public release drift may appear as UNKNOWN instead of actionable evidence | JSON metadata checks and project URL HEAD checks fall back to bounded read-only `curl` after local `urllib` URL/TLS failures | Keep online checks non-mutating and keep owner/external gates separate from local reachability |
 | Test-only service dependencies can look like runtime scope | Inflated support or TCB claims | Dependency policy and release-readiness tests keep `httpx2` in the dev extra and out of service/runtime extras | Revisit if Starlette/FastAPI changes their test-client backend again |
 | Projection SQLite handle closure can regress | Reliability signal can be missed in noisy verification output | Projection API closes connection handles and has warning-as-error regression coverage | Keep warning-as-error projection test in release verification |

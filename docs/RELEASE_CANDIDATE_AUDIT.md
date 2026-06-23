@@ -14,7 +14,7 @@ settings.
 | Audited implementation commit | Recorded in generated manifest field `audited_implementation_commit`; rerun after any source or documentation commit before publication |
 | Version tag alignment | OWNER REVIEW REQUIRED; generated `build/release-candidate/REVIEW_INDEX.md` records the `v0.1.0a3` tag commit and whether it matches the audited implementation commit; do not attach local artifacts to a tag release when this field is `false` |
 | Candidate version | `0.1.0a3` |
-| Recommendation | Do not republish immutable PyPI/TestPyPI files for `0.1.0a3`; create or repair the GitHub Release object only after owner review. |
+| Recommendation | Do not republish immutable PyPI/TestPyPI files for `0.1.0a3` or attach post-tag hardening proof to the `v0.1.0a3` release; use a new owner-approved `0.1.0a4` release for metadata and release-object repair unless rebuilding exactly from the `v0.1.0a3` tag. |
 | Generated local manifest | `build/release-candidate/manifest.json` |
 | Generated review index | `build/release-candidate/REVIEW_INDEX.md` |
 
@@ -168,6 +168,9 @@ uvx --from build/release-candidate/dist/actionlineage-0.1.0a3.tar.gz actionlinea
 
 - The GitHub Release object for `v0.1.0a3` remains the main release-integrity
   blocker.
+- The recommended repair path is a new `0.1.0a4` alpha release built from a
+  reviewed hardening commit, with tag-matched workflow artifacts and package
+  metadata, rather than editing `v0.1.0a3` with post-tag artifacts.
 - Existing public PyPI/TestPyPI metadata lacks project URLs and may retain stale
   long-description wording until a later owner-approved package upload.
 - Python `urllib` URL/TLS failures are mitigated for package and GitHub JSON
