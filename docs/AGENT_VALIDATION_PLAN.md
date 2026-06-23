@@ -21,8 +21,8 @@ Planned improvements:
    naming the failure class, first failing scorer, missing lifecycle evidence,
    observed tool calls, relevant errors, and exact replay command.
 2. Reviewed regression corpus: replay bundles can be promoted into a
-   development-only corpus and replayed in no-model CI. Empty corpora are
-   allowed until a reviewed failure is added.
+   development-only corpus and replayed in no-model CI. The corpus is seeded
+   with a reviewed `AVL-010` agent-failure replay bundle.
 3. Inspect live configuration: the Inspect task accepts mode, adapter, model
    ID, seed, Docker, and artifact-root settings instead of hardcoding scripted
    execution.
@@ -158,8 +158,31 @@ Current stateful lifecycle mutation-minimization slice:
    minimization fields.
 5. Refresh semantic capability coverage so Hypothesis-style stateful generation
    and stateful failure minimization are explicit covered capabilities.
-6. Regenerate the committed no-model public baseline for 14 scorecards and
-   51/51 declared capabilities.
+6. Regenerate the then-current committed no-model public baseline for 14
+   scorecards and 51/51 declared capabilities.
+
+Completed operator-usability and service-auth slice:
+
+1. Make Inspect the primary live-run entrypoint with the `inspect-run` command.
+   Scheduled GitHub Models execution now enters through Inspect while keeping
+   authoritative scoring inside ActionLineage oracles, journals, projections,
+   contracts, detections, and replay artifacts.
+2. Seed `evals/regressions/` with a reviewed, synthetic `AVL-010` replay bundle
+   so CI exercises a real regression corpus without model calls.
+3. Broaden Docker-backed CI smoke coverage to `AVL-001`, `AVL-002`, `AVL-003`,
+   `AVL-004`, `AVL-005`, `AVL-014`, and `AVL-015`.
+4. Add `AVL-015 service-mode-auth-boundary` to evaluate optional service-mode
+   auth without promoting service mode beyond preview. The scenario records a
+   denied invalid synthetic service read, an authorized metadata-only read, a
+   service-auth oracle observation, detection evidence, and token redaction
+   checks.
+5. Add `trend` reports for no-model, Docker, scheduled live, and local runs so
+   suite status, capability coverage, replay-equivalence, failure classes, and
+   artifact-audit counts can be tracked over time.
+6. Refresh semantic capability coverage so `service_mode_auth_eval` is covered
+   and the only remaining known gap is `cloud_observer_live`.
+7. Regenerate the committed no-model public baseline for 15 scorecards and
+   56/56 declared capabilities.
 
 Acceptance commands for this phase:
 
@@ -176,32 +199,38 @@ PYTHONPATH=evals uv run --group eval python -m actionlineage_evals run \
   --seeds 1
 PYTHONPATH=evals uv run --group eval python -m actionlineage_evals replay-regressions \
   --regression-dir evals/regressions \
-  --artifact-root build/evals/regression-replay \
-  --allow-empty
+  --artifact-root build/evals/regression-replay
 PYTHONPATH=evals uv run --group eval python -m actionlineage_evals replay-artifacts \
   build/evals/local \
   --replay-artifact-root build/evals/local-replay
+PYTHONPATH=evals uv run --group eval python -m actionlineage_evals inspect-run \
+  --scenario-path evals/scenarios/AVL-001.yaml \
+  --artifact-root build/evals/inspect-smoke \
+  --mode scripted \
+  --model-adapter scripted \
+  --seed 0
 PYTHONPATH=evals uv run --group eval python -m actionlineage_evals audit-artifacts \
   build/evals/local
 PYTHONPATH=evals uv run --group eval python -m actionlineage_evals summarize \
   build/evals/local
+PYTHONPATH=evals uv run --group eval python -m actionlineage_evals trend \
+  build/evals/local \
+  --output build/evals/reports/agent-validation-trend.json \
+  --markdown-output build/evals/reports/agent-validation-trend.md \
+  --label local
 PYTHONPATH=evals uv run --group eval python -m actionlineage_evals check-public-baseline \
   build/evals/local
 PYTHONPATH=evals uv run --group eval python -m actionlineage_evals docker-smoke
-PYTHONPATH=evals uv run --group eval python -m actionlineage_evals run \
-  --scenario-path evals/scenarios/AVL-001.yaml \
-  --artifact-root build/evals/docker-avl-001 \
-  --mode scripted \
-  --model-adapter scripted \
-  --seeds 1 \
-  --use-docker
-PYTHONPATH=evals uv run --group eval python -m actionlineage_evals run \
-  --scenario-path evals/scenarios/AVL-002.yaml \
-  --artifact-root build/evals/docker-avl-002 \
-  --mode scripted \
-  --model-adapter scripted \
-  --seeds 1 \
-  --use-docker
+for scenario in AVL-001 AVL-002 AVL-003 AVL-004 AVL-005 AVL-014 AVL-015; do
+  lower="$(printf '%s' "$scenario" | tr '[:upper:]' '[:lower:]')"
+  PYTHONPATH=evals uv run --group eval python -m actionlineage_evals run \
+    --scenario-path "evals/scenarios/${scenario}.yaml" \
+    --artifact-root "build/evals/docker-${lower}" \
+    --mode scripted \
+    --model-adapter scripted \
+    --seeds 1 \
+    --use-docker
+done
 PYTHONPATH=evals uv run --group eval pytest tests/evals/test_agent_validation_lab.py
 uv run ruff check .
 uv run ruff format --check .
@@ -248,7 +277,9 @@ Implemented artifacts:
 - `evals/scenarios/AVL-012.yaml`
 - `evals/scenarios/AVL-013.yaml`
 - `evals/scenarios/AVL-014.yaml`
+- `evals/scenarios/AVL-015.yaml`
 - `evals/regressions/README.md`
+- `evals/regressions/AVL-010-56cb348a7a9c9d6c/`
 - `evals/actionlineage_evals/`
 - `evals/docker/`
 - `.github/workflows/agent-validation.yml`
@@ -349,6 +380,7 @@ Independent oracles:
 - `projection_rebuild`
 - `contract_validation`
 - `detection_matches`
+- `service_authz`
 - `redaction_scan`
 
 Scorers:
@@ -470,11 +502,13 @@ Scheduled live-model lane:
 
 - Trigger: default-branch `schedule` and `workflow_dispatch`.
 - Permissions: `contents: read`, `models: read`.
-- Uses GitHub Models through `ModelAdapter`.
+- Uses Inspect as the outer harness and GitHub Models through `ModelAdapter`.
 - Skips all live-model execution unless maintainers configure the explicit
   `GH_MODELS_TOKEN` Actions secret. GitHub Actions rejects secret names
   beginning with `GITHUB_`, so `GH_MODELS_TOKEN` is the repository secret name.
 - Uploads redacted artifacts with short retention.
+- Replays scheduled live bundles, audits artifacts, and emits trend reports in
+  the same workflow.
 
 Local lane:
 
@@ -524,6 +558,9 @@ Implemented eval runner:
   evidence-contamination scenario.
 - `AVL-014` passes as a deterministic expected product-failure stateful
   lifecycle mutation-minimization scenario.
+- `AVL-015` passes as a deterministic service-mode auth boundary scenario with
+  a denied invalid synthetic read, an authorized metadata-only read, service
+  authz oracle evidence, and raw-token redaction checks.
 - `AVL-001` replay passes from a captured replay bundle.
 - Replay-artifact runs include replay-equivalence scorecards.
 - Run artifacts include provenance hashes and pass `audit-artifacts`.
@@ -537,11 +574,14 @@ Implemented eval runner:
 - Suite runs write `suite-summary.json`, and GitHub job summaries include
   replay commands.
 - Docker Compose lifecycle smoke passes when a Docker daemon is available.
-- `AVL-002` runs through Docker/Toxiproxy in the Docker eval lane when a Docker
-  daemon is available.
+- `AVL-001`, `AVL-002`, `AVL-003`, `AVL-004`, `AVL-005`, `AVL-014`, and
+  `AVL-015` run through Docker-backed evals when a Docker daemon is available.
 - Scorecard summaries report pass/fail, failure class, first failing scorer,
   and replay command.
 - Regression corpus replay rejects unreviewed bundles.
+- A reviewed `AVL-010` regression bundle replays without model calls.
+- Trend reports render suite, capability, replay-equivalence, failure-class, and
+  artifact-audit metrics.
 
 ## Required Commands
 

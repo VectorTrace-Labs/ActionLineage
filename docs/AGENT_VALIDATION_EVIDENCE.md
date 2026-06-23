@@ -36,6 +36,11 @@ PYTHONPATH=evals uv run --group eval python -m actionlineage_evals public-report
   build/evals/public-alpha \
   --json-output docs/evidence/agent-validation-baseline.json \
   --markdown-output docs/evidence/agent-validation-baseline.md
+PYTHONPATH=evals uv run --group eval python -m actionlineage_evals trend \
+  build/evals/public-alpha \
+  --output build/evals/reports/agent-validation-trend.json \
+  --markdown-output build/evals/reports/agent-validation-trend.md \
+  --label public-alpha-local
 PYTHONPATH=evals uv run --group eval python -m actionlineage_evals check-public-baseline \
   build/evals/public-alpha
 ```
@@ -44,15 +49,15 @@ PYTHONPATH=evals uv run --group eval python -m actionlineage_evals check-public-
 
 | Evidence | Current result |
 | --- | --- |
-| Scenario validation | 14 scenarios: `AVL-001` through `AVL-014` |
+| Scenario validation | 15 scenarios: `AVL-001` through `AVL-015` |
 | Scenario lint | 0 issues |
-| Capability coverage | 51/51 declared capabilities covered |
+| Capability coverage | 56/56 declared capabilities covered |
 | Eval import boundary | No ActionLineage core imports from eval-only packages |
-| Scripted no-model suite | 14 scorecards, 0 failed |
-| Artifact audit | 343 files scanned, 0 leaks |
+| Scripted no-model suite | 15 scorecards, 0 failed |
+| Artifact audit | 367 files scanned, 0 leaks |
 | Baseline freshness gate | Committed baseline is checked against regenerated no-model artifacts; provenance-only drift is allowed, input or semantic drift fails |
-| Scheduled no-model lane | Trusted default-branch workflow generates deterministic artifacts and public-report outputs without model credentials |
-| Scheduled live-model lane | Optional and skipped unless maintainers configure `GH_MODELS_TOKEN`; provider instability remains non-blocking |
+| Scheduled no-model lane | Trusted workflow generates deterministic artifacts, reviewed regression replay, no-model Inspect smoke, public-report outputs, and trend outputs without model credentials |
+| Scheduled live-model lane | Optional Inspect-driven lane skipped unless maintainers configure `GH_MODELS_TOKEN`; provider instability remains non-blocking |
 | Replay equivalence in the scripted baseline | 0/0 because replay is a separate command path |
 | Public baseline report | `docs/evidence/agent-validation-baseline.md` and `docs/evidence/agent-validation-baseline.json` |
 
@@ -60,7 +65,7 @@ Failure-class counts from the scripted baseline:
 
 | Failure class | Count | Meaning |
 | --- | ---: | --- |
-| `none` | 7 | Positive or benign scenarios without modeled failure controls |
+| `none` | 8 | Positive or benign scenarios without modeled failure controls |
 | `provider_failure` | 1 | Expected provider-failure control (`AVL-007`) |
 | `inconclusive_budget_exhausted` | 1 | Expected budget-exhaustion control (`AVL-008`) |
 | `harness_failure` | 1 | Expected harness-failure control (`AVL-009`) |
@@ -89,6 +94,7 @@ Agent Validation Lab beyond `Local-proof` maturity.
 | `AVL-012` | Concurrent child-run isolation |
 | `AVL-013` | Cross-run evidence contamination control |
 | `AVL-014` | Stateful lifecycle mutation minimization control |
+| `AVL-015` | Service-mode auth boundary with denied and authorized synthetic reads |
 
 ## Known Gaps
 
@@ -97,7 +103,6 @@ The strict coverage report still records explicit known gaps:
 | Gap | Reason |
 | --- | --- |
 | `cloud_observer_live` | Live cloud observers remain outside development-only eval scope. |
-| `service_mode_auth_eval` | Optional service mode is preview and not required for the first lab slice. |
 
 These gaps are not alpha-supported capabilities. Keep them labeled as planned,
 preview, or external-validation work unless a future owner-approved phase

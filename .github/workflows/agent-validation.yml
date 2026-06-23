@@ -48,6 +48,16 @@ jobs:
             --mode scripted \
             --model-adapter scripted \
             --seeds 1
+      - name: Run Inspect no-model smoke
+        env:
+          PYTHONPATH: evals
+        run: |
+          uv run --group eval python -m actionlineage_evals inspect-run \
+            --scenario-path evals/scenarios/AVL-001.yaml \
+            --artifact-root build/evals/inspect-smoke \
+            --mode scripted \
+            --model-adapter scripted \
+            --seed 0
       - name: Replay first captured bundle
         env:
           PYTHONPATH: evals
@@ -61,8 +71,7 @@ jobs:
         run: |
           uv run --group eval python -m actionlineage_evals replay-regressions \
             --regression-dir evals/regressions \
-            --artifact-root build/evals/regression-replay \
-            --allow-empty
+            --artifact-root build/evals/regression-replay
       - name: Audit no-model eval artifacts for redaction leaks
         env:
           PYTHONPATH: evals
@@ -75,6 +84,15 @@ jobs:
             build/evals/no-model \
             --json-output build/evals/reports/agent-validation-baseline.json \
             --markdown-output build/evals/reports/agent-validation-baseline.md
+      - name: Generate no-model trend report
+        env:
+          PYTHONPATH: evals
+        run: |
+          uv run --group eval python -m actionlineage_evals trend \
+            build/evals/no-model \
+            --output build/evals/reports/agent-validation-trend.json \
+            --markdown-output build/evals/reports/agent-validation-trend.md \
+            --label "no-model-py${{ matrix.python-version }}"
       - name: Check committed public baseline freshness
         env:
           PYTHONPATH: evals
@@ -90,6 +108,8 @@ jobs:
             echo "### No-model Agent Validation Lab scorecards"
             echo
             uv run --group eval python -m actionlineage_evals summarize build/evals --format markdown || true
+            echo
+            cat build/evals/reports/agent-validation-trend.md 2>/dev/null || true
           } >> "$GITHUB_STEP_SUMMARY"
       - name: Upload no-model eval artifacts
         if: always()
@@ -122,32 +142,33 @@ jobs:
         env:
           PYTHONPATH: evals
         run: uv run --group eval python -m actionlineage_evals docker-smoke
-      - name: Run AVL-001 through Docker with process oracle
+      - name: Run Docker-backed eval scenarios
         env:
           PYTHONPATH: evals
         run: |
-          uv run --group eval python -m actionlineage_evals run \
-            --scenario-path evals/scenarios/AVL-001.yaml \
-            --artifact-root build/evals/docker-avl-001 \
-            --mode scripted \
-            --model-adapter scripted \
-            --seeds 1 \
-            --use-docker
-      - name: Run AVL-002 through Docker and Toxiproxy
-        env:
-          PYTHONPATH: evals
-        run: |
-          uv run --group eval python -m actionlineage_evals run \
-            --scenario-path evals/scenarios/AVL-002.yaml \
-            --artifact-root build/evals/docker-avl-002 \
-            --mode scripted \
-            --model-adapter scripted \
-            --seeds 1 \
-            --use-docker
+          for scenario in AVL-001 AVL-002 AVL-003 AVL-004 AVL-005 AVL-014 AVL-015; do
+            lower="$(printf '%s' "$scenario" | tr '[:upper:]' '[:lower:]')"
+            uv run --group eval python -m actionlineage_evals run \
+              --scenario-path "evals/scenarios/${scenario}.yaml" \
+              --artifact-root "build/evals/docker-${lower}" \
+              --mode scripted \
+              --model-adapter scripted \
+              --seeds 1 \
+              --use-docker
+          done
       - name: Audit Docker eval artifacts for redaction leaks
         env:
           PYTHONPATH: evals
         run: uv run --group eval python -m actionlineage_evals audit-artifacts build/evals
+      - name: Generate Docker trend report
+        env:
+          PYTHONPATH: evals
+        run: |
+          uv run --group eval python -m actionlineage_evals trend \
+            build/evals \
+            --output build/evals/reports/docker-agent-validation-trend.json \
+            --markdown-output build/evals/reports/docker-agent-validation-trend.md \
+            --label "docker-py${{ matrix.python-version }}"
       - name: Summarize Docker eval artifacts
         if: always()
         env:
@@ -157,6 +178,8 @@ jobs:
             echo "### Docker Agent Validation Lab scorecards"
             echo
             uv run --group eval python -m actionlineage_evals summarize build/evals --format markdown || true
+            echo
+            cat build/evals/reports/docker-agent-validation-trend.md 2>/dev/null || true
           } >> "$GITHUB_STEP_SUMMARY"
       - name: Upload Docker eval artifacts
         if: always()
@@ -210,14 +233,16 @@ jobs:
           GH_MODELS_TOKEN: ${{ secrets.GH_MODELS_TOKEN }}
           PYTHONPATH: evals
         run: |
-          uv run --group eval python -m actionlineage_evals run \
+          uv run --group eval python -m actionlineage_evals inspect-run \
             --scenario-path evals/scenarios \
             --artifact-root build/evals/scheduled \
             --mode live \
             --model-adapter github_models \
             --model-id openai/gpt-4.1-mini \
-            --seeds 1 \
-            --max-scenarios 6
+            --seed 0 \
+            --max-scenarios 6 \
+            --inspect-model mockllm/model \
+            --log-dir build/evals/scheduled/inspect-logs
       - name: Replay scheduled live bundles
         if: steps.live-secret.outputs.configured == 'true'
         env:
@@ -231,6 +256,16 @@ jobs:
         env:
           PYTHONPATH: evals
         run: uv run --group eval python -m actionlineage_evals audit-artifacts build/evals
+      - name: Generate scheduled trend report
+        if: steps.live-secret.outputs.configured == 'true'
+        env:
+          PYTHONPATH: evals
+        run: |
+          uv run --group eval python -m actionlineage_evals trend \
+            build/evals/scheduled \
+            --output build/evals/reports/scheduled-agent-validation-trend.json \
+            --markdown-output build/evals/reports/scheduled-agent-validation-trend.md \
+            --label scheduled-github-models
       - name: Summarize scheduled eval artifacts
         if: always() && steps.live-secret.outputs.configured == 'true'
         env:
@@ -239,7 +274,9 @@ jobs:
           {
             echo "### Scheduled Agent Validation Lab scorecards"
             echo
-              uv run --group eval python -m actionlineage_evals summarize build/evals --format markdown || true
+            uv run --group eval python -m actionlineage_evals summarize build/evals --format markdown || true
+            echo
+            cat build/evals/reports/scheduled-agent-validation-trend.md 2>/dev/null || true
           } >> "$GITHUB_STEP_SUMMARY"
       - name: Upload scheduled eval artifacts
         if: always() && steps.live-secret.outputs.configured == 'true'

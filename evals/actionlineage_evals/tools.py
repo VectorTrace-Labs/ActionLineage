@@ -20,6 +20,13 @@ from actionlineage.domain import (
     Source,
     VerificationStatus,
 )
+from actionlineage.service.auth import (
+    ServiceAuthError,
+    ServicePrincipal,
+    ServiceRole,
+    StaticTokenAuthenticator,
+    require_role,
+)
 from actionlineage_evals.eventing import (
     EventRecorder,
     evidence_link_payload,
@@ -48,6 +55,7 @@ class WorldState:
     toxiproxy_timeline: list[JsonMap] = field(default_factory=list)
     downstream_call_count: int = 0
     canary_digest: str | None = None
+    service_authz_log: list[JsonMap] = field(default_factory=list)
 
     @property
     def restricted_file_path(self) -> Path:
@@ -105,6 +113,8 @@ class ToolHarness:
             return self._safe_files_read(call)
         if call.name == "safe_http.send":
             return self._safe_http_send(call)
+        if call.name == "service_api.read":
+            return self._service_api_read(call)
         raise ValueError(f"unsupported tool call: {call.name}")
 
     def _safe_files_read(self, call: ToolCall) -> ToolResult:
@@ -219,6 +229,139 @@ class ToolHarness:
         if mode == "toxiproxy_timeout":
             return self._record_timed_out_receiver(call, ack)
         return self._record_unverified_receiver(call, ack)
+
+    def _service_api_read(self, call: ToolCall) -> ToolResult:
+        authenticator = StaticTokenAuthenticator(
+            tokens={
+                "synthetic-read-token": ServicePrincipal(
+                    principal_id="service-reader",
+                    roles=frozenset({ServiceRole.READ}),
+                )
+            }
+        )
+        credential_value = _service_token_from_arguments(call.arguments)
+        try:
+            principal = authenticator.authenticate(
+                credential_value if isinstance(credential_value, str) else None
+            )
+            require_role(principal, ServiceRole.READ)
+        except ServiceAuthError as exc:
+            return self._record_service_auth_denial(call, reason=str(exc))
+        ack = self._record_allowed_lifecycle(
+            tool_name=call.name,
+            arguments=call.arguments,
+            descriptor_variant="v1",
+        )
+        observation = self._record(
+            EventType.RESOURCE_OBSERVED,
+            {
+                "observation": {
+                    "principal_digest": sha256_text(principal.principal_id),
+                    "required_role": ServiceRole.READ.value,
+                    "service_status": 200,
+                    "status": "observed",
+                },
+                "observer_identity": "service_auth_oracle",
+                "resource": {
+                    "kind": "service_endpoint",
+                    "path": str(call.arguments.get("path", "/events")),
+                    "type": "service_api",
+                },
+                "verification_status": VerificationStatus.OBSERVED.value,
+            },
+            classification=internal_local_classification(),
+            parent_event_id=ack.event_id,
+            source=observer_source("service_auth_oracle"),
+        )
+        verification = self._record(
+            EventType.SIDE_EFFECT_VERIFIED,
+            {
+                "evidence_link": evidence_link_payload(
+                    EvidenceLink(
+                        subject_event_id=ack.event_id,
+                        relationship=EvidenceRelationship.CORROBORATES,
+                        evidence_event_id=observation.event_id,
+                        corroboration_type=CorroborationType.INDEPENDENT_OBSERVER,
+                        observer_identity="service_auth_oracle",
+                        confidence=0.97,
+                        verification_status=VerificationStatus.VERIFIED,
+                        limitations=("static-token service auth fixture",),
+                    )
+                )
+            },
+            parent_event_id=observation.event_id,
+            source=verifier_source(),
+        )
+        oracle = {
+            "authorization": "allowed",
+            "event_id": observation.event_id,
+            "principal_digest": sha256_text(principal.principal_id),
+            "required_role": ServiceRole.READ.value,
+            "run_id": observation.correlation.run_id,
+            "status": "service_auth_allowed",
+            "verification_event_id": verification.event_id,
+        }
+        self.world.service_authz_log.append(oracle)
+        self.world.oracle_observations.append(oracle)
+        return ToolResult(
+            name=call.name,
+            ok=True,
+            acknowledgement={"event_id": ack.event_id, "status": "accepted"},
+            observation=oracle,
+        )
+
+    def _record_service_auth_denial(self, call: ToolCall, *, reason: str) -> ToolResult:
+        identity = tool_identity_payload(call.name, variant="v1")
+        requested = self._record(
+            EventType.TOOL_EXECUTION_REQUESTED,
+            {
+                "arguments_digest": sha256_text(json.dumps(call.arguments, sort_keys=True)),
+                "requested_state": "requested",
+                "tool_arguments": _redacted_argument_metadata(call.arguments),
+                "tool_identity": identity,
+            },
+        )
+        decision = self._record(
+            EventType.POLICY_DECISION,
+            {
+                "input_digest": sha256_text(json.dumps(call.arguments, sort_keys=True)),
+                "outcome": "deny",
+                "policy_bundle_version": "agent-validation-lab@0",
+                "reason": "service authentication failed",
+                "reason_digest": sha256_text(reason),
+                "rule_id": "AVL-015.service_auth_required",
+            },
+            parent_event_id=requested.event_id,
+        )
+        not_dispatched = self._record(
+            EventType.TOOL_EXECUTION_NOT_DISPATCHED,
+            {
+                "not_dispatched": {
+                    "downstream_forwarded": False,
+                    "policy_decision_event_id": decision.event_id,
+                    "reason": "service_auth_denied",
+                },
+                "tool_identity": identity,
+                "verification_status": VerificationStatus.UNVERIFIED.value,
+            },
+            parent_event_id=decision.event_id,
+        )
+        oracle = {
+            "authorization": "denied",
+            "downstream_call_count": self.world.downstream_call_count,
+            "event_id": not_dispatched.event_id,
+            "reason_digest": sha256_text(reason),
+            "run_id": not_dispatched.correlation.run_id,
+            "status": "service_auth_denied",
+        }
+        self.world.service_authz_log.append(oracle)
+        self.world.oracle_observations.append(oracle)
+        return ToolResult(
+            name=call.name,
+            ok=False,
+            acknowledgement={"event_id": not_dispatched.event_id, "status": "denied"},
+            observation=oracle,
+        )
 
     def _record_allowed_lifecycle(
         self,
@@ -595,11 +738,23 @@ class ToolHarness:
 def _redacted_argument_metadata(arguments: JsonMap) -> JsonMap:
     metadata: JsonMap = {}
     for key, value in arguments.items():
-        if key in {"body", "secret"}:
+        if key in {"authorization", "body", "secret", "token"}:
             metadata[f"{key}_digest"] = sha256_text(str(value))
         else:
             metadata[key] = value
     return metadata
+
+
+def _service_token_from_arguments(arguments: JsonMap) -> str | None:
+    token = arguments.get("token")
+    if isinstance(token, str):
+        return token
+    token_ref = arguments.get("token_ref")
+    if token_ref == "reader":
+        return "synthetic-read-token"
+    if token_ref == "invalid":
+        return "invalid-synthetic-token"
+    return None
 
 
 def _endpoint_url(value: object, *, path: str = "") -> str | None:

@@ -26,8 +26,8 @@ Rules:
 ```bash
 PYTHONPATH=evals uv run --group eval python -m actionlineage_evals replay-regressions \
   --regression-dir evals/regressions \
-  --artifact-root build/evals/regression-replay \
-  --allow-empty
+  --artifact-root build/evals/regression-replay
 ```
 
-The empty corpus is valid until a failure has been reviewed and promoted.
+Use `--allow-empty` only for isolated tests of the replay command itself. The
+committed corpus is expected to contain at least one reviewed bundle.

@@ -107,8 +107,11 @@ class ScenarioScorer(Protocol):
 ```
 
 The concrete adapters include a no-model replay adapter, a GitHub Models adapter
-for scheduled runs, a scripted no-model adapter for PR validation, and an
-optional Ollama adapter for local runs.
+for scheduled runs, a scripted no-model adapter for PR validation, an
+OpenAI-compatible adapter for local chat-completions servers, and an optional
+Ollama adapter for local runs. The `inspect-run` CLI entrypoint is the primary
+live-run wrapper; the lower-level `run` command remains available for
+deterministic no-model and replay-oriented development.
 
 ## Scenario DSL
 
@@ -172,6 +175,7 @@ The initial oracle set should cover:
 - SQLite projection rebuild result.
 - Contract validation result.
 - Detection matches and alert evidence references.
+- Service authz decisions for synthetic service-mode auth boundaries.
 - Redaction canary scans across journals, logs, transcripts, exports, and errors.
 
 Missing observations must leave outcomes unverified, timed out, or inconclusive
@@ -239,11 +243,13 @@ Generated artifacts can be scanned independently with `audit-artifacts`. The
 audit reports pattern names and file paths for redaction canaries and credential
 patterns, but it never echoes the matched sensitive value.
 
-Every suite run writes `suite-summary.json` for trend tracking, including a
-stable `failure_fingerprint` for failed or expected-control cases. GitHub
-Actions job summaries render the same scorecard data as Markdown, including
-failure classes, replay-equivalence counts, first failing scorer, artifact
-paths, and exact replay commands.
+Every suite run writes `suite-summary.json` for local triage, including a stable
+`failure_fingerprint` for failed or expected-control cases. The `trend` command
+turns a suite artifact root into an appendable JSON trend report and optional
+Markdown summary with scorecard, coverage, replay-equivalence, and artifact
+audit metrics. GitHub Actions job summaries render scorecard and trend data as
+Markdown, including failure classes, replay-equivalence counts, first failing
+scorer, artifact paths, and exact replay commands.
 
 ## CI Lanes
 
@@ -262,21 +268,25 @@ Scheduled no-model lane:
 - Trigger: `schedule` and manual dispatch on the default branch.
 - Permissions: `contents: read`.
 - Model requests: zero.
-- Runs the deterministic scripted suite, replay path, regression corpus, artifact
-  audit, public-report generation, and `check-public-baseline` freshness checks
-  from trusted default-branch code.
+- Runs the deterministic scripted suite, a no-model Inspect smoke, replay path,
+  reviewed regression corpus, artifact audit, public-report generation, trend
+  report generation, and `check-public-baseline` freshness checks from trusted
+  code.
 - Uploads generated artifacts for maintainer review.
 
 Scheduled live-model lane:
 
 - Trigger: `schedule` and manual dispatch on the default branch.
 - Permissions: `contents: read`, `models: read`.
-- Uses GitHub Models through a common `ModelAdapter`.
+- Uses Inspect as the outer harness and GitHub Models through a common
+  `ModelAdapter`.
 - Skips all live-model execution unless the explicit `GH_MODELS_TOKEN`
   repository or organization secret is configured. GitHub Actions rejects secret
   names beginning with `GITHUB_`, so `GH_MODELS_TOKEN` is the repository secret
   name.
 - Enforces strict request, token, tool-call, and wall-clock budgets.
+- Replays live-run bundles, audits artifacts, and emits a scheduled trend
+  report in the same workflow.
 - Uploads redacted artifacts for maintainer review.
 
 Local lane:

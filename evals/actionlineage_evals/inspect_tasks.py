@@ -4,10 +4,12 @@
 
 from __future__ import annotations
 
+import json
 from pathlib import Path
 from typing import Any
 
 from inspect_ai import Task, task
+from inspect_ai import eval as inspect_eval
 from inspect_ai.dataset import Sample
 from inspect_ai.scorer import Score, Target, accuracy, scorer
 from inspect_ai.solver import TaskState, solver
@@ -15,6 +17,8 @@ from inspect_ai.solver import TaskState, solver
 from actionlineage_evals.models import RunMode
 from actionlineage_evals.runner import run_scenario
 from actionlineage_evals.scenarios import SCENARIO_DIR, load_scenarios
+
+INSPECT_RUN_SUMMARY_SCHEMA_VERSION = "actionlineage.dev/eval-inspect-run-summary-v0"
 
 
 @solver
@@ -113,3 +117,79 @@ def agent_validation_lab(
         ),
         scorer=actionlineage_scorer(),
     )
+
+
+def run_inspect_eval(
+    *,
+    scenario_path: Path = SCENARIO_DIR,
+    artifact_root: Path = Path("build/evals/inspect"),
+    mode: str = RunMode.SCRIPTED.value,
+    model_adapter: str = "scripted",
+    model_id: str | None = None,
+    seed: int = 0,
+    use_docker: bool = False,
+    max_scenarios: int | None = None,
+    inspect_model: str = "mockllm/model",
+    log_dir: Path | None = None,
+    summary_path: Path | None = None,
+) -> dict[str, object]:
+    """Run the lab through Inspect and write a compact provenance summary."""
+
+    active_log_dir = Path(log_dir) if log_dir is not None else Path(artifact_root) / "inspect-logs"
+    logs = inspect_eval(
+        agent_validation_lab,
+        model=inspect_model,
+        task_args={
+            "artifact_root": str(artifact_root),
+            "max_scenarios": max_scenarios,
+            "mode": mode,
+            "model_adapter": model_adapter,
+            "model_id": model_id,
+            "scenario_path": str(scenario_path),
+            "seed": seed,
+            "use_docker": use_docker,
+        },
+        display="none",
+        log_dir=str(active_log_dir),
+        log_format="json",
+    )
+    log_entries = [_inspect_log_entry(log) for log in logs]
+    summary = {
+        "artifact_root": str(artifact_root),
+        "inspect_log_dir": str(active_log_dir),
+        "inspect_model": inspect_model,
+        "logs": log_entries,
+        "mode": mode,
+        "model_adapter": model_adapter,
+        "model_id": model_id,
+        "ok": all(entry.get("status") == "success" for entry in log_entries),
+        "scenario_path": str(scenario_path),
+        "schema_version": INSPECT_RUN_SUMMARY_SCHEMA_VERSION,
+        "seed": seed,
+        "use_docker": use_docker,
+    }
+    active_summary_path = (
+        Path(summary_path)
+        if summary_path is not None
+        else Path(artifact_root) / "inspect-run-summary.json"
+    )
+    active_summary_path.parent.mkdir(parents=True, exist_ok=True)
+    active_summary_path.write_text(
+        json.dumps(summary, indent=2, sort_keys=True) + "\n",
+        encoding="utf-8",
+    )
+    return summary
+
+
+def _inspect_log_entry(log: object) -> dict[str, object]:
+    status = getattr(log, "status", None)
+    location = getattr(log, "location", None)
+    eval_info = getattr(log, "eval", None)
+    task = getattr(eval_info, "task", None) if eval_info is not None else None
+    samples = getattr(log, "samples", None)
+    return {
+        "location": str(location) if location is not None else None,
+        "sample_count": len(samples) if isinstance(samples, list) else None,
+        "status": str(status) if status is not None else "unknown",
+        "task": str(task) if task is not None else "agent_validation_lab",
+    }

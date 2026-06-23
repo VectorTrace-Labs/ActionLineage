@@ -1,0 +1,25 @@
+{
+  "mutations": [
+    {
+      "index": 0,
+      "parameters": {
+        "field": "tool.arguments.path"
+      },
+      "seed": 0,
+      "semantic_property": "optional-field omission must not alter authoritative lifecycle outcome",
+      "type": "missing_optional_field"
+    },
+    {
+      "index": 1,
+      "parameters": {
+        "source": "malformed_agent_plan"
+      },
+      "seed": 1,
+      "semantic_property": "declared mutation is tracked for replay provenance",
+      "type": "transcript_replay_variant"
+    }
+  ],
+  "scenario_id": "AVL-010",
+  "schema_version": "actionlineage.dev/eval-mutation-sequence/v0",
+  "seed": 0
+}

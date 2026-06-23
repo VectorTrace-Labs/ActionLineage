@@ -71,9 +71,9 @@ PYTHONPATH=evals uv run --group eval python -m actionlineage_evals check-public-
 
 Expected current baseline:
 
-- 14 scenarios;
-- 51 of 51 declared capabilities covered;
-- 14 scripted scorecards;
+- 15 scenarios;
+- 56 of 56 declared capabilities covered;
+- 15 scripted scorecards;
 - 0 failed scorecards;
 - 0 audited leaks;
 - committed baseline check passes with either exact match or provenance-only

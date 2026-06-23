@@ -61,8 +61,11 @@ from actionlineage_evals.summary import (  # noqa: E402
     summarize_scorecards,
     summarize_scorecards_text,
     write_public_baseline_report,
+    write_trend_report,
 )
 from actionlineage_evals.tools import WorldState  # noqa: E402
+
+EXPECTED_SCENARIO_IDS = tuple(f"AVL-{index:03d}" for index in range(1, 16))
 
 
 def test_scenarios_and_capability_coverage_validate() -> None:
@@ -72,38 +75,14 @@ def test_scenarios_and_capability_coverage_validate() -> None:
         strict=True,
     )
 
-    assert [scenario.scenario_id for scenario in scenarios] == [
-        "AVL-001",
-        "AVL-002",
-        "AVL-003",
-        "AVL-004",
-        "AVL-005",
-        "AVL-006",
-        "AVL-007",
-        "AVL-008",
-        "AVL-009",
-        "AVL-010",
-        "AVL-011",
-        "AVL-012",
-        "AVL-013",
-        "AVL-014",
-    ]
+    assert [scenario.scenario_id for scenario in scenarios] == list(EXPECTED_SCENARIO_IDS)
     assert coverage["ok"] is True
-    assert coverage["scenario_ids"] == [
-        "AVL-001",
-        "AVL-002",
-        "AVL-003",
-        "AVL-004",
-        "AVL-005",
-        "AVL-006",
-        "AVL-007",
-        "AVL-008",
-        "AVL-009",
-        "AVL-010",
-        "AVL-011",
-        "AVL-012",
-        "AVL-013",
-        "AVL-014",
+    assert coverage["scenario_ids"] == list(EXPECTED_SCENARIO_IDS)
+    assert coverage["known_gaps"] == [
+        {
+            "id": "cloud_observer_live",
+            "reason": "Live cloud observers remain outside development-only eval scope.",
+        }
     ]
     assert coverage["uncovered_capabilities"] == []
     lint = lint_scenarios(
@@ -357,22 +336,7 @@ def test_scripted_suite_runs_all_scenarios_and_replay(tmp_path: Path) -> None:
     )
 
     assert result.passed is True
-    assert [item.scenario_id for item in result.results] == [
-        "AVL-001",
-        "AVL-002",
-        "AVL-003",
-        "AVL-004",
-        "AVL-005",
-        "AVL-006",
-        "AVL-007",
-        "AVL-008",
-        "AVL-009",
-        "AVL-010",
-        "AVL-011",
-        "AVL-012",
-        "AVL-013",
-        "AVL-014",
-    ]
+    assert [item.scenario_id for item in result.results] == list(EXPECTED_SCENARIO_IDS)
     for scenario_result in result.results:
         expected_failure = {
             "AVL-011": FailureClass.PRODUCT,
@@ -572,6 +536,52 @@ def test_scripted_suite_runs_all_scenarios_and_replay(tmp_path: Path) -> None:
     assert avl014_manifest["stateful_mutation_report"] == "stateful-mutation-report.json"
     assert avl014_manifest["artifact_hashes"]["stateful_mutation_report"].startswith("sha256:")
 
+    avl015_run_dir = tmp_path / "evals" / "avl-015-scripted-seed-0"
+    avl015_scorecard = json.loads((avl015_run_dir / "scorecard.json").read_text(encoding="utf-8"))
+    assert avl015_scorecard["passed"] is True
+    assert avl015_scorecard["failure_class"] is None
+    service_detection = next(
+        score for score in avl015_scorecard["scores"] if score["name"] == "detection"
+    )
+    assert service_detection["ok"] is True
+    assert service_detection["details"]["expected_rule_ids"] == [
+        "AVL-015.service_auth_denied_then_allowed"
+    ]
+    redaction = next(score for score in avl015_scorecard["scores"] if score["name"] == "redaction")
+    assert redaction["ok"] is True
+    assert redaction["details"]["canary_count"] == 3
+    avl015_oracles = [
+        json.loads(line)
+        for line in (avl015_run_dir / "oracle-observations.jsonl")
+        .read_text(encoding="utf-8")
+        .splitlines()
+    ]
+    assert [item["status"] for item in avl015_oracles] == [
+        "service_auth_denied",
+        "service_auth_allowed",
+    ]
+    avl015_tool_calls = json.loads((avl015_run_dir / "tool-calls.json").read_text(encoding="utf-8"))
+    assert [item["tool_call"]["arguments"]["token_ref"] for item in avl015_tool_calls["calls"]] == [
+        "invalid",
+        "reader",
+    ]
+    assert all("token" not in item["tool_call"]["arguments"] for item in avl015_tool_calls["calls"])
+    service_artifact_text = "\n".join(
+        path.read_text(encoding="utf-8")
+        for path in (
+            avl015_run_dir / "journal.jsonl",
+            avl015_run_dir / "transcript.json",
+            avl015_run_dir / "tool-calls.json",
+            avl015_run_dir / "oracle-observations.jsonl",
+            avl015_run_dir / "replay-bundle" / "journal.jsonl",
+            avl015_run_dir / "replay-bundle" / "transcript.json",
+            avl015_run_dir / "replay-bundle" / "tool-calls.json",
+            avl015_run_dir / "replay-bundle" / "oracle-observations.jsonl",
+        )
+    )
+    assert "synthetic-read-token" not in service_artifact_text
+    assert "invalid-synthetic-token" not in service_artifact_text
+
     suite_summary = json.loads((tmp_path / "evals" / "suite-summary.json").read_text())
     assert suite_summary["schema_version"] == "actionlineage.dev/eval-suite-summary/v0"
     assert suite_summary["failure_class_counts"]["product_failure"] == 3
@@ -607,7 +617,7 @@ def test_scripted_suite_runs_all_scenarios_and_replay(tmp_path: Path) -> None:
         replay_artifact_root=tmp_path / "artifact-replay",
     )
     assert replayed_artifacts.passed is True
-    assert len(replayed_artifacts.results) == 14
+    assert len(replayed_artifacts.results) == 15
     avl010_replay_scorecard = json.loads(
         (
             tmp_path
@@ -667,6 +677,16 @@ def test_regression_corpus_replay_supports_empty_and_promoted_bundles(tmp_path: 
     replayed = run_regression_corpus(
         regression_dir=reviewed.parent,
         artifact_root=tmp_path / "regression-replay",
+    )
+
+    assert replayed.passed is True
+    assert [item.scenario_id for item in replayed.results] == ["AVL-010"]
+
+
+def test_committed_reviewed_regression_corpus_replays(tmp_path: Path) -> None:
+    replayed = run_regression_corpus(
+        regression_dir=PROJECT_ROOT / "evals" / "regressions",
+        artifact_root=tmp_path / "committed-regression-replay",
     )
 
     assert replayed.passed is True
@@ -841,6 +861,39 @@ def test_public_baseline_report_is_generated_from_eval_artifacts(tmp_path: Path)
     assert "PYTHONPATH=evals uv run --group eval python -m actionlineage_evals run" in markdown
 
 
+def test_trend_report_is_generated_from_eval_artifacts(tmp_path: Path) -> None:
+    result = run_suite(
+        scenario_path=PROJECT_ROOT / "evals" / "scenarios" / "AVL-001.yaml",
+        artifact_root=tmp_path / "evals",
+        mode=RunMode.SCRIPTED,
+        model_adapter_name="scripted",
+    )
+    assert result.passed is True
+
+    output = tmp_path / "reports" / "trend.json"
+    markdown_output = tmp_path / "reports" / "trend.md"
+    first = write_trend_report(
+        tmp_path / "evals",
+        output_path=output,
+        markdown_output=markdown_output,
+        label="test-run-1",
+    )
+    second = write_trend_report(
+        tmp_path / "evals",
+        output_path=output,
+        markdown_output=markdown_output,
+        label="test-run-2",
+    )
+
+    assert first["run_count"] == 1
+    assert second["run_count"] == 2
+    assert second["latest"]["label"] == "test-run-2"
+    assert second["latest"]["ok"] is True
+    assert second["latest"]["capability_coverage"]["capability_count"] == 56
+    assert second["latest"]["scenario_count"] == 1
+    assert "Agent Validation Trend" in markdown_output.read_text(encoding="utf-8")
+
+
 def test_public_baseline_check_allows_provenance_only_drift(tmp_path: Path) -> None:
     result = run_suite(
         scenario_path=PROJECT_ROOT / "evals" / "scenarios" / "AVL-001.yaml",
@@ -941,6 +994,27 @@ def test_inspect_task_accepts_live_configuration_metadata() -> None:
     assert sample.metadata["model_adapter"] == "openai_compatible"
     assert sample.metadata["model_id"] == "local/test"
     assert sample.metadata["seed"] == 7
+
+
+def test_inspect_run_writes_logs_summary_and_scorecard(tmp_path: Path) -> None:
+    pytest.importorskip("inspect_ai")
+    from actionlineage_evals.inspect_tasks import run_inspect_eval
+
+    summary = run_inspect_eval(
+        scenario_path=PROJECT_ROOT / "evals" / "scenarios" / "AVL-001.yaml",
+        artifact_root=tmp_path / "inspect",
+        mode=RunMode.SCRIPTED.value,
+        model_adapter="scripted",
+        seed=0,
+    )
+
+    assert summary["ok"] is True
+    assert summary["schema_version"] == "actionlineage.dev/eval-inspect-run-summary-v0"
+    assert summary["logs"]
+    assert (tmp_path / "inspect" / "inspect-run-summary.json").exists()
+    assert (tmp_path / "inspect" / "inspect-logs").exists()
+    scorecard = tmp_path / "inspect" / "avl-001-scripted-seed-0" / "scorecard.json"
+    assert json.loads(scorecard.read_text(encoding="utf-8"))["passed"] is True
 
 
 def test_failure_classification_preserves_distinct_classes() -> None:

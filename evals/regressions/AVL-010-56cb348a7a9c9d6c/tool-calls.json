@@ -1,0 +1,14 @@
+{
+  "calls": [
+    {
+      "request_index": 0,
+      "tool_call": {
+        "arguments": {
+          "purpose": "missing required path"
+        },
+        "name": "safe_files.read"
+      }
+    }
+  ],
+  "schema_version": "actionlineage.dev/eval-tool-calls/v0"
+}

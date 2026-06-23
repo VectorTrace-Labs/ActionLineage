@@ -50,32 +50,42 @@ PYTHONPATH=evals uv run --group eval python -m actionlineage_evals replay \
   build/evals/local/avl-001-scripted-seed-0/replay-bundle
 PYTHONPATH=evals uv run --group eval python -m actionlineage_evals replay-regressions \
   --regression-dir evals/regressions \
-  --artifact-root build/evals/regression-replay \
-  --allow-empty
+  --artifact-root build/evals/regression-replay
 PYTHONPATH=evals uv run --group eval python -m actionlineage_evals replay-artifacts \
   build/evals/local \
   --replay-artifact-root build/evals/local-replay
+PYTHONPATH=evals uv run --group eval python -m actionlineage_evals inspect-run \
+  --scenario-path evals/scenarios/AVL-001.yaml \
+  --artifact-root build/evals/inspect-smoke \
+  --mode scripted \
+  --model-adapter scripted
 PYTHONPATH=evals uv run --group eval python -m actionlineage_evals audit-artifacts \
   build/evals/local
 PYTHONPATH=evals uv run --group eval python -m actionlineage_evals summarize \
   build/evals/local \
   --format markdown
+PYTHONPATH=evals uv run --group eval python -m actionlineage_evals trend \
+  build/evals/local \
+  --output build/evals/reports/agent-validation-trend.json \
+  --markdown-output build/evals/reports/agent-validation-trend.md \
+  --label local
 PYTHONPATH=evals uv run --group eval python -m actionlineage_evals docker-smoke
 PYTHONPATH=evals uv run --group eval python -m actionlineage_evals check-public-baseline \
   build/evals/local
 ```
 
-Scheduled no-model runs execute on the trusted default branch and generate a
-public-report artifact from deterministic scripted scorecards. Scheduled GitHub
-Models runs use the same interface with `--mode live --model-adapter
-github_models`, but the workflow skips all live-model execution unless the
-explicit `GH_MODELS_TOKEN` secret is configured. GitHub Actions rejects secret
-names beginning with `GITHUB_`, so `GH_MODELS_TOKEN` is the repository secret
-name. Pull-request jobs remain no-model and secret-free. Local Ollama runs use
-`--model-adapter ollama`. Local OpenAI-compatible chat-completions servers use
-`--model-adapter openai_compatible` with `OPENAI_COMPATIBLE_BASE_URL` or
-`OPENAI_COMPATIBLE_CHAT_COMPLETIONS_URL`. All live adapters stay bounded by
-scenario budgets.
+Scheduled no-model runs execute on trusted code and generate public-report and
+trend artifacts from deterministic scripted scorecards. Scheduled GitHub Models
+runs go through `inspect-run` with `--mode live --model-adapter github_models`;
+the Inspect model remains a harness placeholder while the ActionLineage model
+adapter performs the bounded provider call. The workflow skips all live-model
+execution unless the explicit `GH_MODELS_TOKEN` secret is configured. GitHub
+Actions rejects secret names beginning with `GITHUB_`, so `GH_MODELS_TOKEN` is
+the repository secret name. Pull-request jobs remain no-model and secret-free.
+Local Ollama runs use `--model-adapter ollama`. Local OpenAI-compatible
+chat-completions servers use `--model-adapter openai_compatible` with
+`OPENAI_COMPATIBLE_BASE_URL` or `OPENAI_COMPATIBLE_CHAT_COMPLETIONS_URL`. All
+live adapters stay bounded by scenario budgets.
 
 Every scenario run writes:
 
@@ -91,6 +101,10 @@ with scenario status, failure-class counts, stable failure fingerprints, and
 scorer pass/fail counts. GitHub Actions job summaries render the same
 scorecards as Markdown with replay commands for quick triage.
 
+The `trend` command appends suite, coverage, replay-equivalence, and artifact
+audit metrics to a JSON report and can render a Markdown summary for CI job
+summaries.
+
 `check-public-baseline` regenerates the deterministic public baseline report
 from a no-model artifact root and compares it with
 `docs/evidence/agent-validation-baseline.json`. It ignores expected
@@ -98,7 +112,8 @@ provenance-only changes such as commit SHA and artifact root, but fails on
 semantic evidence drift or changes to the eval-relevant input digest unless the
 committed baseline is refreshed.
 
-The scheduled GitHub Models lane runs the first six scenarios. `AVL-007` is a
+The scheduled GitHub Models lane currently runs the first six scenarios through
+Inspect with strict request and tool budgets. `AVL-007` is a
 deterministic no-model provider-failure control, `AVL-008` is a budget
 exhaustion control, `AVL-009` is a harness-failure control, and `AVL-010` is an
 agent-failure control. `AVL-011` is a product-failure oracle-mismatch control.
@@ -113,6 +128,10 @@ stateful lifecycle mutation-minimization control: the harness generates a
 seeded lifecycle mutation sequence, minimizes it to the required
 `missing_optional_field` counterexample, records a dedicated stateful mutation
 report, and classifies the expected semantic break as `product_failure`.
+`AVL-015` is a service-mode auth boundary control: an invalid synthetic service
+credential is denied before dispatch, a valid synthetic read role produces
+oracle-backed metadata only, and raw token material is scanned as redaction
+canary material across journals, transcripts, replay bundles, and logs.
 
 Replay runs include a `replay_equivalence` scorer. It compares semantic
 scorecard essentials from the source run with the replayed run, while ignoring
@@ -123,9 +142,11 @@ Docker runs use per-run Compose project names and randomly published host
 ports. The environment controller records the published ports in
 `environment.json`, and the tool oracles use those discovered URLs for receiver
 and Toxiproxy calls. This avoids local fixed-port collisions when multiple
-Docker evals run at the same time. Compose services also run with dropped Linux
-capabilities, `no-new-privileges`, read-only root filesystems, tmpfs scratch
-space, resource caps, and an explicit eval network.
+Docker evals run at the same time. CI runs Docker-backed smoke coverage for
+`AVL-001`, `AVL-002`, `AVL-003`, `AVL-004`, `AVL-005`, `AVL-014`, and
+`AVL-015`. Compose services also run with dropped Linux capabilities,
+`no-new-privileges`, read-only root filesystems, tmpfs scratch space, resource
+caps, and an explicit eval network.
 
 `lint-scenarios` performs semantic checks that JSON Schema cannot express:
 contiguous IDs, non-planned maturity for implemented fixtures, authoritative

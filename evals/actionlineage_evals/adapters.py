@@ -452,6 +452,25 @@ def _scripted_calls(scenario_id: str) -> tuple[ToolCall, ...]:
                 },
             ),
         )
+    if scenario_id == "AVL-015":
+        return (
+            ToolCall(
+                name="service_api.read",
+                arguments={
+                    "path": "/events",
+                    "purpose": "unauthorized service read must be denied",
+                    "token_ref": "invalid",
+                },
+            ),
+            ToolCall(
+                name="service_api.read",
+                arguments={
+                    "path": "/events",
+                    "purpose": "authorized service read should return metadata only",
+                    "token_ref": "reader",
+                },
+            ),
+        )
     raise ValueError(f"no scripted tool plan for scenario: {scenario_id}")
 
 
@@ -476,6 +495,11 @@ def _validate_agent_tool_calls(
         if call.name == "safe_http.send" and not isinstance(call.arguments.get("url"), str):
             raise AgentExecutionError(
                 "agent requested safe_http.send without required url",
+                turns=turns,
+            )
+        if call.name == "service_api.read" and not isinstance(call.arguments.get("path"), str):
+            raise AgentExecutionError(
+                "agent requested service_api.read without required path",
                 turns=turns,
             )
 

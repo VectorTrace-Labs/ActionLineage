@@ -1,8 +1,8 @@
 {
   "artifact_root": "build/evals/public-alpha",
   "baseline_inputs": {
-    "digest": "sha256:e3a98bfa75684834159d016ef518447e05b56f777a1ea9785523b15438a45de8",
-    "file_count": 79,
+    "digest": "sha256:424814d5d70d8383fed7025fac43daace684b9444613da6a06586a7845c27643",
+    "file_count": 88,
     "files": [
       {
         "path": ".github/uv-version.txt",
@@ -10,7 +10,7 @@
       },
       {
         "path": ".github/workflows/agent-validation.yml",
-        "sha256": "sha256:edb3c94e4083af2d248d853dd25fc64e77e6bf48058d676a34b135da786c7abf"
+        "sha256": "sha256:59e1d055d3c2a4488730590dfb759406d61d1cbd5564a8e98fc17c513e45fec3"
       },
       {
         "path": "contracts/examples/cloud-object-write.json",
@@ -42,11 +42,11 @@
       },
       {
         "path": "evals/CAPABILITY_COVERAGE.yaml",
-        "sha256": "sha256:746bd3bd592145d90e348ee70b172320c088effba315214b09b2298844cdefa8"
+        "sha256": "sha256:eb4f30c843f858156755d1fca4157114f30d07a2395f7237a56c46de50cc46ef"
       },
       {
         "path": "evals/SCENARIO_SCHEMA.json",
-        "sha256": "sha256:4a63f80807d21dcf58546985cc067f90eeb1d113f98996ddcf5fead0e9b517d5"
+        "sha256": "sha256:4c9034021140988c7999019d427f024f59680acc2a09ea70d2d64bfa53242002"
       },
       {
         "path": "evals/actionlineage_evals/__init__.py",
@@ -54,11 +54,11 @@
       },
       {
         "path": "evals/actionlineage_evals/__main__.py",
-        "sha256": "sha256:ab35de71ca451fb177de2e9d1faa048efdf999c6dfe18606bc3b233ac8694936"
+        "sha256": "sha256:8561a7e2da4c16cfb59ed806923dd738f97fe49ecf2c6e6496941c3773047f25"
       },
       {
         "path": "evals/actionlineage_evals/adapters.py",
-        "sha256": "sha256:4aa09843d907bbdf1a9b3595e207f0c0040eab6d5fa5032a972db4bb1c1fcd49"
+        "sha256": "sha256:5a06f140859ed410b223bc72f1c68f1fcde407bf60f38802a0c483d2df0b6239"
       },
       {
         "path": "evals/actionlineage_evals/artifact_audit.py",
@@ -82,7 +82,7 @@
       },
       {
         "path": "evals/actionlineage_evals/inspect_tasks.py",
-        "sha256": "sha256:4f5f7da65103d00458cba955461d1421076c3fea1902a990f3ab1d47073f866a"
+        "sha256": "sha256:64d1bbf723eee3799d97afcb6ac975a594fc525521652a0f644aacc559bf73fe"
       },
       {
         "path": "evals/actionlineage_evals/linting.py",
@@ -106,7 +106,7 @@
       },
       {
         "path": "evals/actionlineage_evals/runner.py",
-        "sha256": "sha256:cae8a75421daa1a68630d3faed6742d586411583fba997dbefe6b3c8fdb09081"
+        "sha256": "sha256:69c41c2193997deb158e8f2f2f2e26e22051a5c701c9cd86809b9a86de108418"
       },
       {
         "path": "evals/actionlineage_evals/scenarios.py",
@@ -114,7 +114,7 @@
       },
       {
         "path": "evals/actionlineage_evals/scoring.py",
-        "sha256": "sha256:e88f4eb09d740470ad5913cc4c24cd1e19b9bff943021d00cfcf8bd9a0130b6c"
+        "sha256": "sha256:aee75e057ce3a42faa596971cb5cdbdd2350525a0280f8e12304cd6351d9cedd"
       },
       {
         "path": "evals/actionlineage_evals/stateful.py",
@@ -122,11 +122,11 @@
       },
       {
         "path": "evals/actionlineage_evals/summary.py",
-        "sha256": "sha256:c285aee1ee410c2edcde5538346f454fc9330684144ea584748c76cb680f2287"
+        "sha256": "sha256:46940b9f918b4a2bc817ececa294ad481da75f8c65179007d6c262e10df57cf3"
       },
       {
         "path": "evals/actionlineage_evals/tools.py",
-        "sha256": "sha256:52bbdf8ef0332555ad17324459dba7297a898037a456decfb85bf563fa361fa7"
+        "sha256": "sha256:3ba46c8e8a9f52672180e13bd18e7c6dbae47b421f7d5be1f6c3248dba2834a6"
       },
       {
         "path": "evals/actionlineage_evals/triage.py",
@@ -141,8 +141,40 @@
         "sha256": "sha256:e681f6d817a8297ee91f1bdcd94512f00b86b9f2cfd327fd5a3dd60d99b5a63a"
       },
       {
+        "path": "evals/regressions/AVL-010-56cb348a7a9c9d6c/manifest.json",
+        "sha256": "sha256:8a0bffa02b327da7a0cea7e244231fd6756bf0835a53550b0ddd6c17a1d190e4"
+      },
+      {
+        "path": "evals/regressions/AVL-010-56cb348a7a9c9d6c/minimization-report.json",
+        "sha256": "sha256:1eec7a84f66a067d0321cdfd169a721e1119339520274d51d77e262733cfea8c"
+      },
+      {
+        "path": "evals/regressions/AVL-010-56cb348a7a9c9d6c/minimized-transcript.json",
+        "sha256": "sha256:eaf5124597f9944712d005aadde49a5625710582947dade9446d539137fb855f"
+      },
+      {
+        "path": "evals/regressions/AVL-010-56cb348a7a9c9d6c/mutation-sequence.json",
+        "sha256": "sha256:9b018104dd52af7397b2e276f5def7d4ab5a6ab3cc1192c1d564a65985f85abc"
+      },
+      {
+        "path": "evals/regressions/AVL-010-56cb348a7a9c9d6c/provenance.json",
+        "sha256": "sha256:55254f52dfdec7a5f9d6893acbadbcfea56e7a4bc6ee056615a3a884ee06226e"
+      },
+      {
+        "path": "evals/regressions/AVL-010-56cb348a7a9c9d6c/tool-calls.json",
+        "sha256": "sha256:438cfe174983a7b6c5178b613909aab9fed954f8b49743dd8ec953742081e205"
+      },
+      {
+        "path": "evals/regressions/AVL-010-56cb348a7a9c9d6c/transcript.json",
+        "sha256": "sha256:eaf5124597f9944712d005aadde49a5625710582947dade9446d539137fb855f"
+      },
+      {
+        "path": "evals/regressions/AVL-010-56cb348a7a9c9d6c/triage.md",
+        "sha256": "sha256:07d6a9fb8407a27f837c983825c5dcf7580cf2dc380affe62d15c7a7a001a6a3"
+      },
+      {
         "path": "evals/regressions/README.md",
-        "sha256": "sha256:4e27122e1907df72802732814cadea564e92f92bb88e02b3246907b118ffa442"
+        "sha256": "sha256:ab30f7f0e820eb721a8fad59585880ee82539875f76445d56bcda221ccf823d9"
       },
       {
         "path": "evals/scenarios/AVL-001.yaml",
@@ -199,6 +231,10 @@
       {
         "path": "evals/scenarios/AVL-014.yaml",
         "sha256": "sha256:aba0edc801d2200d71ae7cc38016a2473ecb5eb55ffc97179cc00c0fbd6b36b4"
+      },
+      {
+        "path": "evals/scenarios/AVL-015.yaml",
+        "sha256": "sha256:69e2783125b4d490742aaac8091f3c66cb3dbc547196649772db6f9ea39c3f6d"
       },
       {
         "path": "pyproject.toml",
@@ -330,7 +366,7 @@
       "evals/SCENARIO_SCHEMA.json",
       "evals/actionlineage_evals",
       "evals/docker",
-      "evals/regressions/README.md",
+      "evals/regressions",
       "evals/scenarios",
       "pyproject.toml",
       "schemas/actionlineage-event-v1alpha1.schema.json",
@@ -345,17 +381,13 @@
     "schema_version": "actionlineage.dev/agent-validation-baseline-inputs-v0"
   },
   "capability_coverage": {
-    "capability_count": 51,
-    "covered_capability_count": 51,
+    "capability_count": 56,
+    "covered_capability_count": 56,
     "declared_scenario_mismatches": {},
     "known_gaps": [
       {
         "id": "cloud_observer_live",
         "reason": "Live cloud observers remain outside development-only eval scope."
-      },
-      {
-        "id": "service_mode_auth_eval",
-        "reason": "Optional service mode is preview and not required for the first lab slice."
       }
     ],
     "missing_capabilities": {},
@@ -374,70 +406,72 @@
       "AVL-011",
       "AVL-012",
       "AVL-013",
-      "AVL-014"
+      "AVL-014",
+      "AVL-015"
     ],
     "stale_scenario_references": {},
     "strict": true,
     "uncovered_capabilities": []
   },
-  "commit_sha": "0e50f41d4fca6715671d2e4f1bfcadd5753ffe9c",
+  "commit_sha": "9497b2f2da3d8a1cf4987086c255e183d184d9bc",
   "coverage": {
     "contract_coverage": {
       "failed": 1,
-      "passed": 13
+      "passed": 14
     },
     "detection_coverage": {
-      "matches": 17,
+      "matches": 19,
       "missing_rules": 0
     },
     "event_type_coverage": {
-      "agent.intent.recorded": 14,
-      "agent.run.completed": 14,
+      "agent.intent.recorded": 15,
+      "agent.run.completed": 15,
       "agent.run.failed": 4,
-      "agent.run.started": 18,
+      "agent.run.started": 19,
       "agent.tool.schema_changed": 1,
-      "policy.decision": 2,
-      "resource.observed": 21,
+      "policy.decision": 3,
+      "resource.observed": 22,
       "side_effect.conflict_detected": 1,
       "side_effect.observed": 8,
       "side_effect.timed_out": 1,
       "side_effect.unverified": 7,
-      "side_effect.verified": 8,
-      "tool.execution.acknowledged": 16,
-      "tool.execution.authorized": 16,
-      "tool.execution.dispatched": 16,
-      "tool.execution.not_dispatched": 2,
-      "tool.execution.requested": 18
+      "side_effect.verified": 9,
+      "tool.execution.acknowledged": 17,
+      "tool.execution.authorized": 17,
+      "tool.execution.dispatched": 17,
+      "tool.execution.not_dispatched": 3,
+      "tool.execution.requested": 20
     },
     "evidence_link_coverage": {
       "corroboration_types": {
-        "independent_observer": 1,
+        "independent_observer": 2,
         "post_action_readback": 8,
         "self_reported": 8
       },
       "relationships": {
         "contradicts": 1,
-        "corroborates": 8,
+        "corroborates": 9,
         "limits": 8
       },
       "verification_statuses": {
         "conflicting": 1,
         "timed_out": 1,
         "unverified": 7,
-        "verified": 8
+        "verified": 9
       }
     },
     "lifecycle_transition_coverage": {
-      "agent.intent.recorded -> agent.run.started": 14,
+      "agent.intent.recorded -> agent.run.started": 15,
       "agent.run.completed -> agent.run.completed": 4,
       "agent.run.started -> agent.run.failed": 4,
       "agent.run.started -> agent.run.started": 4,
       "agent.run.started -> agent.tool.schema_changed": 1,
-      "agent.run.started -> tool.execution.requested": 9,
+      "agent.run.started -> tool.execution.requested": 10,
       "agent.tool.schema_changed -> tool.execution.requested": 1,
-      "policy.decision -> tool.execution.not_dispatched": 2,
+      "policy.decision -> tool.execution.not_dispatched": 3,
       "resource.observed -> agent.run.completed": 7,
       "resource.observed -> resource.observed": 9,
+      "resource.observed -> side_effect.verified": 1,
       "resource.observed -> tool.execution.requested": 5,
       "side_effect.conflict_detected -> resource.observed": 1,
       "side_effect.observed -> side_effect.conflict_detected": 1,
@@ -447,17 +481,18 @@
       "side_effect.unverified -> resource.observed": 3,
       "side_effect.unverified -> side_effect.verified": 1,
       "side_effect.unverified -> tool.execution.requested": 2,
-      "side_effect.verified -> agent.run.completed": 1,
+      "side_effect.verified -> agent.run.completed": 2,
       "side_effect.verified -> resource.observed": 7,
+      "tool.execution.acknowledged -> resource.observed": 1,
       "tool.execution.acknowledged -> side_effect.observed": 8,
       "tool.execution.acknowledged -> side_effect.timed_out": 1,
       "tool.execution.acknowledged -> side_effect.unverified": 7,
-      "tool.execution.authorized -> tool.execution.dispatched": 16,
-      "tool.execution.dispatched -> tool.execution.acknowledged": 16,
+      "tool.execution.authorized -> tool.execution.dispatched": 17,
+      "tool.execution.dispatched -> tool.execution.acknowledged": 17,
       "tool.execution.not_dispatched -> agent.run.completed": 1,
-      "tool.execution.not_dispatched -> tool.execution.requested": 1,
-      "tool.execution.requested -> policy.decision": 2,
-      "tool.execution.requested -> tool.execution.authorized": 16
+      "tool.execution.not_dispatched -> tool.execution.requested": 2,
+      "tool.execution.requested -> policy.decision": 3,
+      "tool.execution.requested -> tool.execution.authorized": 17
     }
   },
   "environment_identifiers": [
@@ -473,7 +508,7 @@
       "agent_failure": 1,
       "harness_failure": 1,
       "inconclusive_budget_exhausted": 1,
-      "none": 7,
+      "none": 8,
       "product_failure": 3,
       "provider_failure": 1
     },
@@ -526,35 +561,35 @@
     "score_counts": {
       "capability_coverage": {
         "failed": 0,
-        "passed": 14
+        "passed": 15
       },
       "contract": {
         "failed": 1,
-        "passed": 13
+        "passed": 14
       },
       "detection": {
         "failed": 0,
-        "passed": 14
+        "passed": 15
       },
       "integrity": {
         "failed": 0,
-        "passed": 14
+        "passed": 15
       },
       "lifecycle": {
         "failed": 1,
-        "passed": 13
+        "passed": 14
       },
       "projection_rebuild": {
         "failed": 0,
-        "passed": 14
+        "passed": 15
       },
       "redaction": {
         "failed": 0,
-        "passed": 14
+        "passed": 15
       },
       "replayability": {
         "failed": 0,
-        "passed": 14
+        "passed": 15
       },
       "run_isolation": {
         "failed": 1,
@@ -1433,6 +1468,84 @@
         "observed",
         "verified"
       ]
+    },
+    {
+      "artifact_paths": {
+        "capability_coverage": "build/evals/public-alpha/avl-015-scripted-seed-0/capability-coverage.json",
+        "environment": "build/evals/public-alpha/avl-015-scripted-seed-0/environment.json",
+        "journal": "build/evals/public-alpha/avl-015-scripted-seed-0/journal.jsonl",
+        "mutation_sequence": "build/evals/public-alpha/avl-015-scripted-seed-0/mutation-sequence.json",
+        "oracle_observations": "build/evals/public-alpha/avl-015-scripted-seed-0/oracle-observations.jsonl",
+        "provenance": "build/evals/public-alpha/avl-015-scripted-seed-0/provenance.json",
+        "replay_bundle": "build/evals/public-alpha/avl-015-scripted-seed-0/replay-bundle",
+        "scorecard": "build/evals/public-alpha/avl-015-scripted-seed-0/scorecard.json",
+        "tool_calls": "build/evals/public-alpha/avl-015-scripted-seed-0/tool-calls.json",
+        "transcript": "build/evals/public-alpha/avl-015-scripted-seed-0/transcript.json",
+        "triage": "build/evals/public-alpha/avl-015-scripted-seed-0/triage.md"
+      },
+      "capabilities": [
+        "intent_recorded",
+        "run_started",
+        "tool_descriptor_hash",
+        "tool_requested",
+        "tool_authorized",
+        "tool_dispatched",
+        "tool_acknowledged",
+        "tool_not_dispatched",
+        "policy_decision_deny",
+        "downstream_forwarded_false",
+        "side_effect_observed",
+        "side_effect_verified",
+        "evidence_link_corroborates_acknowledgement",
+        "redaction_canary_absent",
+        "provider_independent_oracle",
+        "service_mode_auth_eval",
+        "service_auth_denied",
+        "service_auth_allowed",
+        "service_token_redaction",
+        "service_role_boundary",
+        "journal_integrity",
+        "projection_rebuild",
+        "contract_validation",
+        "detection_coverage",
+        "transcript_replay",
+        "ordered_tool_transcript",
+        "replay_equivalence",
+        "artifact_provenance",
+        "artifact_redaction_audit",
+        "parallel_safe_docker"
+      ],
+      "descriptor_hashes": [
+        "sha256:1b61c1a10dba868402945a6c367f96ea5ac319421054895e26d3ddc0c64f1106"
+      ],
+      "event_count": 12,
+      "event_types": [
+        "agent.intent.recorded",
+        "agent.run.completed",
+        "agent.run.started",
+        "policy.decision",
+        "resource.observed",
+        "side_effect.verified",
+        "tool.execution.acknowledged",
+        "tool.execution.authorized",
+        "tool.execution.dispatched",
+        "tool.execution.not_dispatched",
+        "tool.execution.requested"
+      ],
+      "expected_failure_class": "product_failure",
+      "failure_class": "none",
+      "failure_fingerprint": null,
+      "mode": "scripted",
+      "model_adapter": "scripted",
+      "passed": true,
+      "scenario_id": "AVL-015",
+      "scenario_name": "service-mode-auth-boundary",
+      "seed": 0,
+      "verification_statuses": [
+        "observed",
+        "unverified",
+        "verified"
+      ]
     }
   ],
   "scenario_ids": [
@@ -1449,7 +1562,8 @@
     "AVL-011",
     "AVL-012",
     "AVL-013",
-    "AVL-014"
+    "AVL-014",
+    "AVL-015"
   ],
   "scenario_schema": {
     "api_versions": [
@@ -1463,12 +1577,12 @@
     0
   ],
   "source_commits": [
-    "0e50f41d4fca6715671d2e4f1bfcadd5753ffe9c"
+    "9497b2f2da3d8a1cf4987086c255e183d184d9bc"
   ],
   "suite": {
     "failed_count": 0,
-    "scenario_count": 14,
-    "scorecard_count": 14
+    "scenario_count": 15,
+    "scorecard_count": 15
   },
   "tool_schema_hashes": [
     {
@@ -1484,6 +1598,11 @@
     {
       "descriptor_hash": "sha256:91ddb9481e6919a0ff33961083825cabeb26415e6bc6a532b088ace85338c11a",
       "name": "safe_http.send",
+      "server_identity": "actionlineage-eval-toolserver"
+    },
+    {
+      "descriptor_hash": "sha256:1b61c1a10dba868402945a6c367f96ea5ac319421054895e26d3ddc0c64f1106",
+      "name": "service_api.read",
       "server_identity": "actionlineage-eval-toolserver"
     }
   ]

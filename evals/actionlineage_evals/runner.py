@@ -449,7 +449,10 @@ def _run_paths(run_dir: Path) -> RunPaths:
 
 
 def _canaries(scenario: ScenarioDefinition, seed: int) -> tuple[str, ...]:
-    return tuple(f"AVL_CANARY_{canary_id}_{seed:04d}" for canary_id in scenario.expected_canary_ids)
+    values = [f"AVL_CANARY_{canary_id}_{seed:04d}" for canary_id in scenario.expected_canary_ids]
+    if scenario.scenario_id == "AVL-015":
+        values.extend(("synthetic-read-token", "invalid-synthetic-token"))
+    return tuple(values)
 
 
 def _error_dict(error: Exception | None) -> dict[str, str] | None:

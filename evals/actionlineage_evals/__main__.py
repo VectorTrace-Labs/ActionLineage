@@ -31,6 +31,7 @@ from actionlineage_evals.summary import (
     summarize_scorecards_markdown,
     summarize_scorecards_text,
     write_public_baseline_report,
+    write_trend_report,
 )
 
 
@@ -78,6 +79,31 @@ def main(argv: list[str] | None = None) -> int:
     run.add_argument("--max-scenarios", type=int)
     run.add_argument("--use-docker", action="store_true")
     run.add_argument("--promote-regressions", action="store_true")
+
+    inspect_run = subcommands.add_parser("inspect-run")
+    inspect_run.add_argument("--scenario-path", type=Path, default=SCENARIO_DIR)
+    inspect_run.add_argument(
+        "--artifact-root",
+        type=Path,
+        default=DEFAULT_ARTIFACT_ROOT / "inspect",
+    )
+    inspect_run.add_argument(
+        "--mode",
+        choices=[mode.value for mode in RunMode],
+        default=RunMode.SCRIPTED.value,
+    )
+    inspect_run.add_argument(
+        "--model-adapter",
+        choices=["scripted", "replay", "github_models", "openai_compatible", "ollama"],
+        default="scripted",
+    )
+    inspect_run.add_argument("--model-id")
+    inspect_run.add_argument("--seed", type=int, default=0)
+    inspect_run.add_argument("--max-scenarios", type=int)
+    inspect_run.add_argument("--use-docker", action="store_true")
+    inspect_run.add_argument("--inspect-model", default="mockllm/model")
+    inspect_run.add_argument("--log-dir", type=Path)
+    inspect_run.add_argument("--summary-path", type=Path)
 
     replay = subcommands.add_parser("replay")
     replay.add_argument("bundle_dir", type=Path)
@@ -132,6 +158,21 @@ def main(argv: list[str] | None = None) -> int:
     summarize = subcommands.add_parser("summarize")
     summarize.add_argument("artifact_root", type=Path)
     summarize.add_argument("--format", choices=["json", "text", "markdown"], default="json")
+
+    trend = subcommands.add_parser("trend")
+    trend.add_argument("artifact_root", type=Path)
+    trend.add_argument(
+        "--output",
+        type=Path,
+        default=DEFAULT_ARTIFACT_ROOT / "reports" / "agent-validation-trend.json",
+    )
+    trend.add_argument("--markdown-output", type=Path)
+    trend.add_argument("--label", default="local")
+    trend.add_argument(
+        "--coverage-path",
+        type=Path,
+        default=Path("evals/CAPABILITY_COVERAGE.yaml"),
+    )
 
     public_report = subcommands.add_parser("public-report")
     public_report.add_argument("artifact_root", type=Path)
@@ -215,6 +256,24 @@ def main(argv: list[str] | None = None) -> int:
         )
         _print(suite_result.as_dict())
         return 0 if suite_result.passed else 1
+    if args.command == "inspect-run":
+        from actionlineage_evals.inspect_tasks import run_inspect_eval
+
+        summary = run_inspect_eval(
+            scenario_path=args.scenario_path,
+            artifact_root=args.artifact_root,
+            mode=args.mode,
+            model_adapter=args.model_adapter,
+            model_id=args.model_id,
+            seed=args.seed,
+            use_docker=args.use_docker,
+            max_scenarios=args.max_scenarios,
+            inspect_model=args.inspect_model,
+            log_dir=args.log_dir,
+            summary_path=args.summary_path,
+        )
+        _print(summary)
+        return 0 if summary["ok"] is True else 1
     if args.command == "replay":
         replay_result = replay_bundle(args.bundle_dir, artifact_root=args.artifact_root)
         _print(replay_result.as_dict())
@@ -265,6 +324,23 @@ def main(argv: list[str] | None = None) -> int:
         summary = summarize_scorecards(args.artifact_root)
         _print(summary)
         return 0 if summary["ok"] else 1
+    if args.command == "trend":
+        report = write_trend_report(
+            args.artifact_root,
+            output_path=args.output,
+            label=args.label,
+            markdown_output=args.markdown_output,
+            coverage_path=args.coverage_path,
+        )
+        _print(
+            {
+                "ok": report["latest"]["ok"],
+                "output": str(args.output),
+                "run_count": report["run_count"],
+                "schema_version": report["schema_version"],
+            }
+        )
+        return 0 if report["latest"]["ok"] is True else 1
     if args.command == "public-report":
         report = write_public_baseline_report(
             args.artifact_root,

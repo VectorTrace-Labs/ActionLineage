@@ -1,0 +1,7 @@
+{
+  "failure_class": "agent_failure",
+  "minimized_tool_calls": 1,
+  "original_tool_calls": 1,
+  "reduced": false,
+  "schema_version": "actionlineage.dev/eval-minimization-report/v0"
+}

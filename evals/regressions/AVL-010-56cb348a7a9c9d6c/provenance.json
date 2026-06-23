@@ -1,0 +1,47 @@
+{
+  "artifact_hashes": {
+    "journal": "sha256:67a2e11cf869f0e48440e7fdaf158f22ac0e82a62654a55aaf9af4608f09633b",
+    "mutation_sequence": "sha256:9b018104dd52af7397b2e276f5def7d4ab5a6ab3cc1192c1d564a65985f85abc",
+    "oracle_observations": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "tool_calls": "sha256:438cfe174983a7b6c5178b613909aab9fed954f8b49743dd8ec953742081e205",
+    "toxiproxy_timeline": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "transcript": "sha256:eaf5124597f9944712d005aadde49a5625710582947dade9446d539137fb855f"
+  },
+  "commit": {
+    "git_head": "9497b2f2da3d8a1cf4987086c255e183d184d9bc",
+    "github_sha": null
+  },
+  "config_hashes": {
+    "capability_coverage": "sha256:eb4f30c843f858156755d1fca4157114f30d07a2395f7237a56c46de50cc46ef",
+    "scenario": "sha256:ff1b9677bf610f533ac54a3a71520cb562b48528d2963a40b72785327c52a672",
+    "scenario_schema": "sha256:4c9034021140988c7999019d427f024f59680acc2a09ea70d2d64bfa53242002"
+  },
+  "environment": {
+    "controller": "fixture",
+    "deterministic": true,
+    "run_dir": "build/evals/regression-seed/avl-010-scripted-seed-0"
+  },
+  "generated_at": "2026-06-23T22:33:00.010401Z",
+  "model": {
+    "adapter": "scripted",
+    "model_id": null
+  },
+  "run": {
+    "id": "avl-010-scripted-seed-0",
+    "mode": "scripted",
+    "seed": 0
+  },
+  "scenario": {
+    "id": "AVL-010",
+    "maturity": "development-only",
+    "name": "malformed-tool-plan-agent-failure",
+    "path": "evals/scenarios/AVL-010.yaml"
+  },
+  "schema_version": "actionlineage.dev/eval-run-provenance/v0",
+  "workflow": {
+    "event_name": null,
+    "run_attempt": null,
+    "run_id": null,
+    "workflow": null
+  }
+}

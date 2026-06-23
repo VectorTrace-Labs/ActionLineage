@@ -1,0 +1,174 @@
+{
+  "artifact_hashes": {
+    "journal": "sha256:f0978111df2b971c8cda49135056cd22323a7d668e0024e5136b079adc255d99",
+    "minimization_report": "sha256:1eec7a84f66a067d0321cdfd169a721e1119339520274d51d77e262733cfea8c",
+    "minimized_transcript": "sha256:eaf5124597f9944712d005aadde49a5625710582947dade9446d539137fb855f",
+    "mutation_sequence": "sha256:9b018104dd52af7397b2e276f5def7d4ab5a6ab3cc1192c1d564a65985f85abc",
+    "oracle_observations": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "provenance": "sha256:55254f52dfdec7a5f9d6893acbadbcfea56e7a4bc6ee056615a3a884ee06226e",
+    "stateful_mutation_report": null,
+    "tool_calls": "sha256:438cfe174983a7b6c5178b613909aab9fed954f8b49743dd8ec953742081e205",
+    "transcript": "sha256:eaf5124597f9944712d005aadde49a5625710582947dade9446d539137fb855f"
+  },
+  "environment": {
+    "controller": "fixture",
+    "deterministic": true,
+    "run_dir": "build/evals/regression-seed/avl-010-scripted-seed-0"
+  },
+  "journal": "journal.jsonl",
+  "minimization_report": "minimization-report.json",
+  "minimized_transcript": "minimized-transcript.json",
+  "model_metadata": [
+    {
+      "model_id": "scripted/actionlineage-eval-agent-v0",
+      "provider": "scripted",
+      "request_index": 0
+    }
+  ],
+  "mutation_sequence": "mutation-sequence.json",
+  "oracle_observations": "oracle-observations.jsonl",
+  "prompt_hashes": {
+    "capability_coverage_digest": "sha256:eb4f30c843f858156755d1fca4157114f30d07a2395f7237a56c46de50cc46ef",
+    "scenario_file_digest": "sha256:ff1b9677bf610f533ac54a3a71520cb562b48528d2963a40b72785327c52a672",
+    "scenario_path": "evals/scenarios/AVL-010.yaml",
+    "scenario_prompt_digest": "sha256:9054907980cdfc446f3bfb25ed60c2967896d51044f093af3dc78bfbc2eac0f6",
+    "scenario_schema_digest": "sha256:4c9034021140988c7999019d427f024f59680acc2a09ea70d2d64bfa53242002"
+  },
+  "provenance": "provenance.json",
+  "review": {
+    "failure_class": "agent_failure",
+    "policy": "synthetic redacted reviewed regression corpus",
+    "reason": "synthetic agent-failure minimized regression control",
+    "reviewed_at": "2026-06-23T22:33:07.643835Z",
+    "reviewed_by": "security-platform",
+    "source_run": "AVL-010 scripted seed 0 local reviewed regression seed",
+    "status": "reviewed"
+  },
+  "reviewed": true,
+  "scenario": {
+    "id": "AVL-010",
+    "name": "malformed-tool-plan-agent-failure",
+    "path": "evals/scenarios/AVL-010.yaml"
+  },
+  "schema_version": "actionlineage.dev/eval-replay-bundle/v0",
+  "scorecard": {
+    "agent_error": {
+      "message": "agent requested safe_files.read without required path",
+      "type": "AgentExecutionError"
+    },
+    "expected_failure_class": "agent_failure",
+    "failure_class": "agent_failure",
+    "harness_error": null,
+    "passed": true,
+    "provider_error": null,
+    "scenario_id": "AVL-010",
+    "scores": [
+      {
+        "details": {
+          "event_count": 3,
+          "forbidden_statuses_present": [],
+          "missing_event_types": [],
+          "missing_verification_statuses": [],
+          "observed_event_types": [
+            "agent.intent.recorded",
+            "agent.run.started",
+            "agent.run.failed"
+          ],
+          "observed_verification_statuses": []
+        },
+        "name": "lifecycle",
+        "ok": true
+      },
+      {
+        "details": {
+          "issues": [],
+          "last_event_hash": "sha256:43c98f0ce7e2709de2e6c0d708201cab906ddd951c55e6e927cda9c7f1dfc0e8",
+          "ok": true,
+          "records_verified": 3
+        },
+        "name": "integrity",
+        "ok": true
+      },
+      {
+        "details": {
+          "database_path": "build/evals/regression-seed/avl-010-scripted-seed-0/projection.sqlite",
+          "journal_path": "build/evals/regression-seed/avl-010-scripted-seed-0/journal.jsonl",
+          "last_event_hash": "sha256:43c98f0ce7e2709de2e6c0d708201cab906ddd951c55e6e927cda9c7f1dfc0e8",
+          "ok": true,
+          "records_indexed": 3,
+          "schema_version": 2
+        },
+        "name": "projection_rebuild",
+        "ok": true
+      },
+      {
+        "details": {
+          "contract_name": "AVL-010-malformed-tool-plan-agent-failure",
+          "ok": true,
+          "violations": []
+        },
+        "name": "contract",
+        "ok": true
+      },
+      {
+        "details": {
+          "expected_rule_ids": [],
+          "matches": [],
+          "missing_rule_ids": []
+        },
+        "name": "detection",
+        "ok": true
+      },
+      {
+        "details": {
+          "canary_count": 0,
+          "leaks": []
+        },
+        "name": "redaction",
+        "ok": true
+      },
+      {
+        "details": {
+          "capabilities": [
+            "intent_recorded",
+            "run_started",
+            "agent_failure_control",
+            "tool_not_dispatched",
+            "missing_optional_field_mutation",
+            "journal_integrity",
+            "projection_rebuild",
+            "contract_validation",
+            "transcript_replay",
+            "replay_equivalence",
+            "artifact_provenance",
+            "artifact_redaction_audit",
+            "mutation_minimization"
+          ],
+          "scenario_id": "AVL-010"
+        },
+        "name": "capability_coverage",
+        "ok": true
+      },
+      {
+        "details": {
+          "missing": [],
+          "required": [
+            "build/evals/regression-seed/avl-010-scripted-seed-0/provenance.json",
+            "build/evals/regression-seed/avl-010-scripted-seed-0/transcript.json",
+            "build/evals/regression-seed/avl-010-scripted-seed-0/tool-calls.json",
+            "build/evals/regression-seed/avl-010-scripted-seed-0/oracle-observations.jsonl",
+            "build/evals/regression-seed/avl-010-scripted-seed-0/mutation-sequence.json"
+          ]
+        },
+        "name": "replayability",
+        "ok": true
+      }
+    ]
+  },
+  "seed": 0,
+  "stateful_mutation_report": null,
+  "tool_calls": "tool-calls.json",
+  "toxiproxy_timeline": "toxiproxy-timeline.jsonl",
+  "transcript": "transcript.json",
+  "triage": "triage.md"
+}

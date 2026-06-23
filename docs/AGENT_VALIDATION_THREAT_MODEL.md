@@ -26,6 +26,7 @@ credentials and synthetic sensitive material out of persisted artifacts.
 - Replay bundles and minimized regression fixtures.
 - Capability coverage metadata.
 - Synthetic redaction canaries.
+- Synthetic service-mode auth tokens and service-auth oracle decisions.
 
 ## Trust Boundaries
 
@@ -146,6 +147,9 @@ Controls:
   redaction canary is used.
 - Replay bundles store redacted tool arguments and digests rather than raw
   sensitive values.
+- `AVL-015` treats synthetic service-token values as canaries so journals,
+  transcripts, replay bundles, Inspect logs, and errors fail redaction scoring
+  if raw token material is persisted.
 
 ### T8: Harness Or Oracle Bugs Create False Confidence
 
@@ -168,6 +172,10 @@ Controls:
 - `AVL-014` intentionally generates and minimizes a seeded lifecycle mutation
   sequence and must classify the missing verification-status counterexample as
   `product_failure` through the `stateful_mutation_minimization` scorer.
+- `AVL-015` exercises optional service-mode auth boundaries outside the runtime
+  dependency path: invalid synthetic credentials must be denied before dispatch,
+  authorized synthetic reads must be corroborated by the service-auth oracle,
+  and raw token values must stay out of artifacts.
 - Replays must run without model calls and produce deterministic scorer output.
 - Replay-equivalence checks compare source and replay scorecard essentials so a
   replay cannot silently drift while still reporting a local pass.
@@ -208,8 +216,8 @@ Controls:
 - Reviewed regression promotion requires redaction audit, provenance, triage,
   replay artifacts, minimized transcript, and minimization report before a
   bundle enters the replayed corpus.
-- Suite summaries provide trendable failure-class, scorer, and replay-equivalence
-  counts for CI review.
+- Suite summaries and trend reports provide failure-class, scorer,
+  replay-equivalence, coverage, and artifact-audit counts for CI review.
 
 ## Claims And Limitations
 

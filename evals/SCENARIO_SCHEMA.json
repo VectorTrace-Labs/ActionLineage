@@ -325,7 +325,7 @@
           "type": "boolean"
         },
         "sideEffectClass": {
-          "enum": ["filesystem_read", "http_send", "process", "database", "none"]
+          "enum": ["filesystem_read", "http_send", "service_read", "process", "database", "none"]
         },
         "policyMode": {
           "enum": ["observe", "allow", "deny", "require_approval", "not_applicable"]
@@ -357,7 +357,8 @@
             "contract_validation",
             "detection_matches",
             "redaction_scan",
-            "downstream_call_count"
+            "downstream_call_count",
+            "service_authz"
           ]
         },
         "subject": {

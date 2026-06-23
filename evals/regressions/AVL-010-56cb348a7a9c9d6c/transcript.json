@@ -1,0 +1,23 @@
+{
+  "schema_version": "actionlineage.dev/eval-transcript/v0",
+  "turns": [
+    {
+      "content": "scripted malformed agent plan",
+      "model_id": "scripted/actionlineage-eval-agent-v0",
+      "provider": "scripted",
+      "raw": {
+        "mode": "scripted",
+        "scenario_id": "AVL-010"
+      },
+      "request_index": 0,
+      "tool_calls": [
+        {
+          "arguments": {
+            "purpose": "missing required path"
+          },
+          "name": "safe_files.read"
+        }
+      ]
+    }
+  ]
+}

@@ -6,12 +6,14 @@ import hashlib
 import json
 from collections import Counter
 from collections.abc import Iterable
+from datetime import UTC, datetime
 from itertools import pairwise
 from pathlib import Path
 from typing import Any
 
 from actionlineage.domain import event_to_dict
 from actionlineage.journal import JournalError, LocalJournal
+from actionlineage_evals.artifact_audit import audit_artifacts
 from actionlineage_evals.models import FailureClass, JsonMap, ScenarioResult
 from actionlineage_evals.scenarios import (
     CAPABILITY_COVERAGE_PATH,
@@ -24,6 +26,7 @@ from actionlineage_evals.scenarios import (
 
 PUBLIC_REPORT_SCHEMA_VERSION = "actionlineage.dev/agent-validation-public-report-v0"
 BASELINE_INPUTS_SCHEMA_VERSION = "actionlineage.dev/agent-validation-baseline-inputs-v0"
+TREND_REPORT_SCHEMA_VERSION = "actionlineage.dev/agent-validation-trend-report-v0"
 
 BASELINE_INPUT_PATHS = (
     Path(".github/uv-version.txt"),
@@ -34,7 +37,7 @@ BASELINE_INPUT_PATHS = (
     Path("evals/SCENARIO_SCHEMA.json"),
     Path("evals/actionlineage_evals"),
     Path("evals/docker"),
-    Path("evals/regressions/README.md"),
+    Path("evals/regressions"),
     Path("evals/scenarios"),
     Path("pyproject.toml"),
     Path("schemas/actionlineage-event-v1alpha1.schema.json"),
@@ -150,6 +153,145 @@ def summarize_scorecards_markdown(root: Path) -> str:
             f"`{item.get('replay_command') or ''}` |"
         )
     return "\n".join(lines) + "\n"
+
+
+def build_trend_point(
+    artifact_root: Path,
+    *,
+    label: str,
+    coverage_path: Path = CAPABILITY_COVERAGE_PATH,
+) -> JsonMap:
+    """Build one trendable eval-suite datapoint."""
+
+    summary = summarize_scorecards(artifact_root)
+    coverage = validate_capability_coverage(coverage_path, strict=True)
+    audit = audit_artifacts(artifact_root)
+    return {
+        "artifact_audit": {
+            "files_scanned": audit["files_scanned"],
+            "leak_count": audit["leak_count"],
+            "ok": audit["ok"],
+        },
+        "artifact_root": str(artifact_root),
+        "capability_coverage": {
+            "capability_count": coverage["capability_count"],
+            "covered_capability_count": coverage["covered_capability_count"],
+            "known_gap_count": len(coverage["known_gaps"]),
+            "ok": coverage["ok"],
+        },
+        "failure_class_counts": summary["failure_class_counts"],
+        "failed_count": summary["failed_count"],
+        "label": label,
+        "ok": summary["ok"] is True and coverage["ok"] is True and audit["ok"] is True,
+        "recorded_at": _utc_now(),
+        "replay_equivalence": summary["replay_equivalence"],
+        "scenario_count": summary["scenario_count"],
+        "scenarios": [
+            {
+                "failure_class": item.get("failure_class"),
+                "failure_fingerprint": item.get("failure_fingerprint"),
+                "first_failing_scorer": item.get("first_failing_scorer"),
+                "passed": item.get("passed"),
+                "replay_equivalence_count": item.get("replay_equivalence_count"),
+                "replay_equivalence_ok_count": item.get("replay_equivalence_ok_count"),
+                "scenario_id": item.get("scenario_id"),
+            }
+            for item in summary["scorecards"]
+            if isinstance(item, dict)
+        ],
+    }
+
+
+def write_trend_report(
+    artifact_root: Path,
+    *,
+    output_path: Path,
+    label: str,
+    markdown_output: Path | None = None,
+    coverage_path: Path = CAPABILITY_COVERAGE_PATH,
+) -> JsonMap:
+    """Append one eval-suite trend point and write JSON/Markdown reports."""
+
+    output_path = Path(output_path)
+    previous_runs: list[JsonMap] = []
+    if output_path.exists():
+        raw: Any = json.loads(output_path.read_text(encoding="utf-8"))
+        if isinstance(raw, dict) and raw.get("schema_version") == TREND_REPORT_SCHEMA_VERSION:
+            runs = raw.get("runs", ())
+            if isinstance(runs, list):
+                previous_runs = [item for item in runs if isinstance(item, dict)]
+    point = build_trend_point(artifact_root, label=label, coverage_path=coverage_path)
+    report: JsonMap = {
+        "latest": point,
+        "run_count": len(previous_runs) + 1,
+        "runs": [*previous_runs, point],
+        "schema_version": TREND_REPORT_SCHEMA_VERSION,
+    }
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    output_path.write_text(json.dumps(report, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    if markdown_output is not None:
+        markdown_output.parent.mkdir(parents=True, exist_ok=True)
+        markdown_output.write_text(render_trend_report_markdown(report), encoding="utf-8")
+    return report
+
+
+def render_trend_report_markdown(report: JsonMap) -> str:
+    """Render a trend report for CI summaries and artifacts."""
+
+    latest = report.get("latest", {})
+    if not isinstance(latest, dict):
+        latest = {}
+    coverage = latest.get("capability_coverage", {})
+    if not isinstance(coverage, dict):
+        coverage = {}
+    audit = latest.get("artifact_audit", {})
+    if not isinstance(audit, dict):
+        audit = {}
+    replay = latest.get("replay_equivalence", {})
+    if not isinstance(replay, dict):
+        replay = {}
+    lines = [
+        "# Agent Validation Trend",
+        "",
+        "| Metric | Value |",
+        "| --- | --- |",
+        f"| Trend points | {report.get('run_count', 0)} |",
+        f"| Latest label | `{latest.get('label', '')}` |",
+        f"| Latest recorded at | `{latest.get('recorded_at', '')}` |",
+        f"| Scorecards | {latest.get('scenario_count', 0)} |",
+        f"| Failed scorecards | {latest.get('failed_count', 0)} |",
+        (
+            "| Capability coverage | "
+            f"{coverage.get('covered_capability_count', 0)}/"
+            f"{coverage.get('capability_count', 0)} |"
+        ),
+        f"| Known gaps | {coverage.get('known_gap_count', 0)} |",
+        f"| Replay equivalence | {replay.get('ok_count', 0)}/{replay.get('count', 0)} OK |",
+        (
+            "| Artifact audit | "
+            f"{audit.get('files_scanned', 0)} files, {audit.get('leak_count', 0)} leaks |"
+        ),
+        (
+            "| Failure classes | "
+            f"`{json.dumps(latest.get('failure_class_counts', {}), sort_keys=True)}` |"
+        ),
+        "",
+        "| Scenario | Passed | Failure class | First failing scorer | Failure fingerprint |",
+        "| --- | --- | --- | --- | --- |",
+    ]
+    scenarios = latest.get("scenarios", ())
+    if isinstance(scenarios, list):
+        for item in scenarios:
+            if not isinstance(item, dict):
+                continue
+            lines.append(
+                f"| `{item.get('scenario_id', '')}` | {item.get('passed', '')} | "
+                f"`{item.get('failure_class') or 'none'}` | "
+                f"`{item.get('first_failing_scorer') or 'none'}` | "
+                f"`{item.get('failure_fingerprint') or 'none'}` |"
+            )
+    lines.append("")
+    return "\n".join(lines)
 
 
 def build_public_baseline_report(
@@ -778,3 +920,7 @@ def _sha256_json(value: JsonMap) -> str:
 
 def _hash_file(path: Path) -> str:
     return f"sha256:{hashlib.sha256(path.read_bytes()).hexdigest()}"
+
+
+def _utc_now() -> str:
+    return datetime.now(UTC).isoformat().replace("+00:00", "Z")

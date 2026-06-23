@@ -7,21 +7,21 @@ This deterministic report is generated from the development-only no-model Agent 
 | Field | Value |
 | --- | --- |
 | Schema | `actionlineage.dev/agent-validation-public-report-v0` |
-| Source commit under evaluation | `0e50f41d4fca6715671d2e4f1bfcadd5753ffe9c` |
+| Source commit under evaluation | `9497b2f2da3d8a1cf4987086c255e183d184d9bc` |
 | Artifact root | `build/evals/public-alpha` |
-| Baseline input digest | `sha256:e3a98bfa75684834159d016ef518447e05b56f777a1ea9785523b15438a45de8` (79 files) |
-| Scenarios | 14 scorecards for 14 registered scenarios |
+| Baseline input digest | `sha256:424814d5d70d8383fed7025fac43daace684b9444613da6a06586a7845c27643` (88 files) |
+| Scenarios | 15 scorecards for 15 registered scenarios |
 | Failed scorecards | 0 |
 | Seeds | `[0]` |
 | Model adapters | `[{"adapter": "scripted", "model_id": null, "no_model": true}]` |
-| Capability coverage | 51/51 declared capabilities |
-| Tool descriptor hashes | 3 unique tool identities |
+| Capability coverage | 56/56 declared capabilities |
+| Tool descriptor hashes | 4 unique tool identities |
 | Event types observed | 17 |
-| Lifecycle transitions observed | 30 |
-| Evidence-link statuses | `{"conflicting": 1, "timed_out": 1, "unverified": 7, "verified": 8}` |
-| Contract scores | `{"failed": 1, "passed": 13}` |
-| Detection scores | `{"matches": 17, "missing_rules": 0}` |
-| Failure classes | `{"agent_failure": 1, "harness_failure": 1, "inconclusive_budget_exhausted": 1, "none": 7, "product_failure": 3, "provider_failure": 1}` |
+| Lifecycle transitions observed | 32 |
+| Evidence-link statuses | `{"conflicting": 1, "timed_out": 1, "unverified": 7, "verified": 9}` |
+| Contract scores | `{"failed": 1, "passed": 14}` |
+| Detection scores | `{"matches": 19, "missing_rules": 0}` |
+| Failure classes | `{"agent_failure": 1, "harness_failure": 1, "inconclusive_budget_exhausted": 1, "none": 8, "product_failure": 3, "provider_failure": 1}` |
 
 Expected control scenarios intentionally preserve product, agent, harness, provider, and budget failure classes when those classes are the scenario objective. They do not represent unresolved release blockers when the suite passes.
 
@@ -43,6 +43,7 @@ Expected control scenarios intentionally preserve product, agent, harness, provi
 | `AVL-012` | True | `none` | `none` | 0 | 31 | `["observed", "unverified", "verified"]` | `build/evals/public-alpha/avl-012-scripted-seed-0/scorecard.json` |
 | `AVL-013` | True | `product_failure` | `sha256:4a483d17910e8d6ded020741211d4b04c7d7532d9761aa938ad506a8158b6a1f` | 0 | 32 | `["observed", "unverified", "verified"]` | `build/evals/public-alpha/avl-013-scripted-seed-0/scorecard.json` |
 | `AVL-014` | True | `product_failure` | `sha256:cfe474eea06a6a7d5426713ecdeec155127c02654411b051f1a6b0d2d9416460` | 0 | 15 | `["observed", "verified"]` | `build/evals/public-alpha/avl-014-scripted-seed-0/scorecard.json` |
+| `AVL-015` | True | `none` | `none` | 0 | 12 | `["observed", "unverified", "verified"]` | `build/evals/public-alpha/avl-015-scripted-seed-0/scorecard.json` |
 
 ## Reproduction Commands
 
