@@ -26,14 +26,14 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        python-version: ["3.12", "3.13"]
+        python-version: ["3.12", "3.13", "3.14"]
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
       - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405
         with:
           python-version: ${{ matrix.python-version }}
       - name: Install uv
-        run: python -m pip install --upgrade uv
+        run: python -m pip install "uv==$(cat .github/uv-version.txt)"
       - name: Sync
         run: uv sync --locked --all-extras
       - name: Lint
@@ -49,7 +49,7 @@ jobs:
       - name: Secret scan
         run: uv run python scripts/secret_scan.py .
       - name: Dependency license check
-        run: uv run python scripts/check_dependency_licenses.py
+        run: uv run --all-extras python scripts/check_dependency_licenses.py
       - name: Dependency audit
         run: uv run pip-audit
 
@@ -68,16 +68,16 @@ jobs:
         with:
           python-version: "3.12"
       - name: Install uv
-        run: python -m pip install --upgrade uv
+        run: python -m pip install "uv==$(cat .github/uv-version.txt)"
       - name: Sync
         run: uv sync --locked --all-extras
       - name: Build wheel and source distribution
         run: uv build --out-dir dist
       - name: Generate SBOM
-        run: uv run python scripts/generate_sbom.py --output build/release/actionlineage-sbom.json
+        run: uv run --all-extras python scripts/generate_sbom.py --output build/release/actionlineage-sbom.json
       - name: Generate dependency license report
         run: |
-          uv run python scripts/check_dependency_licenses.py \
+          uv run --all-extras python scripts/check_dependency_licenses.py \
             --output build/release/actionlineage-license-report.json
       - name: Generate local release provenance
         run: |
@@ -95,7 +95,7 @@ jobs:
             --artifact-root build/release \
             --dist-dir dist \
             --audited-implementation-commit "$GITHUB_SHA" \
-            --gate "release_verify|PASS|release.yml verify job passed on Python 3.12 and 3.13" \
+            --gate "release_verify|PASS|release.yml verify job passed on Python 3.12, 3.13, and 3.14" \
             --gate "wheel_sdist_build|PASS|uv build --out-dir dist" \
             --gate "dependency_license_check|PASS|dependency license report generated without issues" \
             --output build/release/manifest.json
@@ -152,6 +152,7 @@ jobs:
     if: startsWith(github.ref, 'refs/tags/v')
     permissions:
       contents: read
+      id-token: write
       packages: write
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
@@ -187,6 +188,112 @@ jobs:
         run: |
           docker push "${{ steps.image.outputs.image }}:${GITHUB_REF_NAME}"
           docker push "${{ steps.image.outputs.image }}:${{ steps.image.outputs.version }}"
+      - name: Capture published image digest
+        id: digest
+        shell: bash
+        run: |
+          digest_ref="$(docker inspect --format='{{index .RepoDigests 0}}' "${{ steps.image.outputs.image }}:${GITHUB_REF_NAME}")"
+          digest="${digest_ref##*@}"
+          if [ -z "$digest" ] || [ "$digest" = "$digest_ref" ]; then
+            echo "could not determine pushed image digest" >&2
+            exit 1
+          fi
+          mkdir -p build/container
+          cat > build/container/actionlineage-ghcr-image.json <<JSON
+          {
+            "image": "${{ steps.image.outputs.image }}",
+            "digest": "${digest}",
+            "tag": "${GITHUB_REF_NAME}",
+            "version": "${{ steps.image.outputs.version }}",
+            "digest_ref": "${{ steps.image.outputs.image }}@${digest}"
+          }
+          JSON
+          sed "s#${{ steps.image.outputs.image }}:${{ steps.image.outputs.version }}#${{ steps.image.outputs.image }}@${digest}#" \
+            deploy/kubernetes/actionlineage-service.yaml \
+            > build/container/actionlineage-service.digest-pinned.yaml
+          echo "digest=${digest}" >> "$GITHUB_OUTPUT"
+      - name: Generate container attestation predicates
+        shell: bash
+        run: |
+          mkdir -p build/container
+          uv_version="$(cat .github/uv-version.txt)"
+          digest="${{ steps.digest.outputs.digest }}"
+          digest_hex="${digest#sha256:}"
+          cat > build/container/actionlineage-container-provenance.json <<JSON
+          {
+            "_type": "https://slsa.dev/provenance/v1",
+            "subject": [
+              {
+                "name": "${{ steps.image.outputs.image }}",
+                "digest": {"sha256": "${digest_hex}"}
+              }
+            ],
+            "buildDefinition": {
+              "buildType": "https://github.com/VectorTrace-Labs/ActionLineage/.github/workflows/release.yml",
+              "externalParameters": {
+                "ref": "${GITHUB_REF}",
+                "sha": "${GITHUB_SHA}",
+                "uv_version": "${uv_version}"
+              }
+            },
+            "runDetails": {
+              "builder": {"id": "https://github.com/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"}
+            }
+          }
+          JSON
+          python3 scripts/generate_sbom.py --output build/container/actionlineage-container-sbom.json
+      - name: Install cosign
+        shell: bash
+        run: |
+          cosign_version="$(cat .github/cosign-version.txt)"
+          curl --fail --silent --show-error --location \
+            -H "Cache-Control: no-cache" \
+            -H "Pragma: no-cache" \
+            -o cosign-linux-amd64 \
+            "https://github.com/sigstore/cosign/releases/download/${cosign_version}/cosign-linux-amd64"
+          curl --fail --silent --show-error --location \
+            -H "Cache-Control: no-cache" \
+            -H "Pragma: no-cache" \
+            -o cosign_checksums.txt \
+            "https://github.com/sigstore/cosign/releases/download/${cosign_version}/cosign_checksums.txt"
+          grep "  cosign-linux-amd64$" cosign_checksums.txt | sha256sum -c -
+          sudo install -m 0755 cosign-linux-amd64 /usr/local/bin/cosign
+      - name: Sign and attest published image digest
+        env:
+          COSIGN_YES: "true"
+        shell: bash
+        run: |
+          image_ref="${{ steps.image.outputs.image }}@${{ steps.digest.outputs.digest }}"
+          identity_regexp="https://github.com/${GITHUB_REPOSITORY}/.github/workflows/release.yml@refs/tags/.*"
+          cosign sign "${image_ref}"
+          cosign attest \
+            --predicate build/container/actionlineage-container-provenance.json \
+            --type slsaprovenance \
+            "${image_ref}"
+          cosign attest \
+            --predicate build/container/actionlineage-container-sbom.json \
+            --type https://actionlineage.dev/simple-sbom-v0 \
+            "${image_ref}"
+          cosign verify \
+            --certificate-identity-regexp "${identity_regexp}" \
+            --certificate-oidc-issuer "https://token.actions.githubusercontent.com" \
+            "${image_ref}"
+          cosign verify-attestation \
+            --type slsaprovenance \
+            --certificate-identity-regexp "${identity_regexp}" \
+            --certificate-oidc-issuer "https://token.actions.githubusercontent.com" \
+            "${image_ref}"
+          cosign verify-attestation \
+            --type https://actionlineage.dev/simple-sbom-v0 \
+            --certificate-identity-regexp "${identity_regexp}" \
+            --certificate-oidc-issuer "https://token.actions.githubusercontent.com" \
+            "${image_ref}"
+      - name: Upload container release evidence
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: actionlineage-container-release-evidence
+          path: build/container/*
+          if-no-files-found: error
 
   publish-testpypi:
     name: Publish to TestPyPI
@@ -249,7 +356,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        python-version: ["3.12", "3.13"]
+        python-version: ["3.12", "3.13", "3.14"]
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
       - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405

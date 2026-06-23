@@ -20,14 +20,14 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        python-version: ["3.12", "3.13"]
+        python-version: ["3.12", "3.13", "3.14"]
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
       - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405
         with:
           python-version: ${{ matrix.python-version }}
       - name: Install uv
-        run: python -m pip install --upgrade uv
+        run: python -m pip install "uv==$(cat .github/uv-version.txt)"
       - name: Sync eval dependencies
         run: uv sync --locked --all-extras --group eval
       - name: Validate scenario DSL and coverage map
@@ -102,14 +102,14 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        python-version: ["3.12", "3.13"]
+        python-version: ["3.12", "3.13", "3.14"]
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
       - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405
         with:
           python-version: ${{ matrix.python-version }}
       - name: Install uv
-        run: python -m pip install --upgrade uv
+        run: python -m pip install "uv==$(cat .github/uv-version.txt)"
       - name: Sync eval dependencies
         run: uv sync --locked --all-extras --group eval
       - name: Start and tear down disposable Compose environment
@@ -194,7 +194,7 @@ jobs:
           python-version: "3.12"
       - name: Install uv
         if: steps.live-secret.outputs.configured == 'true'
-        run: python -m pip install --upgrade uv
+        run: python -m pip install "uv==$(cat .github/uv-version.txt)"
       - name: Sync eval dependencies
         if: steps.live-secret.outputs.configured == 'true'
         run: uv sync --locked --all-extras --group eval

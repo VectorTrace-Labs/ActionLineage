@@ -51,7 +51,7 @@ spec:
         fsGroup: 10001
       containers:
         - name: actionlineage
-          image: ghcr.io/vectortrace-labs/actionlineage:0.1.0a3
+          image: ghcr.io/vectortrace-labs/actionlineage:0.1.0a6
           imagePullPolicy: IfNotPresent
           command:
             - python
@@ -86,12 +86,12 @@ spec:
               mountPath: /data
           readinessProbe:
             httpGet:
-              path: /health
+              path: /ready
               port: http
             periodSeconds: 10
           livenessProbe:
             httpGet:
-              path: /health
+              path: /live
               port: http
             periodSeconds: 30
           securityContext:

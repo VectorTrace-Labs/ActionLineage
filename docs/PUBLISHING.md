@@ -80,10 +80,10 @@ avoid implying production stability and make release evidence easier to audit.
 ## Trusted Publisher Setup
 
 Package publishing uses Trusted Publisher records in TestPyPI and PyPI. Version
-`0.1.0a5` is the corrective release-prep version for the next owner-approved
-Trusted Publishing run. Version `0.1.0a3` was published from
-`.github/workflows/release.yml` with no registry API token and remains the
-latest public package until `0.1.0a5` is published.
+`0.1.0a6` is the corrective release-prep version for the next owner-approved
+Trusted Publishing run. Version `0.1.0a5` is currently published on both PyPI
+and TestPyPI with `Requires-Python: >=3.12`; those published distributions and
+their long descriptions cannot be changed in place.
 
 For TestPyPI:
 
@@ -128,9 +128,9 @@ After a successful release workflow run, verify downloaded artifacts with GitHub
 CLI:
 
 ```bash
-gh attestation verify actionlineage-0.1.0a5-py3-none-any.whl \
+gh attestation verify actionlineage-0.1.0a6-py3-none-any.whl \
   --repo VectorTrace-Labs/ActionLineage
-gh attestation verify actionlineage-0.1.0a5.tar.gz \
+gh attestation verify actionlineage-0.1.0a6.tar.gz \
   --repo VectorTrace-Labs/ActionLineage
 ```
 
@@ -140,20 +140,52 @@ Also verify checksums:
 shasum -a 256 -c SHA256SUMS.txt
 ```
 
+## Container Signature Verification
+
+For version tags, the release workflow pushes a GHCR image, captures the
+published OCI digest, signs that immutable digest with keyless Sigstore/cosign,
+and attaches build-provenance and SBOM attestations to the digest. PR builds do
+not require signing credentials.
+
+Independent verification after publication:
+
+```bash
+IMAGE=ghcr.io/vectortrace-labs/actionlineage@sha256:<published-digest>
+IDENTITY='https://github.com/VectorTrace-Labs/ActionLineage/.github/workflows/release.yml@refs/tags/.*'
+ISSUER='https://token.actions.githubusercontent.com'
+
+cosign verify \
+  --certificate-identity-regexp "$IDENTITY" \
+  --certificate-oidc-issuer "$ISSUER" \
+  "$IMAGE"
+
+cosign verify-attestation \
+  --type slsaprovenance \
+  --certificate-identity-regexp "$IDENTITY" \
+  --certificate-oidc-issuer "$ISSUER" \
+  "$IMAGE"
+
+cosign verify-attestation \
+  --type https://actionlineage.dev/simple-sbom-v0 \
+  --certificate-identity-regexp "$IDENTITY" \
+  --certificate-oidc-issuer "$ISSUER" \
+  "$IMAGE"
+```
+
 ## Current Alpha Publication Evidence
 
 Current public package publication proof:
 
 - TestPyPI: `https://test.pypi.org/project/actionlineage/`
 - PyPI: `https://pypi.org/project/actionlineage/`
-- Version: `0.1.0a5` after the corrective publication; `0.1.0a3` remains the latest public package until then
-- TestPyPI workflow run: `27973522992`
-- PyPI workflow run: `27973832210`
+- Current public version: `0.1.0a5`
+- Next prepared corrective version: `0.1.0a6`
+- Current GitHub Release: `v0.1.0a5`, published 2026-06-23 with 13 assets
 
-Fresh `uvx` install, deterministic demo, and journal verification previously
-passed from both indexes for `0.1.0a3` on Python 3.12. The `0.1.0a5`
-post-publication lane must repeat that proof on Python 3.12 and 3.13. Because
-`0.1.0a5` is a prerelease, `uvx` smoke tests use `--prerelease allow`.
+Fresh `uvx` install, deterministic demo, and journal verification were release
+proof requirements for the current public alpha. The `0.1.0a6`
+post-publication lane must repeat that proof on Python 3.12, 3.13, and 3.14.
+Because `0.1.0a6` is a prerelease, `uvx` smoke tests use `--prerelease allow`.
 Organization ownership transfer remains an external follow-up.
 
 See `docs/PACKAGE_MANAGERS.md` for GHCR, Homebrew, conda-forge, and deferred

@@ -25,6 +25,9 @@ def test_release_consistency_offline_current_repo_has_no_failures() -> None:
     assert checks["local.version.readme_install"]["status"] == "PASS"
     assert checks["local.version.changelog"]["status"] == "PASS"
     assert checks["local.metadata.project_urls"]["status"] == "PASS"
+    assert checks["local.deploy.helm_app_version"]["status"] == "PASS"
+    assert checks["local.deploy.helm_image_tag"]["status"] == "PASS"
+    assert checks["local.deploy.kubernetes_image_tag"]["status"] == "PASS"
     assert checks["dist.present"]["status"] == "UNKNOWN"
 
 
@@ -66,21 +69,43 @@ def test_release_consistency_rejects_sdist_local_state(tmp_path: Path) -> None:
     checker = _load_checker()
     dist_dir = tmp_path / "dist"
     dist_dir.mkdir()
-    metadata = _metadata("0.1.0a5", ">=3.12")
-    _write_wheel(dist_dir / "actionlineage-0.1.0a5-py3-none-any.whl", metadata)
+    metadata = _metadata("0.1.0a6", ">=3.12,<3.15")
+    _write_wheel(dist_dir / "actionlineage-0.1.0a6-py3-none-any.whl", metadata)
     _write_sdist(
-        dist_dir / "actionlineage-0.1.0a5.tar.gz",
+        dist_dir / "actionlineage-0.1.0a6.tar.gz",
         metadata,
-        extra_name="actionlineage-0.1.0a5/.hypothesis/constants/example",
+        extra_name="actionlineage-0.1.0a6/.hypothesis/constants/example",
     )
 
     report = checker.build_report(PROJECT_ROOT, dist_dir=dist_dir)
 
     checks = {check["id"]: check for check in report["checks"]}
     assert report["ok"] is False
-    assert checks["dist.sdist.actionlineage-0.1.0a5.tar.gz.local_state"]["status"] == "FAIL"
-    assert checks["dist.wheel.actionlineage-0.1.0a5-py3-none-any.whl.version"]["status"] == "PASS"
-    assert checks["dist.sdist.actionlineage-0.1.0a5.tar.gz.version"]["status"] == "PASS"
+    assert checks["dist.sdist.actionlineage-0.1.0a6.tar.gz.local_state"]["status"] == "FAIL"
+    assert checks["dist.wheel.actionlineage-0.1.0a6-py3-none-any.whl.version"]["status"] == "PASS"
+    assert checks["dist.sdist.actionlineage-0.1.0a6.tar.gz.version"]["status"] == "PASS"
+
+
+def test_release_consistency_accepts_normalized_python_requirement_order(tmp_path: Path) -> None:
+    checker = _load_checker()
+    dist_dir = tmp_path / "dist"
+    dist_dir.mkdir()
+    metadata = _metadata("0.1.0a6", "<3.15,>=3.12")
+    _write_wheel(dist_dir / "actionlineage-0.1.0a6-py3-none-any.whl", metadata)
+    _write_sdist(
+        dist_dir / "actionlineage-0.1.0a6.tar.gz",
+        metadata,
+        extra_name="actionlineage-0.1.0a6/README.md",
+    )
+
+    report = checker.build_report(PROJECT_ROOT, dist_dir=dist_dir)
+
+    checks = {check["id"]: check for check in report["checks"]}
+    assert (
+        checks["dist.wheel.actionlineage-0.1.0a6-py3-none-any.whl.requires_python"]["status"]
+        == "PASS"
+    )
+    assert checks["dist.sdist.actionlineage-0.1.0a6.tar.gz.requires_python"]["status"] == "PASS"
 
 
 def test_release_consistency_flags_stale_public_description_claims() -> None:
@@ -141,6 +166,10 @@ def test_fetch_json_falls_back_to_bounded_curl_after_url_error(
         "--silent",
         "--show-error",
         "--location",
+        "--header",
+        "Cache-Control: no-cache",
+        "--header",
+        "Pragma: no-cache",
         "--max-time",
         "3.5",
         "--user-agent",
@@ -223,6 +252,10 @@ def test_project_url_head_falls_back_to_bounded_curl_after_url_error(
         "--silent",
         "--show-error",
         "--location",
+        "--header",
+        "Cache-Control: no-cache",
+        "--header",
+        "Pragma: no-cache",
         "--max-time",
         "3.5",
         "--output",
@@ -321,10 +354,11 @@ def _write_minimal_project(project_root: Path, *, runtime_version: str) -> None:
 [project]
 name = "actionlineage"
 version = "1.2.3"
-requires-python = ">=3.12"
+requires-python = ">=3.12,<3.15"
 classifiers = [
   "Programming Language :: Python :: 3.12",
   "Programming Language :: Python :: 3.13",
+  "Programming Language :: Python :: 3.14",
 ]
 
 [project.urls]
@@ -341,6 +375,20 @@ target-version = "py312"
 [tool.mypy]
 python_version = "3.12"
 """.lstrip(),
+        encoding="utf-8",
+    )
+    _write_minimal_deploy(project_root, version="1.2.3")
+
+
+def _write_minimal_deploy(project_root: Path, *, version: str) -> None:
+    helm_dir = project_root / "deploy" / "helm" / "actionlineage"
+    helm_dir.mkdir(parents=True)
+    (helm_dir / "Chart.yaml").write_text(f'appVersion: "{version}"\n', encoding="utf-8")
+    (helm_dir / "values.yaml").write_text(f'image:\n  tag: "{version}"\n', encoding="utf-8")
+    kube_dir = project_root / "deploy" / "kubernetes"
+    kube_dir.mkdir(parents=True)
+    (kube_dir / "actionlineage-service.yaml").write_text(
+        f"image: ghcr.io/vectortrace-labs/actionlineage:{version}\n",
         encoding="utf-8",
     )
 
@@ -361,12 +409,12 @@ Project-URL: Security policy, https://github.com/VectorTrace-Labs/ActionLineage/
 
 def _write_wheel(path: Path, metadata: str) -> None:
     with zipfile.ZipFile(path, "w") as archive:
-        archive.writestr("actionlineage-0.1.0a3.dist-info/METADATA", metadata)
+        archive.writestr("actionlineage-0.1.0a6.dist-info/METADATA", metadata)
 
 
 def _write_sdist(path: Path, metadata: str, *, extra_name: str) -> None:
     with tarfile.open(path, "w:gz") as archive:
-        _add_tar_bytes(archive, "actionlineage-0.1.0a3/PKG-INFO", metadata.encode("utf-8"))
+        _add_tar_bytes(archive, "actionlineage-0.1.0a6/PKG-INFO", metadata.encode("utf-8"))
         _add_tar_bytes(archive, extra_name, b"cache")
 
 

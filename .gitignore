@@ -11,10 +11,12 @@ htmlcov/
 *.db
 *.sqlite
 *.sqlite3
+*.jsonl.lock
 .journal/
 .dist/
 dist/
 build/
+cdk.out/
 *.egg-info/
 node_modules/
 .DS_Store

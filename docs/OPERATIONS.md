@@ -5,11 +5,19 @@ the local append-only journal as canonical evidence.
 
 ## Health States
 
+`/live` reports process-level liveness only. It returns HTTP 200 while the
+service process can serve requests and does not verify journal integrity.
+
+`/ready` verifies that required local state is usable. It returns HTTP 503 when
+the configured journal cannot be locked/read or when journal verification fails.
+`/health` remains as a compatibility alias for readiness and therefore also
+uses fail-closed HTTP status.
+
 `check_local_health()` reports:
 
 - `ok` when the journal verifies and the configured projection exists.
-- `degraded` when journal verification fails or a configured projection is
-  missing.
+- `degraded` when journal verification fails, the journal cannot be checked, or
+  a configured projection is missing.
 
 Health checks do not mutate journals or rebuild projections.
 
@@ -61,7 +69,9 @@ uv sync --extra service
 
 Service endpoints:
 
-- `GET /health`
+- `GET /live`
+- `GET /ready`
+- `GET /health` compatibility readiness alias
 - `GET /timeline`
 - `GET /events`
 - `POST /ingest`
@@ -70,7 +80,23 @@ Service endpoints:
 - `POST /export-case`
 
 `/ingest` requires `write`; timeline, events, contract validation, and detection
-evaluation require `read`; case export requires `export`.
+evaluation require `read`; case export requires `export`. Journal-dependent
+service endpoints fail closed with HTTP 503 when the internal journal does not
+verify.
+
+Service-created events include server-controlled `payload.ingested_by`
+provenance. It records the authenticated service principal, role set,
+authentication method, non-secret credential identifier, request ID, server
+receipt time, and service instance identity. Clients cannot supply
+`ingested_by`; requests that try to do so are rejected. Submitted `source` and
+`principal` fields remain evidence assertions from the submitted record and are
+not treated as authenticated transport identity. Older records without
+`payload.ingested_by` remain readable and are identified as legacy records
+without invented authenticated identity.
+
+Write-role credentials cannot assert `classification.trust=trusted`. Trusted
+evidence assertions require an admin service role in this alpha service model;
+unprivileged attempts are rejected.
 
 Service-mode case exports are written under a configured export root. Set
 `ACTIONLINEAGE_EXPORT_ROOT` for environment-driven service startup; otherwise
@@ -136,6 +162,17 @@ The Kubernetes and Helm examples mount a persistent volume at `/data`, keep the
 append-only journal at `/data/actionlineage.journal`, keep the projection at
 `/data/projection.sqlite`, run as a non-root user, and read the bearer token
 from a Kubernetes Secret.
+
+Liveness probes use `/live`; readiness probes use `/ready`. Journal corruption
+therefore removes the pod from service without creating an endless liveness
+restart loop.
+
+New journal, projection, lock, and generated demo evidence files default to
+private POSIX permissions (`0600` for files and `0700` for application-created
+evidence directories). Existing storage that is broader than this is rejected
+for writes with an actionable error rather than silently chmodding parent
+directories the application did not create. Windows and filesystems that do not
+enforce POSIX mode bits require equivalent administrator controls.
 
 ## PostgreSQL Projection
 

@@ -18,8 +18,9 @@ rewrite both the journal and all trusted anchors.
 
 ## Append durability and incomplete records
 
-The local writer serializes append attempts with a sidecar lock file, verifies
-the existing journal before writing, requires the incoming
+The local writer serializes append attempts with a kernel-backed advisory lock
+on a stable sidecar lock file, verifies the existing journal before writing,
+requires the incoming
 `causality.sequence` to equal the next record index, writes one canonical JSON
 record plus a newline terminator, flushes, and calls `fsync()` on the journal
 file.
@@ -38,9 +39,23 @@ verified prefix. ActionLineage does not repair or truncate the source journal in
 place; use verified-prefix export to copy the records that verified before the
 first issue.
 
-The lock is a local sidecar file, not a distributed lock. Filesystems, network
-mounts, or backup tools that do not honor local exclusive creation semantics
-need deployment-specific controls before relying on concurrent writers.
+The lock file stores non-secret owner metadata while held, including PID,
+hostname, process-start identity, acquisition time, application version, and
+operation name. The file itself is not an ownership sentinel; process
+termination releases the advisory lock without requiring manual deletion. A
+malformed or foreign-host metadata record is not deleted based on unsafe
+guesswork.
+
+The lock is a local advisory lock, not a distributed lock. Filesystems, network
+mounts, container volumes, or backup tools that do not honor local advisory lock
+semantics need deployment-specific controls before relying on concurrent
+writers.
+
+Verified snapshots read and verify from one open file descriptor while holding
+a shared journal lock. They return the immutable event tuple captured during
+that verification pass and record verification status, verified count, terminal
+hash, and failure details. Security-sensitive consumers should use verified
+snapshots rather than raw parsing helpers.
 
 ## Trusted anchors
 

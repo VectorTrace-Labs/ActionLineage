@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import os
 import sqlite3
 from collections.abc import Iterable, Iterator
 from contextlib import contextmanager
@@ -17,7 +18,7 @@ from actionlineage.domain import (
     serialize_event,
 )
 from actionlineage.domain.events import event_type_value
-from actionlineage.journal import VerificationResult, iter_events, verify_journal
+from actionlineage.journal import VerificationResult, verified_journal_snapshot
 
 PROJECTION_SCHEMA_VERSION = 2
 INCIDENT_EXPORT_VERSION = "actionlineage.dev/incident-export-v0"
@@ -317,25 +318,24 @@ def rebuild_projection(journal_path: Path, database_path: Path) -> RebuildResult
 
     journal_path = Path(journal_path)
     database_path = Path(database_path)
-    verification = verify_journal(journal_path)
-    if not verification.ok:
-        raise ProjectionVerificationError(journal_path, verification)
+    snapshot = verified_journal_snapshot(journal_path)
+    if not snapshot.ok:
+        raise ProjectionVerificationError(journal_path, snapshot.verification)
 
-    database_path.parent.mkdir(parents=True, exist_ok=True)
+    _prepare_projection_path(database_path)
     indexed_count = 0
 
     try:
         with _connect(database_path) as connection:
             ensure_schema(connection)
             connection.execute("DELETE FROM events")
-            for record_number, event in enumerate(iter_events(journal_path), start=1):
+            for record_number, event in enumerate(snapshot.events, start=1):
                 index_event(connection, event, journal_record_number=record_number)
                 indexed_count += 1
 
-            if indexed_count != verification.records_verified:
+            if indexed_count != snapshot.record_count:
                 raise ProjectionRebuildError(
-                    "journal changed while rebuilding projection; indexed record count "
-                    "does not match verification result"
+                    "indexed record count does not match verified journal snapshot"
                 )
 
             _set_metadata(
@@ -344,7 +344,7 @@ def rebuild_projection(journal_path: Path, database_path: Path) -> RebuildResult
                     "schema_version": str(PROJECTION_SCHEMA_VERSION),
                     "source_journal_path": str(journal_path),
                     "records_indexed": str(indexed_count),
-                    "last_event_hash": verification.last_event_hash or "",
+                    "last_event_hash": snapshot.terminal_hash or "",
                 },
             )
     except sqlite3.Error as exc:
@@ -354,7 +354,7 @@ def rebuild_projection(journal_path: Path, database_path: Path) -> RebuildResult
         journal_path=journal_path,
         database_path=database_path,
         records_indexed=indexed_count,
-        last_event_hash=verification.last_event_hash,
+        last_event_hash=snapshot.terminal_hash,
     )
 
 
@@ -922,6 +922,31 @@ def _connect(database_path: Path) -> Iterator[sqlite3.Connection]:
             yield connection
     finally:
         connection.close()
+
+
+def _prepare_projection_path(database_path: Path) -> None:
+    database_path.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
+    if os.name != "posix":
+        return
+    parent_mode = database_path.parent.stat().st_mode & 0o777
+    if parent_mode & 0o077:
+        raise ProjectionRebuildError(
+            f"projection directory is not private: {database_path.parent}; "
+            "expected mode 0700 or stricter"
+        )
+    fd = os.open(
+        database_path,
+        os.O_RDWR | os.O_CREAT | getattr(os, "O_CLOEXEC", 0),
+        0o600,
+    )
+    try:
+        mode = os.fstat(fd).st_mode & 0o777
+        if mode & 0o077:
+            raise ProjectionRebuildError(
+                f"projection file is not private: {database_path}; expected mode 0600 or stricter"
+            )
+    finally:
+        os.close(fd)
 
 
 def _user_version(connection: sqlite3.Connection) -> int:

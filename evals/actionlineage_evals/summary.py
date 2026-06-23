@@ -10,6 +10,8 @@ from itertools import pairwise
 from pathlib import Path
 from typing import Any
 
+from actionlineage.domain import event_to_dict
+from actionlineage.journal import JournalError, LocalJournal
 from actionlineage_evals.models import FailureClass, JsonMap, ScenarioResult
 from actionlineage_evals.scenarios import (
     CAPABILITY_COVERAGE_PATH,
@@ -539,16 +541,13 @@ def _load_optional_json(path: Path) -> JsonMap:
 
 
 def _load_journal_events(path: Path) -> list[JsonMap]:
-    events: list[JsonMap] = []
     if not path.exists():
-        return events
-    for line in path.read_text(encoding="utf-8").splitlines():
-        if not line.strip():
-            continue
-        raw: Any = json.loads(line)
-        if isinstance(raw, dict):
-            events.append(raw)
-    return events
+        return []
+    snapshot = LocalJournal(path).verified_snapshot()
+    if not snapshot.ok:
+        codes = ",".join(issue.code for issue in snapshot.verification.issues)
+        raise JournalError(f"agent validation journal verification failed: {path}: {codes}")
+    return [event_to_dict(event) for event in snapshot.events]
 
 
 def _collect_tool_identities(value: object) -> list[JsonMap]:

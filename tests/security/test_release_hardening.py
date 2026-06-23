@@ -79,6 +79,19 @@ def test_secret_scan_skips_local_assistant_docs_by_default(tmp_path: Path) -> No
     assert len(scanner.scan_paths([tmp_path], include_local_only=True)) == 1
 
 
+def test_secret_scan_skips_installed_and_generated_vendor_dirs(tmp_path: Path) -> None:
+    scanner = _load_script("secret_scan")
+    for directory_name in ("node_modules", "cdk.out"):
+        vendor_dir = tmp_path / directory_name / "example"
+        vendor_dir.mkdir(parents=True)
+        (vendor_dir / "fixture.txt").write_text(
+            "Bearer " + "dependency-fixture-token-value-1234567890\n",
+            encoding="utf-8",
+        )
+
+    assert scanner.scan_paths([tmp_path]) == []
+
+
 def test_markdown_link_check_passes_current_repository() -> None:
     checker = _load_script("check_markdown_links")
 
@@ -178,7 +191,7 @@ def test_public_quickstart_smoke_runs_local_cli(tmp_path: Path) -> None:
     smoker = _load_script("smoke_public_quickstart")
 
     result = smoker.run_smoke(
-        cli_prefix=("uv", "run", "actionlineage"),
+        cli_prefix=(sys.executable, "-c", "from actionlineage.cli import app; app()"),
         output_dir=tmp_path / "quickstart",
         contract_path=PROJECT_ROOT / "contracts/examples/outbound-http.json",
     )
@@ -233,7 +246,7 @@ def test_public_quickstart_smoke_fails_when_expected_artifacts_are_missing(
             name=name,
             command=command,
             exit_code=0,
-            stdout="0.1.0a5\n" if name == "version" else "{}\n",
+            stdout=f"{smoker.DEFAULT_EXPECTED_VERSION}\n" if name == "version" else "{}\n",
             stderr="",
         )
 

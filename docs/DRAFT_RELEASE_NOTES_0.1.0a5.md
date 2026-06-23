@@ -2,6 +2,12 @@
 
 Last reviewed: 2026-06-23.
 
+Historical snapshot: these draft notes were prepared before `v0.1.0a5`,
+PyPI, and TestPyPI publication completed. They are retained to explain the
+`0.1.0a5` repair rationale, not as current release-prep instructions. Current
+release-prep notes for this remediation are in
+`docs/DRAFT_RELEASE_NOTES_0.1.0a6.md`.
+
 These are draft notes for owner review of the recommended corrective alpha
 release. They are not a publication request, release tag, or package upload.
 Use them only after the repository version, changelog, tag, release workflow

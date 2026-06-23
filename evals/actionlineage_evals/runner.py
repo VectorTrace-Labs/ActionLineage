@@ -132,7 +132,7 @@ def run_scenario(
 
     run_id = f"{scenario.scenario_id.lower()}-{mode.value}-seed-{seed}"
     paths = _run_paths(Path(artifact_root) / run_id)
-    paths.run_dir.mkdir(parents=True, exist_ok=True)
+    paths.run_dir.mkdir(mode=0o700, parents=True, exist_ok=True)
     world = WorldState(run_dir=paths.run_dir, use_docker=use_docker)
     world.prepare()
     environment = build_environment_controller(

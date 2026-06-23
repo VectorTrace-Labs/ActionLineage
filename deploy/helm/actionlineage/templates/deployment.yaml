@@ -20,7 +20,11 @@ spec:
         {{- toYaml .Values.podSecurityContext | nindent 8 }}
       containers:
         - name: actionlineage
+          {{- if .Values.image.digest }}
+          image: "{{ .Values.image.repository }}@{{ .Values.image.digest }}"
+          {{- else }}
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          {{- end }}
           imagePullPolicy: {{ .Values.image.pullPolicy }}
           command:
             - python
@@ -55,11 +59,11 @@ spec:
               mountPath: {{ .Values.persistence.mountPath | quote }}
           readinessProbe:
             httpGet:
-              path: /health
+              path: /ready
               port: http
           livenessProbe:
             httpGet:
-              path: /health
+              path: /live
               port: http
           securityContext:
             {{- toYaml .Values.containerSecurityContext | nindent 12 }}

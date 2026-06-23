@@ -11,6 +11,7 @@ from actionlineage.detection import DetectionMatch
 from actionlineage.domain import EventEnvelope, event_to_dict
 from actionlineage.domain.events import event_type_value
 from actionlineage.errors import ActionLineageValidationError
+from actionlineage.journal.verify import VerificationResult
 
 CONTRACT_SCHEMA_VERSION = "actionlineage.dev/contract/v1"
 
@@ -136,6 +137,7 @@ def validate_contract(
     contract: LineageContract,
     *,
     detection_results: tuple[DetectionMatch, ...] = (),
+    journal_verification: VerificationResult | None = None,
 ) -> ContractResult:
     """Validate required telemetry fields and control dependencies."""
 
@@ -144,17 +146,7 @@ def validate_contract(
     events_by_id = {event.event_id: event for event in events}
 
     if contract.hash_chain_required:
-        for event in events:
-            if event.integrity.event_hash is None:
-                violations.append(
-                    ContractViolation(
-                        code="event_hash_missing",
-                        message="contract requires journal integrity hashes",
-                        event_id=event.event_id,
-                        event_type=event_type_value(event.event_type),
-                        remediation="append events through the local journal before validation",
-                    )
-                )
+        violations.extend(_validate_journal_integrity_requirement(events, journal_verification))
 
     for requirement in contract.events:
         matches = _events_of_type(events, requirement.event_type)
@@ -250,6 +242,55 @@ def validate_contract(
         ok=not violations,
         violations=tuple(violations),
     )
+
+
+def _validate_journal_integrity_requirement(
+    events: tuple[EventEnvelope, ...],
+    verification: VerificationResult | None,
+) -> tuple[ContractViolation, ...]:
+    if verification is None:
+        return (
+            ContractViolation(
+                code="journal_integrity_unverified",
+                message="contract requires a verified journal hash chain",
+                field="journal.integrity",
+                remediation="validate a VerifiedJournalSnapshot instead of unverified events",
+            ),
+        )
+    if not verification.ok:
+        issue = verification.issues[0] if verification.issues else None
+        return (
+            ContractViolation(
+                code="journal_integrity_violation",
+                message=(
+                    "contract requires a verified journal hash chain"
+                    + (f"; verifier reported {issue.code}" if issue is not None else "")
+                ),
+                event_id=issue.event_id if issue is not None else None,
+                field="journal.integrity",
+                remediation="run journal verification and repair or replace the invalid journal",
+            ),
+        )
+    if verification.records_verified != len(events):
+        return (
+            ContractViolation(
+                code="journal_integrity_snapshot_mismatch",
+                message="verified record count does not match supplied event tuple",
+                field="journal.integrity",
+                remediation="consume the immutable events from the verified journal snapshot",
+            ),
+        )
+    terminal_hash = events[-1].integrity.event_hash if events else None
+    if verification.last_event_hash != terminal_hash:
+        return (
+            ContractViolation(
+                code="journal_integrity_snapshot_mismatch",
+                message="verified terminal hash does not match supplied event tuple",
+                field="journal.integrity",
+                remediation="consume the immutable events from the verified journal snapshot",
+            ),
+        )
+    return ()
 
 
 def load_contract(path: Path) -> LineageContract:

@@ -594,7 +594,7 @@ def test_cli_git_anchor_statement_create_and_verify(tmp_path: Path) -> None:
 
 
 def _init_git_repo(repo_path: Path) -> Path:
-    repo_path.mkdir(parents=True)
+    repo_path.mkdir(mode=0o700, parents=True)
     _git(repo_path, "init")
     _git(repo_path, "config", "user.name", "ActionLineage Test")
     _git(repo_path, "config", "user.email", "actionlineage@example.invalid")

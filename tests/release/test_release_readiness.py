@@ -16,9 +16,9 @@ def test_package_metadata_is_public_alpha_ready() -> None:
     pyproject = tomllib.loads(PYPROJECT.read_text(encoding="utf-8"))
     project = pyproject["project"]
 
-    assert project["version"] == "0.1.0a5"
-    assert project["requires-python"] == ">=3.12"
-    assert actionlineage.__version__ == "0.1.0a5"
+    assert project["version"] == "0.1.0a6"
+    assert project["requires-python"] == ">=3.12,<3.15"
+    assert actionlineage.__version__ == "0.1.0a6"
     assert "Development Status :: 3 - Alpha" in project["classifiers"]
     assert "Development Status :: 5 - Production/Stable" not in project["classifiers"]
     assert "Intended Audience :: Developers" in project["classifiers"]
@@ -26,6 +26,7 @@ def test_package_metadata_is_public_alpha_ready() -> None:
     assert "Operating System :: OS Independent" in project["classifiers"]
     assert "Programming Language :: Python :: 3.12" in project["classifiers"]
     assert "Programming Language :: Python :: 3.13" in project["classifiers"]
+    assert "Programming Language :: Python :: 3.14" in project["classifiers"]
     assert "Topic :: Software Development :: Libraries :: Python Modules" in project["classifiers"]
     assert "Typing :: Typed" in project["classifiers"]
     assert project["license"] == "Apache-2.0"
@@ -83,6 +84,7 @@ def test_release_docs_are_present() -> None:
         "docs/RELEASE_CANDIDATE_AUDIT.md",
         "docs/DRAFT_RELEASE_NOTES_0.1.0a3.md",
         "docs/DRAFT_RELEASE_NOTES_0.1.0a5.md",
+        "docs/DRAFT_RELEASE_NOTES_0.1.0a6.md",
         "docs/OWNER_PUBLICATION_CHECKLIST.md",
         "docs/PACKAGE_MANAGERS.md",
         "docs/REVIEW_PROCESS.md",
@@ -131,18 +133,18 @@ def test_cli_version_matches_package_metadata() -> None:
     result = CliRunner().invoke(app, ["version"])
 
     assert result.exit_code == 0
-    assert result.stdout.strip() == "0.1.0a5"
+    assert result.stdout.strip() == "0.1.0a6"
 
 
 def test_readme_quickstart_uses_demo_aligned_contract() -> None:
     readme = (PROJECT_ROOT / "README.md").read_text(encoding="utf-8")
 
     assert "Five-Minute PyPI Evaluation" in readme
-    assert "Python 3.12 or newer" in readme
-    assert "Because `0.1.0a5` is a prerelease" in readme
-    assert "uvx --prerelease allow --from actionlineage==0.1.0a5 actionlineage version" in readme
+    assert "Python 3.12, 3.13, or 3.14" in readme
+    assert "Because `0.1.0a6` is a prerelease" in readme
+    assert "uvx --prerelease allow --from actionlineage==0.1.0a6 actionlineage version" in readme
     assert (
-        "uvx --prerelease allow --from actionlineage==0.1.0a5 actionlineage demo run --output-dir"
+        "uvx --prerelease allow --from actionlineage==0.1.0a6 actionlineage demo run --output-dir"
     ) in readme
     assert "PyPI path needs internet access to install the package" in readme
     assert "uv sync --locked --all-extras" in readme
@@ -238,7 +240,7 @@ def test_external_review_docs_prepare_review_without_claiming_validation() -> No
     )
 
     for required in (
-        "uvx --prerelease allow --from actionlineage==0.1.0a5 actionlineage version",
+        "uvx --prerelease allow --from actionlineage==0.1.0a6 actionlineage version",
         "actionlineage demo run",
         "actionlineage journal verify",
         "contracts/examples/outbound-http.json",
@@ -254,7 +256,7 @@ def test_external_review_docs_prepare_review_without_claiming_validation() -> No
         "docs/REVIEW_OUTREACH_DRAFTS.md",
         "actionlineage doctor",
         'pipx run --pip-args="--pre"',
-        "python -m pip install --pre actionlineage==0.1.0a5",
+        "python -m pip install --pre actionlineage==0.1.0a6",
     ):
         assert required in combined
 
@@ -276,9 +278,9 @@ def test_troubleshooting_doc_covers_first_time_user_failures() -> None:
     for required in (
         "Troubleshooting First-Time Evaluation",
         "actionlineage doctor",
-        "uvx --prerelease allow --from actionlineage==0.1.0a5",
+        "uvx --prerelease allow --from actionlineage==0.1.0a6",
         'pipx run --pip-args="--pre"',
-        "python -m pip install --pre actionlineage==0.1.0a5",
+        "python -m pip install --pre actionlineage==0.1.0a6",
         "Python 3.12",
         "uv sync --locked --extra adapters",
         "uv sync --locked --extra service",
@@ -342,13 +344,18 @@ def test_external_review_issue_templates_collect_safe_repro_context() -> None:
 def test_release_candidate_audit_prepares_without_publishing() -> None:
     audit = (PROJECT_ROOT / "docs/RELEASE_CANDIDATE_AUDIT.md").read_text(encoding="utf-8")
     draft_notes = (PROJECT_ROOT / "docs/DRAFT_RELEASE_NOTES_0.1.0a3.md").read_text(encoding="utf-8")
-    next_draft_notes = (PROJECT_ROOT / "docs/DRAFT_RELEASE_NOTES_0.1.0a5.md").read_text(
+    historical_a5_notes = (PROJECT_ROOT / "docs/DRAFT_RELEASE_NOTES_0.1.0a5.md").read_text(
+        encoding="utf-8"
+    )
+    next_draft_notes = (PROJECT_ROOT / "docs/DRAFT_RELEASE_NOTES_0.1.0a6.md").read_text(
         encoding="utf-8"
     )
     owner_checklist = (PROJECT_ROOT / "docs/OWNER_PUBLICATION_CHECKLIST.md").read_text(
         encoding="utf-8"
     )
-    combined = "\n".join((audit, draft_notes, next_draft_notes, owner_checklist))
+    combined = "\n".join(
+        (audit, draft_notes, historical_a5_notes, next_draft_notes, owner_checklist)
+    )
     normalized = combined.lower()
 
     assert "build/release-candidate/manifest.json" in audit
@@ -417,26 +424,23 @@ def test_release_candidate_audit_prepares_without_publishing() -> None:
     assert "Release assets must be built from the same commit resolved by the release tag" in (
         draft_notes
     )
-    assert "recommended corrective alpha" in next_draft_notes
-    assert "Use them only after the repository version" in next_draft_notes
-    assert "A new `v0.1.0a5` tag from the reviewed hardening commit" in next_draft_notes
-    assert "`v0.1.0a4` was tagged" in next_draft_notes
-    assert "No event-schema namespace change" in next_draft_notes
-    assert "no independent external review, adoption, production use, or audit is claimed" in (
+    assert "Historical snapshot" in historical_a5_notes
+    assert "ActionLineage `0.1.0a6` hardens the public alpha" in next_draft_notes
+    assert "Contract and detection consumers now require a verified journal snapshot" in (
         next_draft_notes
     )
+    assert "Service-created events may include `payload.ingested_by`" in next_draft_notes
+    assert "Python support is explicitly bounded to `>=3.12,<3.15`" in next_draft_notes
     assert "Codex must not perform these actions without explicit approval" in owner_checklist
     assert "build/release-candidate/REVIEW_INDEX.md" in owner_checklist
     assert "Version tag matches audited commit" in owner_checklist
     assert "not as an attestation or external validation" in owner_checklist
-    assert "recommended corrective metadata/release repair is a" in owner_checklist
-    assert "new owner-approved `0.1.0a5` release" in owner_checklist
-    assert "gh release create v0.1.0a3" in owner_checklist
-    assert "gh release create v0.1.0a5" in owner_checklist
+    assert "recommended alpha-hardening repair is a" in owner_checklist
+    assert "owner-approved `0.1.0a6` release" in owner_checklist
+    assert "gh release create v0.1.0a6" in owner_checklist
     assert "--verify-tag" in owner_checklist
     assert "--draft" in owner_checklist
-    assert "--notes-file /tmp/actionlineage-v0.1.0a3-release-notes.md" in owner_checklist
-    assert "--notes-file /tmp/actionlineage-v0.1.0a5-release-notes.md" in owner_checklist
+    assert "--notes-file /tmp/actionlineage-v0.1.0a6-release-notes.md" in owner_checklist
     assert "Review the draft in the GitHub UI before publishing" in owner_checklist
     assert (
         "Do not republish or attempt to overwrite existing PyPI/TestPyPI files" in owner_checklist
@@ -478,8 +482,8 @@ def test_release_checklist_covers_required_gates() -> None:
         "uv run pip-audit",
         "uv build --out-dir dist",
         "scripts/smoke_public_quickstart.py",
-        "--package-spec dist/actionlineage-0.1.0a5-py3-none-any.whl",
-        "--package-spec dist/actionlineage-0.1.0a5.tar.gz",
+        "--package-spec dist/actionlineage-0.1.0a6-py3-none-any.whl",
+        "--package-spec dist/actionlineage-0.1.0a6.tar.gz",
         "scripts/write_ci_quality_summary.py",
         "--coverage-floor 85",
         "actionlineage_evals public-report",
@@ -522,7 +526,7 @@ def test_release_checklist_covers_required_gates() -> None:
 def test_ci_runs_local_release_proof_gates() -> None:
     workflow = (PROJECT_ROOT / ".github/workflows/ci.yml").read_text(encoding="utf-8")
 
-    assert "python-version: ['3.12', '3.13']" in workflow
+    assert "python-version: ['3.12', '3.13', '3.14']" in workflow
     assert "python-version: ${{ matrix.python-version }}" in workflow
     assert "fetch-depth: 0" in workflow
     assert "uv sync --locked --all-extras" in workflow
@@ -532,7 +536,8 @@ def test_ci_runs_local_release_proof_gates() -> None:
     assert "--cov-report=xml:/tmp/actionlineage-coverage.xml" in workflow
     assert "--cov-fail-under=85" in workflow
     assert (
-        "uv run python scripts/generate_sbom.py --output /tmp/actionlineage-sbom.json" in workflow
+        "uv run --all-extras python scripts/generate_sbom.py --output /tmp/actionlineage-sbom.json"
+        in workflow
     )
     assert "name: Dependency license check" in workflow
     assert "scripts/check_dependency_licenses.py" in workflow
@@ -564,7 +569,7 @@ def test_release_workflow_builds_attests_and_uses_trusted_publishing() -> None:
 
     assert "name: release" in workflow
     assert "publish_target:" in workflow
-    assert 'python-version: ["3.12", "3.13"]' in workflow
+    assert 'python-version: ["3.12", "3.13", "3.14"]' in workflow
     assert "python-version: ${{ matrix.python-version }}" in workflow
     assert "name: Verify release candidate" in workflow
     assert "name: Build release artifacts" in workflow
@@ -645,9 +650,9 @@ def test_artifact_upload_action_is_node24_pin_and_download_action_is_not_used() 
 
     assert upload_artifact_v7_0_1 in release
     assert upload_artifact_v7_0_1 in agent_validation
-    assert combined.count(f"actions/upload-artifact@{upload_artifact_v7_0_1}") == 5
+    assert combined.count(f"actions/upload-artifact@{upload_artifact_v7_0_1}") == 6
     assert "actions/download-artifact@" not in combined
-    assert 'python-version: ["3.12", "3.13"]' in agent_validation
+    assert 'python-version: ["3.12", "3.13", "3.14"]' in agent_validation
     assert (
         "actionlineage-agent-validation-no-model-py${{ matrix.python-version }}" in agent_validation
     )
@@ -708,8 +713,9 @@ def test_publishing_docs_record_package_publication_and_remaining_gates() -> Non
     assert "GHCR Container Images" in publishing
     assert "https://pypi.org/project/actionlineage/" in publishing
     assert "https://test.pypi.org/project/actionlineage/" in publishing
-    assert "27973522992" in publishing
-    assert "27973832210" in publishing
+    assert "Current public version: `0.1.0a5`" in publishing
+    assert "Next prepared corrective version: `0.1.0a6`" in publishing
+    assert "Current GitHub Release: `v0.1.0a5`" in publishing
     assert "post-publication verification job runs only after the selected publishing" in publishing
     assert "index-propagation.json" in publishing
     assert "installed-metadata.json" in publishing
@@ -718,9 +724,9 @@ def test_publishing_docs_record_package_publication_and_remaining_gates() -> Non
     assert "ghcr.io/vectortrace-labs/actionlineage" in package_managers
     assert "PyPI/TestPyPI | Alpha-supported" in package_managers
     assert (
-        "uvx --prerelease allow --from actionlineage==0.1.0a5 actionlineage version"
+        "uvx --prerelease allow --from actionlineage==0.1.0a6 actionlineage version"
     ) in package_managers
-    assert "Python 3.12-compatible alpha release" in package_managers
+    assert "Python 3.12/3.13/3.14 alpha release candidate" in package_managers
     assert "do not publish or document a `latest` tag" in package_managers
     assert "Homebrew tap" in package_managers
     assert "Do not commit an unvalidated formula" in package_managers
@@ -728,7 +734,7 @@ def test_publishing_docs_record_package_publication_and_remaining_gates() -> Non
     assert "package ownership transfer to the organization account" in maturity
     assert "GHCR container-image publication" in maturity
     assert "PyPI/TestPyPI organization ownership transfer" in decisions
-    assert "corrected long description wording" in decisions
+    assert "corrected long-description text" in decisions
     assert "GHCR package visibility" in decisions
     assert "Homebrew tap" in decisions
 
@@ -764,7 +770,7 @@ def test_public_claim_audit_tracks_package_description_drift() -> None:
     assert "bounded read-only `curl` fallback" in scorecard
     assert "Local Python certificate stores can block online release checks" in scorecard
     assert "recommended repair version is `0.1.0a5`" in audit
-    assert "recommended repair version is `0.1.0a5`" in scorecard
+    assert "recommended repair version is `0.1.0a6`" in scorecard
 
 
 def test_review_process_keeps_ai_review_advisory() -> None:

@@ -59,7 +59,7 @@ class EventRecorder:
     _journal: LocalJournal | None = None
 
     def __post_init__(self) -> None:
-        self.journal_path.parent.mkdir(parents=True, exist_ok=True)
+        self.journal_path.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
         self.journal_path.unlink(missing_ok=True)
         correlation = Correlation(
             trace_id=f"trace_{self.scenario_id.lower()}_{self.seed:04d}",

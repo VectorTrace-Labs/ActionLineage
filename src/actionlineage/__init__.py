@@ -130,9 +130,12 @@ from actionlineage.journal import (
     JournalAnchor,
     JournalAnchorLogEntry,
     JournalArchiveManifest,
+    JournalFileMetadata,
     JournalSegmentManifest,
+    JournalStoragePermissionError,
     LocalJournal,
     VerificationResult,
+    VerifiedJournalSnapshot,
     append_journal_anchor_log,
     create_external_anchor_attestation,
     create_git_anchor_statement,
@@ -143,6 +146,7 @@ from actionlineage.journal import (
     load_git_anchor_statement,
     load_journal_anchor_log,
     load_journal_archive_manifest,
+    verified_journal_snapshot,
     verify_external_anchor_attestation,
     verify_git_anchor_statement,
     verify_journal,
@@ -250,7 +254,7 @@ from actionlineage.service import (
     require_tenant_role,
 )
 
-__version__ = "0.1.0a5"
+__version__ = "0.1.0a6"
 
 __all__ = [
     "COMPATIBILITY_POLICY_VERSION",
@@ -340,7 +344,9 @@ __all__ = [
     "JournalAnchor",
     "JournalAnchorLogEntry",
     "JournalArchiveManifest",
+    "JournalFileMetadata",
     "JournalSegmentManifest",
+    "JournalStoragePermissionError",
     "JwtAuthenticator",
     "JwtLibraryUnavailable",
     "KubernetesAuditObserver",
@@ -395,6 +401,7 @@ __all__ = [
     "VerificationRecord",
     "VerificationResult",
     "VerificationStatus",
+    "VerifiedJournalSnapshot",
     "WebhookReceiptObserver",
     "WebhookSink",
     "__version__",
@@ -465,6 +472,7 @@ __all__ = [
     "taxii_envelope_for_stix_bundle",
     "validate_contract",
     "validate_pack_manifest",
+    "verified_journal_snapshot",
     "verify_external_anchor_attestation",
     "verify_git_anchor_statement",
     "verify_journal",

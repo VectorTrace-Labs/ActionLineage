@@ -23,7 +23,12 @@ from actionlineage.domain import (
 )
 from actionlineage.domain.events import JsonObject
 from actionlineage.evidence.normalization import EvidenceNormalizer
-from actionlineage.journal import JournalError, JournalReader, JournalWriter
+from actionlineage.journal import (
+    JournalError,
+    JournalReader,
+    JournalWriter,
+    VerifiedJournalSnapshot,
+)
 
 
 class EvidenceSourceKind(StrEnum):
@@ -318,7 +323,7 @@ def import_evidence_batch(
     *,
     normalizer: EvidenceNormalizer,
     journal: JournalWriter,
-    existing_events: JournalReader | None = None,
+    existing_events: JournalReader | VerifiedJournalSnapshot | None = None,
 ) -> BatchImportResult:
     """Normalize and append a batch of source-neutral evidence records.
 
@@ -390,12 +395,21 @@ def _payload_with_ingest_metadata(record: EvidenceRecord) -> JsonObject:
     return payload
 
 
-def _existing_idempotency_keys(existing_events: JournalReader | None) -> set[str]:
+def _existing_idempotency_keys(
+    existing_events: JournalReader | VerifiedJournalSnapshot | None,
+) -> set[str]:
     if existing_events is None:
         return set()
+    snapshot = (
+        existing_events
+        if isinstance(existing_events, VerifiedJournalSnapshot)
+        else existing_events.verified_snapshot()
+    )
+    if not snapshot.ok:
+        raise JournalError("cannot scan idempotency keys from an unverified journal")
 
     idempotency_keys: set[str] = set()
-    for event in existing_events.iter_events():
+    for event in snapshot.events:
         key = _event_idempotency_key(event)
         if key is not None:
             idempotency_keys.add(key)

@@ -92,6 +92,8 @@ def build_report(
 
     checks.extend(_check_python_support(pyproject, expected_python))
     checks.extend(_check_project_urls(project))
+    checks.extend(_check_deployment_versions(project_root, expected_version))
+    checks.extend(_check_generated_release_metadata(project_root, expected_version))
     checks.extend(_check_local_tag(project_root, expected_version))
     checks.extend(_check_dist_metadata(dist_dir, expected_version, expected_python))
 
@@ -179,9 +181,9 @@ def _check_python_support(pyproject: dict[str, Any], expected_python: str) -> li
     checks = [
         Check(
             id="local.python.requires",
-            status=PASS if expected_python == ">=3.12" else FAIL,
-            summary="requires-python declares the supported alpha floor",
-            expected=">=3.12",
+            status=PASS if expected_python == ">=3.12,<3.15" else FAIL,
+            summary="requires-python declares the tested supported alpha range",
+            expected=">=3.12,<3.15",
             actual=expected_python,
             severity="P0",
         ),
@@ -191,11 +193,12 @@ def _check_python_support(pyproject: dict[str, Any], expected_python: str) -> li
             if {
                 "Programming Language :: Python :: 3.12",
                 "Programming Language :: Python :: 3.13",
+                "Programming Language :: Python :: 3.14",
             }
             <= classifiers
             else FAIL,
-            summary="Python classifiers include supported 3.12 and 3.13 versions",
-            expected="3.12 and 3.13 classifiers",
+            summary="Python classifiers include supported 3.12, 3.13, and 3.14 versions",
+            expected="3.12, 3.13, and 3.14 classifiers",
             actual=", ".join(
                 sorted(c for c in classifiers if c.startswith("Programming Language :: Python"))
             ),
@@ -217,6 +220,87 @@ def _check_python_support(pyproject: dict[str, Any], expected_python: str) -> li
         ),
     ]
     return checks
+
+
+def _check_deployment_versions(project_root: Path, expected_version: str) -> list[Check]:
+    chart = (project_root / "deploy/helm/actionlineage/Chart.yaml").read_text(encoding="utf-8")
+    values = (project_root / "deploy/helm/actionlineage/values.yaml").read_text(encoding="utf-8")
+    manifest = (project_root / "deploy/kubernetes/actionlineage-service.yaml").read_text(
+        encoding="utf-8"
+    )
+    return [
+        _compare(
+            "local.deploy.helm_app_version",
+            expected_version,
+            _regex_value(chart, r'appVersion:\s*"([^"]+)"'),
+            "Helm appVersion matches Python package version",
+            severity="P0",
+        ),
+        _compare(
+            "local.deploy.helm_image_tag",
+            expected_version,
+            _regex_value(values, r'tag:\s*"([^"]+)"'),
+            "Helm default image tag matches Python package version",
+            severity="P0",
+        ),
+        _compare(
+            "local.deploy.kubernetes_image_tag",
+            expected_version,
+            _regex_value(
+                manifest,
+                r"ghcr\.io/vectortrace-labs/actionlineage:([0-9][A-Za-z0-9.!+-]*)",
+            ),
+            "standalone Kubernetes image tag matches Python package version",
+            severity="P0",
+        ),
+    ]
+
+
+def _check_generated_release_metadata(project_root: Path, expected_version: str) -> list[Check]:
+    candidates = (
+        project_root / "build/release/actionlineage-release-provenance.json",
+        project_root / "build/release-candidate/actionlineage-release-provenance.json",
+    )
+    for path in candidates:
+        if path.exists():
+            try:
+                data = json.loads(path.read_text(encoding="utf-8"))
+            except json.JSONDecodeError as exc:
+                return [
+                    Check(
+                        id="local.release_metadata.provenance_version",
+                        status=FAIL,
+                        summary="generated release provenance is valid JSON",
+                        actual=f"line {exc.lineno}: {exc.msg}",
+                        severity="P0",
+                    )
+                ]
+            version_value = (
+                data.get("project", {}).get("version") if isinstance(data, dict) else None
+            )
+            return [
+                _compare(
+                    "local.release_metadata.provenance_version",
+                    expected_version,
+                    str(version_value),
+                    "generated release provenance version matches Python package version",
+                    severity="P0",
+                )
+            ]
+    return [
+        Check(
+            id="local.release_metadata.provenance_version",
+            status=UNKNOWN,
+            summary="generated release provenance was not present in this checkout",
+            expected=expected_version,
+            severity="P1",
+        )
+    ]
+
+
+def _regex_value(text: str, pattern: str) -> str | None:
+    match = re.search(pattern, text)
+    return match.group(1) if match else None
 
 
 def _check_project_urls(project: dict[str, Any]) -> list[Check]:
@@ -357,7 +441,7 @@ def _check_metadata_file(
             "artifact metadata version matches pyproject",
             severity="P0",
         ),
-        _compare(
+        _compare_python_requirement(
             f"{prefix}.requires_python",
             expected_python,
             metadata.get("Requires-Python"),
@@ -473,7 +557,7 @@ def _check_package_index(
             "public package index latest version matches pyproject",
             severity="P0",
         ),
-        _compare(
+        _compare_python_requirement(
             f"{prefix}.requires_python",
             expected_python,
             str(info.get("requires_python")),
@@ -608,7 +692,7 @@ def _check_url_heads(project_urls: dict[str, str], timeout_seconds: float) -> li
         request = urllib.request.Request(
             url,
             method="HEAD",
-            headers={"User-Agent": "actionlineage-release-consistency/0"},
+            headers=_no_cache_headers(),
         )
         try:
             with urllib.request.urlopen(request, timeout=timeout_seconds) as response:
@@ -649,9 +733,7 @@ def _check_url_heads(project_urls: dict[str, str], timeout_seconds: float) -> li
 
 
 def _fetch_json(url: str, timeout_seconds: float) -> tuple[Any | None, str | None]:
-    request = urllib.request.Request(
-        url, headers={"User-Agent": "actionlineage-release-consistency/0"}
-    )
+    request = urllib.request.Request(url, headers=_no_cache_headers())
     try:
         with urllib.request.urlopen(request, timeout=timeout_seconds) as response:
             return json.loads(response.read().decode("utf-8")), None
@@ -673,6 +755,10 @@ def _fetch_json_with_curl(
         "--silent",
         "--show-error",
         "--location",
+        "--header",
+        "Cache-Control: no-cache",
+        "--header",
+        "Pragma: no-cache",
         "--max-time",
         str(curl_timeout),
         "--user-agent",
@@ -710,6 +796,10 @@ def _fetch_head_status_with_curl(
         "--silent",
         "--show-error",
         "--location",
+        "--header",
+        "Cache-Control: no-cache",
+        "--header",
+        "Pragma: no-cache",
         "--max-time",
         str(curl_timeout),
         "--output",
@@ -747,6 +837,14 @@ def _fetch_head_status_with_curl(
     return status_code, None
 
 
+def _no_cache_headers() -> dict[str, str]:
+    return {
+        "User-Agent": "actionlineage-release-consistency/0",
+        "Cache-Control": "no-cache",
+        "Pragma": "no-cache",
+    }
+
+
 def _compare(
     check_id: str,
     expected: str | None,
@@ -763,6 +861,33 @@ def _compare(
         actual=actual,
         severity=severity,
     )
+
+
+def _compare_python_requirement(
+    check_id: str,
+    expected: str | None,
+    actual: str | None,
+    summary: str,
+    *,
+    severity: str = "P1",
+) -> Check:
+    return Check(
+        id=check_id,
+        status=PASS
+        if _canonical_python_requirement(expected) == _canonical_python_requirement(actual)
+        else FAIL,
+        summary=summary,
+        expected=expected,
+        actual=actual,
+        severity=severity,
+    )
+
+
+def _canonical_python_requirement(value: str | None) -> tuple[str, ...] | None:
+    if value is None:
+        return None
+    terms = [term.strip() for term in value.split(",")]
+    return tuple(sorted(term for term in terms if term))
 
 
 def _set_compare(

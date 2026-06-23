@@ -30,7 +30,8 @@ evidence and limitations.
 - Built wheel and source distribution first-time-user smoke validation for
   version, demo, journal verification, contract validation, case export, and
   static console export.
-- Python 3.12+ source, package metadata, CI, and release workflow validation.
+- Python 3.12, 3.13, and 3.14 source, package metadata, CI, and release
+  workflow validation.
 
 ## Local-Proof Surface
 
@@ -82,10 +83,10 @@ evidence and limitations.
 
 - PyPI/TestPyPI package ownership transfer to the organization account after
   package-index organization approval.
-- GitHub Release object and hosted release artifacts for `v0.1.0a5`; the tag,
-  package upload, and release object are owner actions after local gates pass.
-- Public package metadata project URLs for PyPI/TestPyPI after the next
-  owner-approved release publishes corrected metadata.
+- GitHub Release object and hosted release artifacts for the next
+  owner-approved `v0.1.0a6` release.
+- Corrected PyPI/TestPyPI long-description wording after the next
+  owner-approved release publishes updated metadata.
 - Homebrew tap and formula publication.
 - conda-forge recipe publication.
 - Branch protection and GitHub security-control status.

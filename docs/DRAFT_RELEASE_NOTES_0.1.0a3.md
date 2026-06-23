@@ -2,6 +2,11 @@
 
 Last reviewed: 2026-06-23.
 
+Historical snapshot: these notes describe the earlier `0.1.0a3` public-alpha
+state. They are retained for release-history auditability and should not be
+used as current publication instructions. Current release status lives in
+`README.md`, `docs/PUBLISHING.md`, and `docs/QUALITY_SCORECARD.md`.
+
 These are draft notes for owner review. They are suitable for repairing or
 creating the existing `v0.1.0a3` GitHub Release object after owner approval.
 They are not a request to republish immutable package-index artifacts.

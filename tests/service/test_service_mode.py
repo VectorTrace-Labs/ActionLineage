@@ -1,5 +1,8 @@
 from __future__ import annotations
 
+import os
+import subprocess
+import sys
 from pathlib import Path
 
 import pytest
@@ -7,6 +10,7 @@ from fastapi.testclient import TestClient
 
 from actionlineage.contracts import ContractEventRequirement, LineageContract, contract_to_dict
 from actionlineage.demo import run_demo
+from actionlineage.journal import LocalJournal
 from actionlineage.service import (
     JwtAuthenticator,
     OidcJwtAuthenticator,
@@ -210,6 +214,100 @@ def test_local_health_reports_ok_and_projection_missing(tmp_path: Path) -> None:
     assert degraded.issues[0].code == "projection_missing"
 
 
+def test_service_health_split_and_corrupt_journal_readiness(tmp_path: Path) -> None:
+    demo = run_demo(tmp_path / "demo")
+    _tamper_record_three(demo.journal_path)
+    client = _client(
+        demo.journal_path,
+        demo.database_path,
+        token="reader",
+        roles=frozenset({ServiceRole.READ}),
+    )
+
+    live = client.get("/live")
+    ready = client.get("/ready")
+    health = client.get("/health")
+
+    assert live.status_code == 200
+    assert live.json()["state"] == "live"
+    assert ready.status_code == 503
+    assert health.status_code == 503
+    assert ready.json()["issues"][0]["code"] == "journal_integrity_error"
+    assert ready.json()["issues"][0]["details"]["verification"]["issues"][0]["code"] == (
+        "event_hash_mismatch"
+    )
+
+
+def test_service_readiness_accepts_empty_private_journal(tmp_path: Path) -> None:
+    journal_path = tmp_path / "events.jsonl"
+    database_path = tmp_path / "projection.sqlite"
+    _write_private_bytes(journal_path, b"")
+    _write_private_bytes(database_path, b"")
+    client = _client(
+        journal_path,
+        database_path,
+        token="reader",
+        roles=frozenset({ServiceRole.READ}),
+    )
+
+    ready = client.get("/ready")
+
+    assert ready.status_code == 200
+    assert ready.json()["ok"] is True
+
+
+def test_service_readiness_rejects_malformed_journal(tmp_path: Path) -> None:
+    journal_path = tmp_path / "events.jsonl"
+    database_path = tmp_path / "projection.sqlite"
+    _write_private_bytes(journal_path, b'{"not":"an actionlineage event"}\n')
+    _write_private_bytes(database_path, b"")
+    client = _client(
+        journal_path,
+        database_path,
+        token="reader",
+        roles=frozenset({ServiceRole.READ}),
+    )
+
+    ready = client.get("/ready")
+
+    assert ready.status_code == 503
+    assert ready.json()["issues"][0]["code"] == "journal_integrity_error"
+    assert ready.json()["issues"][0]["details"]["verification"]["issues"][0]["code"] == (
+        "parse_error"
+    )
+
+
+def test_service_readiness_reports_locked_journal_without_failing_liveness(
+    tmp_path: Path,
+) -> None:
+    if os.name != "posix":
+        pytest.skip("kernel advisory lock contention is covered on POSIX platforms")
+    demo = run_demo(tmp_path / "demo")
+    lock_path = demo.journal_path.with_suffix(f"{demo.journal_path.suffix}.lock")
+    holder = _start_lock_holder(lock_path)
+    try:
+        client = _client(
+            demo.journal_path,
+            demo.database_path,
+            token="reader",
+            roles=frozenset({ServiceRole.READ}),
+        )
+
+        live = client.get("/live")
+        ready = client.get("/ready")
+    finally:
+        holder.terminate()
+        try:
+            holder.wait(timeout=5)
+        except subprocess.TimeoutExpired:
+            holder.kill()
+            holder.wait(timeout=5)
+
+    assert live.status_code == 200
+    assert ready.status_code == 503
+    assert ready.json()["issues"][0]["code"] == "journal_unavailable"
+
+
 def test_create_app_factory_is_available_with_optional_dependencies(tmp_path: Path) -> None:
     demo = run_demo(tmp_path / "demo")
     authenticator = StaticTokenAuthenticator(
@@ -304,6 +402,197 @@ def test_service_ingest_endpoint_writes_and_rebuilds_projection(tmp_path: Path) 
     assert timeline.json()["event_count"] == 1
 
 
+def test_service_ingest_preserves_authenticated_provenance_for_asserted_principal(
+    tmp_path: Path,
+) -> None:
+    demo = run_demo(tmp_path / "demo")
+    client = _client(
+        demo.journal_path,
+        demo.database_path,
+        token="writer-a",
+        roles=frozenset({ServiceRole.WRITE, ServiceRole.READ}),
+    )
+
+    response = client.post(
+        "/ingest",
+        headers={"Authorization": "Bearer writer-a", "X-Request-ID": "req-test-1"},
+        json={
+            "correlation": {"trace_id": "trace_service", "run_id": "run_service"},
+            "principal": {"principal_id": "principal-b", "principal_type": "human"},
+            "source": {"component": "client-asserted", "instance_id": "source-b", "version": "1"},
+            "records": [
+                {
+                    "idempotency_key": "service-record-provenance",
+                    "event_type": "agent.intent.recorded",
+                    "payload": {"intent": {"summary": "service ingest"}},
+                    "source_kind": "external_json",
+                    "sort_key": "001",
+                }
+            ],
+        },
+    )
+
+    assert response.status_code == 200
+    event = LocalJournal(demo.journal_path).verified_snapshot().events[-1]
+    ingested_by = event.payload["ingested_by"]
+    assert event.principal.principal_id == "principal-b"
+    assert event.source.component == "client-asserted"
+    assert ingested_by["authenticated_principal"] == "writer-a"
+    assert ingested_by["request_id"] == "req-test-1"
+    assert "writer-a" in ingested_by["credential_identifier"]
+
+
+def test_service_ingest_rejects_client_supplied_ingested_by(tmp_path: Path) -> None:
+    demo = run_demo(tmp_path / "demo")
+    client = _client(
+        demo.journal_path,
+        demo.database_path,
+        token="writer",
+        roles=frozenset({ServiceRole.WRITE}),
+    )
+
+    response = client.post(
+        "/ingest",
+        headers={"Authorization": "Bearer writer"},
+        json={
+            "correlation": {"trace_id": "trace_service", "run_id": "run_service"},
+            "records": [
+                {
+                    "idempotency_key": "service-record-override",
+                    "event_type": "agent.intent.recorded",
+                    "payload": {
+                        "intent": {"summary": "service ingest"},
+                        "ingested_by": {"authenticated_principal": "attacker"},
+                    },
+                    "source_kind": "external_json",
+                }
+            ],
+        },
+    )
+
+    assert response.status_code == 400
+    assert "ingested_by is server-controlled" in response.json()["detail"]
+
+
+def test_service_ingest_rejects_unprivileged_trusted_evidence(tmp_path: Path) -> None:
+    demo = run_demo(tmp_path / "demo")
+    writer = _client(
+        demo.journal_path,
+        demo.database_path,
+        token="writer",
+        roles=frozenset({ServiceRole.WRITE}),
+    )
+    admin = _client(
+        demo.journal_path,
+        demo.database_path,
+        token="admin",
+        roles=frozenset({ServiceRole.ADMIN}),
+    )
+    body = {
+        "correlation": {"trace_id": "trace_service", "run_id": "run_service"},
+        "classification": {"sensitivity": "internal", "trust": "trusted"},
+        "records": [
+            {
+                "idempotency_key": "service-record-trusted",
+                "event_type": "agent.intent.recorded",
+                "payload": {"intent": {"summary": "trusted ingest"}},
+                "source_kind": "external_json",
+            }
+        ],
+    }
+
+    denied = writer.post("/ingest", headers={"Authorization": "Bearer writer"}, json=body)
+    allowed = admin.post("/ingest", headers={"Authorization": "Bearer admin"}, json=body)
+
+    assert denied.status_code == 403
+    assert "admin role required" in denied.json()["detail"]
+    assert allowed.status_code == 200
+    assert LocalJournal(demo.journal_path).verified_snapshot().events[-1].classification.trust == (
+        "trusted"
+    )
+
+
+def test_service_ingest_does_not_persist_or_echo_bearer_token(tmp_path: Path) -> None:
+    demo = run_demo(tmp_path / "demo")
+    raw_token = "writer-secret-token-value"
+    client = _client(
+        demo.journal_path,
+        demo.database_path,
+        token=raw_token,
+        principal_id="writer-no-secret",
+        roles=frozenset({ServiceRole.WRITE, ServiceRole.READ}),
+    )
+
+    ingest = client.post(
+        "/ingest",
+        headers={"Authorization": f"Bearer {raw_token}"},
+        json={
+            "correlation": {"trace_id": "trace_service", "run_id": "run_service"},
+            "records": [
+                {
+                    "idempotency_key": "service-record-no-secret",
+                    "event_type": "agent.intent.recorded",
+                    "payload": {"intent": {"summary": "service ingest"}},
+                    "source_kind": "external_json",
+                }
+            ],
+        },
+    )
+    events = client.get("/events", headers={"Authorization": f"Bearer {raw_token}"})
+    contract = LineageContract(
+        name="service-contract",
+        events=(ContractEventRequirement(event_type="agent.intent.recorded"),),
+    )
+    validation = client.post(
+        "/contracts/validate",
+        headers={"Authorization": f"Bearer {raw_token}"},
+        json={"contract": contract_to_dict(contract)},
+    )
+
+    assert ingest.status_code == 200
+    assert events.status_code == 200
+    assert validation.status_code == 200
+    assert raw_token not in demo.journal_path.read_text(encoding="utf-8")
+    assert raw_token not in str(events.json())
+    assert raw_token not in str(validation.json())
+
+
+def test_service_ingested_by_is_covered_by_canonical_hash(tmp_path: Path) -> None:
+    demo = run_demo(tmp_path / "demo")
+    client = _client(
+        demo.journal_path,
+        demo.database_path,
+        token="writer",
+        roles=frozenset({ServiceRole.WRITE}),
+    )
+    response = client.post(
+        "/ingest",
+        headers={"Authorization": "Bearer writer"},
+        json={
+            "correlation": {"trace_id": "trace_service", "run_id": "run_service"},
+            "records": [
+                {
+                    "idempotency_key": "service-record-hash",
+                    "event_type": "agent.intent.recorded",
+                    "payload": {"intent": {"summary": "service ingest"}},
+                    "source_kind": "external_json",
+                }
+            ],
+        },
+    )
+    assert response.status_code == 200
+
+    text = demo.journal_path.read_text(encoding="utf-8")
+    demo.journal_path.write_text(
+        text.replace('"authenticated_principal":"writer"', '"authenticated_principal":"other"'),
+        encoding="utf-8",
+    )
+
+    verification = LocalJournal(demo.journal_path).verify()
+    assert not verification.ok
+    assert verification.issues[0].code == "event_hash_mismatch"
+
+
 def test_service_contract_and_detection_endpoints(tmp_path: Path) -> None:
     demo = run_demo(tmp_path / "demo")
     client = _client(
@@ -333,6 +622,40 @@ def test_service_contract_and_detection_endpoints(tmp_path: Path) -> None:
     assert detection_response.status_code == 200
     assert detection_response.json()["rules_evaluated"] == ["AL-DET-003"]
     assert detection_response.json()["match_count"] == 1
+
+
+def test_service_journal_dependent_endpoints_fail_closed_on_corruption(tmp_path: Path) -> None:
+    demo = run_demo(tmp_path / "demo")
+    _tamper_record_three(demo.journal_path)
+    client = _client(
+        demo.journal_path,
+        demo.database_path,
+        token="reader",
+        roles=frozenset({ServiceRole.READ}),
+    )
+    contract = LineageContract(
+        name="service-contract",
+        events=(ContractEventRequirement(event_type="agent.intent.recorded"),),
+    )
+
+    events = client.get("/events", headers={"Authorization": "Bearer reader"})
+    contract_response = client.post(
+        "/contracts/validate",
+        headers={"Authorization": "Bearer reader"},
+        json={"contract": contract_to_dict(contract)},
+    )
+    detection_response = client.post(
+        "/detections/evaluate",
+        headers={"Authorization": "Bearer reader"},
+        json={"rule_ids": ["AL-DET-003"]},
+    )
+
+    for response in (events, contract_response, detection_response):
+        assert response.status_code == 503
+        assert response.json()["detail"]["error"] == "journal_integrity_error"
+        assert response.json()["detail"]["verification"]["issues"][0]["code"] == (
+            "event_hash_mismatch"
+        )
 
 
 def test_service_detection_endpoint_rejects_malformed_rule_ids(tmp_path: Path) -> None:
@@ -401,12 +724,13 @@ def _client(
     *,
     token: str,
     roles: frozenset[ServiceRole],
+    principal_id: str | None = None,
     export_root=None,
 ) -> TestClient:
     authenticator = StaticTokenAuthenticator(
         tokens={
             token: ServicePrincipal(
-                principal_id=token,
+                principal_id=principal_id or token,
                 roles=roles,
             )
         }
@@ -419,6 +743,54 @@ def _client(
             export_root=export_root,
         )
     )
+
+
+def _tamper_record_three(journal_path: Path) -> None:
+    lines = journal_path.read_bytes().splitlines()
+    lines[2] = lines[2].replace(b'"requested_state":"requested"', b'"requested_state":"tampered"')
+    journal_path.write_bytes(b"\n".join(lines) + b"\n")
+
+
+def _write_private_bytes(path: Path, payload: bytes) -> None:
+    path.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
+    fd = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+    try:
+        os.write(fd, payload)
+        os.fsync(fd)
+    finally:
+        os.close(fd)
+
+
+def _start_lock_holder(lock_path: Path) -> subprocess.Popen[str]:
+    code = """
+from pathlib import Path
+import sys
+import time
+import actionlineage.journal.local as local_journal_module
+
+lock_path = Path(sys.argv[1])
+with local_journal_module._journal_lock(
+    lock_path,
+    mode="exclusive",
+    operation="readiness-test",
+    timeout_seconds=1,
+    poll_seconds=0.01,
+):
+    print("locked", flush=True)
+    time.sleep(30)
+"""
+    process = subprocess.Popen(
+        [sys.executable, "-c", code, str(lock_path)],
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        text=True,
+    )
+    assert process.stdout is not None
+    if process.stdout.readline().strip() != "locked":
+        stderr = process.stderr.read() if process.stderr is not None else ""
+        process.terminate()
+        pytest.fail(f"failed to start lock holder: {stderr}")
+    return process
 
 
 class FakeSigningKey:

@@ -5,14 +5,15 @@ from __future__ import annotations
 import hashlib
 import hmac
 import json
+import os
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any, Literal, cast
 
-from actionlineage.domain import deterministic_json_bytes
+from actionlineage.domain import deterministic_json_bytes, serialize_event
 from actionlineage.domain.events import JsonObject
-from actionlineage.journal.local import verify_journal
+from actionlineage.journal.local import verified_journal_snapshot, verify_journal
 from actionlineage.journal.verify import VerificationIssue, VerificationResult
 
 JOURNAL_ANCHOR_VERSION = "actionlineage.dev/journal-anchor-v1"
@@ -597,26 +598,37 @@ def export_verified_prefix(
     if _same_resolved_path(journal_path, output_path):
         raise JournalAnchorError("verified-prefix output path must differ from source journal")
 
-    verification = verify_journal(
+    snapshot = verified_journal_snapshot(
         journal_path,
         expected_record_count=expected_record_count,
         expected_last_event_hash=expected_last_event_hash,
     )
 
     output_path.parent.mkdir(parents=True, exist_ok=True)
-    with journal_path.open("rb") as source_file, output_path.open("wb") as output_file:
-        for index, raw_line in enumerate(source_file):
-            if index >= verification.records_verified:
-                break
-            output_file.write(raw_line)
-            if not raw_line.endswith(b"\n"):
+    fd = os.open(
+        output_path,
+        os.O_WRONLY | os.O_CREAT | os.O_TRUNC | getattr(os, "O_CLOEXEC", 0),
+        0o600,
+    )
+    try:
+        if os.name == "posix":
+            os.fchmod(fd, 0o600)
+        with os.fdopen(fd, "wb") as output_file:
+            fd = -1
+            for event in snapshot.events:
+                output_file.write(serialize_event(event))
                 output_file.write(b"\n")
+            output_file.flush()
+            os.fsync(output_file.fileno())
+    finally:
+        if fd >= 0:
+            os.close(fd)
 
     return VerifiedPrefixExport(
         source_path=journal_path,
         output_path=output_path,
-        records_exported=verification.records_verified,
-        verification=verification,
+        records_exported=snapshot.record_count,
+        verification=snapshot.verification,
     )
 
 
