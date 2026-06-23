@@ -122,7 +122,7 @@ uv run pip-audit
 uv build --out-dir /tmp/actionlineage-release-proof/dist
 uv run python scripts/smoke_public_quickstart.py --package-spec /tmp/actionlineage-release-proof/dist/actionlineage-0.1.0a3-py3-none-any.whl --output-dir /tmp/actionlineage-wheel-smoke
 uv run python scripts/smoke_public_quickstart.py --package-spec /tmp/actionlineage-release-proof/dist/actionlineage-0.1.0a3.tar.gz --output-dir /tmp/actionlineage-sdist-smoke
-uv run python scripts/check_release_consistency.py --dist-dir /tmp/actionlineage-release-proof/dist
+uv run python scripts/check_release_consistency.py --dist-dir /tmp/actionlineage-release-proof/dist --output /tmp/actionlineage-release-proof/release-consistency-offline.json
 uv run python scripts/generate_release_provenance.py --dist-dir /tmp/actionlineage-release-proof/dist --output /tmp/actionlineage-release-proof/actionlineage-release-provenance.json
 uv run python scripts/write_ci_quality_summary.py --python-version 3.13 --coverage-xml /tmp/actionlineage-coverage.xml --coverage-floor 85 --sbom /tmp/actionlineage-release-proof/actionlineage-sbom.json --license-report /tmp/actionlineage-release-proof/actionlineage-license-report.json --provenance /tmp/actionlineage-release-proof/actionlineage-release-provenance.json --dist-dir /tmp/actionlineage-release-proof/dist --wheel-smoke-dir /tmp/actionlineage-wheel-smoke --sdist-smoke-dir /tmp/actionlineage-sdist-smoke --demo-map-svg /tmp/actionlineage-demo/demo-evidence-map.svg --output /tmp/actionlineage-ci-summary.md
 uv run python scripts/write_release_candidate_manifest.py --artifact-root /tmp/actionlineage-release-proof --dist-dir /tmp/actionlineage-release-proof/dist --gate "ruff_check|PASS|uv run ruff check ." --output /tmp/actionlineage-release-proof/manifest.json

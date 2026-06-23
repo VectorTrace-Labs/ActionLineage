@@ -87,8 +87,10 @@ Use `docs/EVALUATION_REPRODUCTION.md` for exact command bundles covering:
 When a maintainer provides a local release-candidate bundle, start with
 `build/release-candidate/REVIEW_INDEX.md` if present. It is generated from the
 candidate manifest, which is generated from local artifact bytes and evidence
-summaries, and it verifies listed artifact hashes. It is still local proof
-rather than a hosted release, signed attestation, or independent review.
+summaries, and it verifies listed artifact hashes. If the bundle includes
+`release-consistency-*.json` reports, the index also summarizes PASS/FAIL/UNKNOWN
+counts and non-passing checks. It is still local proof rather than a hosted
+release, signed attestation, or independent review.
 
 Use `docs/AGENT_VALIDATION_EVIDENCE.md` plus
 `docs/evidence/agent-validation-baseline.md` and

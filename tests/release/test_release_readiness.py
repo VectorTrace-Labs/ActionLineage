@@ -178,6 +178,7 @@ def test_external_review_docs_prepare_review_without_claiming_validation() -> No
         "reproduction": (PROJECT_ROOT / "docs/EVALUATION_REPRODUCTION.md").read_text(
             encoding="utf-8"
         ),
+        "hardening": (PROJECT_ROOT / "docs/SECURITY_HARDENING.md").read_text(encoding="utf-8"),
         "troubleshooting": (PROJECT_ROOT / "docs/TROUBLESHOOTING.md").read_text(encoding="utf-8"),
         "case_study": (PROJECT_ROOT / "docs/ADOPTION_CASE_STUDY_TEMPLATE.md").read_text(
             encoding="utf-8"
@@ -198,6 +199,10 @@ def test_external_review_docs_prepare_review_without_claiming_validation() -> No
     assert "docs/TROUBLESHOOTING.md" in docs["reproduction"]
     assert "No-Model Agent Validation Baseline" in docs["reproduction"]
     assert "Local Release Proof" in docs["reproduction"]
+    assert "release-consistency-offline.json" in docs["reproduction"]
+    assert "review index summarizes the report counts" in docs["reproduction"]
+    assert "release-consistency-*.json" in docs["external"]
+    assert "offline release-consistency report" in docs["hardening"]
     assert "This is a template" in docs["case_study"]
     assert "Known Limitations" in docs["limitations"]
     assert (
@@ -214,6 +219,7 @@ def test_external_review_docs_prepare_review_without_claiming_validation() -> No
         "docs/evidence/agent-validation-baseline.json",
         "scripts/check_claims_language.py",
         "scripts/secret_scan.py",
+        "scripts/check_release_consistency.py",
         "scripts/write_release_candidate_manifest.py",
         "build/release-candidate/REVIEW_INDEX.md",
         "actionlineage doctor",
@@ -312,12 +318,12 @@ def test_release_candidate_audit_prepares_without_publishing() -> None:
     assert "Release-candidate manifest generation" in audit
     assert "build/release-candidate/REVIEW_INDEX.md" in audit
     assert "Release proof review index" in audit
-    assert "4d2adec2e3f9bf7e732918e7e0c0063286596db2" in audit
+    assert "3ff4185b199fc74474f65dfa86d72441728a010d" in audit
     assert "Do not republish immutable PyPI/TestPyPI files" in audit
     assert "135 files already formatted" in audit
     assert "298 passed" in audit
     assert "86.03 percent total coverage" in audit
-    assert "307 passed" in audit
+    assert "308 passed" in audit
     assert "no warning summary" in audit
     assert "23 package entries" in audit
     assert "23 direct dependencies checked, 0 issues" in audit
@@ -635,7 +641,7 @@ def test_public_claim_audit_tracks_package_description_drift() -> None:
     assert "PALPHA-013" in hardening_plan
     assert "PALPHA-014" in hardening_plan
     assert "MITIGATED_WITH_CURL_FALLBACK" in hardening_plan
-    assert "4d2adec2e3f9bf7e732918e7e0c0063286596db2" in hardening_plan
+    assert "3ff4185b199fc74474f65dfa86d72441728a010d" in hardening_plan
     assert "Public package long descriptions can lag" in hardening_plan
     assert "Local release-proof reproduction docs mixed" in hardening_plan
     assert "bounded read-only `curl` fallback" in audit

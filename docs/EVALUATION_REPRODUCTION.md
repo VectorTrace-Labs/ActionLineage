@@ -95,7 +95,8 @@ uv run python scripts/generate_release_provenance.py \
   --dist-dir build/release-proof/dist \
   --output build/release-proof/actionlineage-release-provenance.json
 uv run python scripts/check_release_consistency.py \
-  --dist-dir build/release-proof/dist
+  --dist-dir build/release-proof/dist \
+  --output build/release-proof/release-consistency-offline.json
 uv run pip-audit
 ```
 
@@ -118,6 +119,10 @@ uv run python scripts/write_release_review_index.py \
   --manifest build/release-proof/manifest.json \
   --output build/release-proof/REVIEW_INDEX.md
 ```
+
+If `release-consistency-offline.json` is present in the manifest, the generated
+review index summarizes the report counts and any non-passing checks so
+reviewers do not have to inspect the raw JSON first.
 
 ## Minimized Failure Bundles
 

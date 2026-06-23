@@ -11,7 +11,7 @@ settings.
 | Item | Result |
 | --- | --- |
 | Branch | `codex/public-alpha-hardening` |
-| Audited implementation commit | `4d2adec2e3f9bf7e732918e7e0c0063286596db2` before this audit-doc refresh |
+| Audited implementation commit | `3ff4185b199fc74474f65dfa86d72441728a010d` before this audit-doc refresh |
 | Candidate version | `0.1.0a3` |
 | Recommendation | Do not republish immutable PyPI/TestPyPI files for `0.1.0a3`; create or repair the GitHub Release object only after owner review. |
 | Generated local manifest | `build/release-candidate/manifest.json` |
@@ -28,7 +28,7 @@ are not committed source files.
 | Ruff lint | PASS | `uv run ruff check .` |
 | Ruff format check | PASS | `uv run ruff format --check .`, 135 files already formatted |
 | Strict mypy | PASS | `uv run mypy src`, 56 source files |
-| Full pytest after online release-consistency hardening slice | PASS | `307 passed`; no warning summary |
+| Full pytest after release proof index consistency-summary slice | PASS | `308 passed`; no warning summary |
 | Branch coverage with eval group | PASS | `298 passed`, 86.03 percent total coverage; no warning summary |
 | Compatibility tests | PASS | Included in full suite; golden journals and public API tests passed |
 | Property-based regression tests | PASS | Included in full suite through Hypothesis tests |
