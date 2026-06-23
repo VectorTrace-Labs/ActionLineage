@@ -30,8 +30,8 @@ commit changes the source archive.
 | Ruff lint | PASS | `uv run ruff check .` |
 | Ruff format check | PASS | `uv run ruff format --check .`, 135 files already formatted |
 | Strict mypy | PASS | `uv run mypy src`, 56 source files |
-| Full pytest after Phase 7 journal I/O hardening slice | PASS | `316 passed`; no warning summary |
-| Branch coverage with eval group | PASS | `316 passed`, 86.14 percent total coverage; no warning summary |
+| Full pytest after public-alpha hardening slices | PASS | `318 passed`; no warning summary |
+| Branch coverage with eval group | PASS | `318 passed`, 86.14 percent total coverage; no warning summary |
 | Compatibility tests | PASS | Included in full suite; golden journals and public API tests passed |
 | Property-based regression tests | PASS | Included in full suite through Hypothesis tests |
 | Claim-language scan | PASS | `uv run python scripts/check_claims_language.py .` |
@@ -55,7 +55,7 @@ commit changes the source archive.
 | Dependency license report | PASS | `build/release-candidate/actionlineage-license-report.json` |
 | Release provenance generation | PASS | 2 artifact subjects |
 | SHA256 checksums | PASS | `build/release-candidate/SHA256SUMS.txt` |
-| Release-candidate manifest generation | PASS | `scripts/write_release_candidate_manifest.py` generated `build/release-candidate/manifest.json` with 9 artifacts, 21 gates, and no manifest issues |
+| Release-candidate manifest generation | PASS | `scripts/write_release_candidate_manifest.py` generated `build/release-candidate/manifest.json` with 9 artifacts, 23 gates, and no manifest issues |
 | Release proof review index | PASS | `build/release-candidate/REVIEW_INDEX.md` generated from the local manifest; 9 of 9 manifest-listed artifact hashes verified; release-consistency reports are summarized when present |
 | Release workflow artifact proof | PASS | `.github/workflows/release.yml` generates `build/release/release-consistency-offline.json`, `build/release/manifest.json`, and `build/release/REVIEW_INDEX.md`, includes them in checksums and attestations, and smoke-checks the bundle after artifact download |
 | Release consistency, offline | PASS | 0 failures, 0 unknowns |

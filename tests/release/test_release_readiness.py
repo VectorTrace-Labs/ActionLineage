@@ -353,7 +353,7 @@ def test_release_candidate_audit_prepares_without_publishing() -> None:
     assert "rerun after any source or documentation commit before publication" in audit
     assert "Do not republish immutable PyPI/TestPyPI files" in audit
     assert "135 files already formatted" in audit
-    assert "316 passed" in audit
+    assert "318 passed" in audit
     assert "86.14 percent total coverage" in audit
     assert "no warning summary" in audit
     assert "23 package entries" in audit
