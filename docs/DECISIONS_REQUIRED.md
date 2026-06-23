@@ -21,7 +21,7 @@ implementation change.
 | Package metadata refresh | Include project URLs, corrected long description wording, and sdist cache exclusions in the next owner-approved package release | Expecting PyPI/TestPyPI to show corrected project links or corrected description text |
 | Signing/provenance | Use GitHub artifact attestations for release artifacts; keep local provenance as a supplemental manifest | Claiming attested package artifacts |
 | Owner publication checklist | Review `docs/OWNER_PUBLICATION_CHECKLIST.md` before any release object, package, container, or public announcement action | Any publication or announcement |
-| Public security contact | Confirm GitHub private vulnerability reporting and contact path | Public announcement |
+| Public security contact | Private vulnerability reporting and repository security policy were confirmed enabled through authenticated GitHub reads on 2026-06-23 | Public announcement |
 | External review | Select reviewer or review venue | Any claim of independent validation |
 | Agent Validation artifact action runtime | Keep pinned Node 24-compatible upload action SHA and avoid the download action in release workflows | Changing artifact handling actions or relaxing artifact audit posture |
 
@@ -30,10 +30,10 @@ implementation change.
 | Gate | Evidence needed |
 | --- | --- |
 | Branch protection | Authenticated GitHub API output confirmed protected `main` on 2026-06-23; recheck before announcement if settings change |
-| Code scanning | Authenticated alert read on 2026-06-23 showed 10 CodeQL alerts, all non-open (`8 fixed`, `2 dismissed`); latest public CodeQL run status still needs UI/API confirmation before badge or announcement claims |
+| Code scanning | Authenticated reads on 2026-06-23 showed latest `main` `codeql` workflow run `27974809091` and GitHub CodeQL dynamic analysis run `27974805527` completed successfully for commit `0e500d65d90fbda691d13e63ab58091e85083525`; CodeQL alerts were all non-open (`8 fixed`, `2 dismissed`) |
 | Dependabot alerts/security updates | Dependabot security updates were enabled and authenticated alert read showed 0 Dependabot alerts on 2026-06-23 |
 | Secret scanning and push protection | Secret scanning and push protection were enabled and authenticated alert read showed 0 secret-scanning alerts on 2026-06-23 |
-| Private vulnerability reporting | GitHub security settings confirmation |
+| Private vulnerability reporting | Authenticated REST endpoint returned `enabled: true` on 2026-06-23 |
 | Published packages | PyPI package page, TestPyPI package page, or GHCR package page |
 | GitHub Release object | Public GitHub Release page for `v0.1.0a3` with expected artifacts or a documented decision not to create one |
 | PyPI/TestPyPI organization ownership transfer | Package-index organization approval and project ownership transfer |

@@ -53,10 +53,10 @@ supported, local-proof, preview, planned, and external-validation labels.
 - Public package metadata project URLs require a future owner-approved package
   release to appear on PyPI/TestPyPI.
 - Authenticated GitHub reads confirmed branch protection, secret scanning, push
-  protection, Dependabot security updates, 0 Dependabot alerts, 0
-  secret-scanning alerts, 0 repository security advisories, and no open CodeQL
-  alerts on 2026-06-23; private vulnerability reporting and latest public
-  CodeQL run status still require UI/API confirmation before public claims.
+  protection, private vulnerability reporting, a repository security policy,
+  Dependabot security updates, 0 Dependabot alerts, 0 secret-scanning alerts, 0
+  repository security advisories, latest `main` CodeQL success, and no open
+  CodeQL alerts on 2026-06-23.
 - No external audit, external adoption, production history, or independent
   validation is claimed by this repository.
 

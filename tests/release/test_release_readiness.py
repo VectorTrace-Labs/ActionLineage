@@ -367,9 +367,10 @@ def test_release_candidate_audit_prepares_without_publishing() -> None:
     assert "bounded read-only `curl`" in audit
     assert "`fail_count=5`, `unknown_count=0`" in audit
     assert "Project URL HEAD reachability | PASS" in audit
-    assert "PARTIAL PASS / AUTHENTICATED READ" in audit
+    assert "PASS / AUTHENTICATED READ" in audit
     assert "CodeQL analysis" in audit
-    assert "secret scanning, and push protection" in audit
+    assert "private vulnerability reporting enabled" in audit
+    assert "Latest `main` `codeql` workflow run" in audit
     assert "contract validate, case export, and static console export" in audit
     assert "47/47 declared capabilities covered" in audit
     assert "236 files scanned, 0 leaks" in audit
@@ -384,7 +385,7 @@ def test_release_candidate_audit_prepares_without_publishing() -> None:
 
     for status in (
         "PASS",
-        "PARTIAL PASS",
+        "PASS / AUTHENTICATED READ",
         "BLOCKED_ON_OWNER",
         "BLOCKED_ON_EXTERNAL_VALIDATION",
         "NOT_IN_RELEASE_SCOPE",

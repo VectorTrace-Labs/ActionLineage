@@ -278,9 +278,9 @@ See `docs/PACKAGE_MANAGERS.md`.
 - Dependabot version updates are configured for uv, GitHub Actions, and Docker.
 - Authenticated GitHub reads on 2026-06-23 confirmed Dependabot security
   updates, secret scanning, push protection, 0 Dependabot alerts, 0
-  secret-scanning alerts, 0 repository security advisories, and no open CodeQL
-  alerts.
-- Private vulnerability reporting requires repository-setting confirmation.
+  secret-scanning alerts, 0 repository security advisories, private
+  vulnerability reporting, repository security policy, latest `main` CodeQL
+  success, and no open CodeQL alerts.
 
 ## Documentation Gates
 

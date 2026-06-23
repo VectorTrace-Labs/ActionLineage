@@ -113,11 +113,11 @@ External validation:
 - Configure TestPyPI and PyPI Trusted Publisher records for `release.yml`.
 - Run TestPyPI and PyPI publish jobs.
 - Link successful attestation verification from release notes.
-- Confirm branch protection, CodeQL alert state, Dependabot alerts, secret
-  scanning, and push protection in GitHub; current authenticated reads show no
-  open CodeQL, Dependabot, secret-scanning, or repository advisory alerts.
-- Confirm private vulnerability reporting in GitHub UI or API before public
-  security-contact claims.
+- Confirm branch protection, CodeQL run and alert state, Dependabot alerts,
+  secret scanning, push protection, repository security policy, and private
+  vulnerability reporting in GitHub; current authenticated reads show these
+  controls enabled and no open CodeQL, Dependabot, secret-scanning, or
+  repository advisory alerts.
 
 ## Phase 6: External Review Readiness
 

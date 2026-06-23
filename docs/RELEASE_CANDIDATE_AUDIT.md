@@ -64,7 +64,7 @@ commit changes the source archive.
 | Public state via independent curl spot-checks | PASS / BLOCKED | PyPI/TestPyPI expose `0.1.0a3`; GitHub tag exists; GitHub Release object for `v0.1.0a3` is absent |
 | Container build | NOT_IN_RELEASE_SCOPE | Preview container gates run in GitHub Actions on hosted Ubuntu |
 | GitHub Release object for `v0.1.0a3` | BLOCKED_ON_OWNER | Creating or repairing release objects requires owner action |
-| Repository security settings | PARTIAL PASS / AUTHENTICATED READ | Authenticated GitHub API read confirmed `main` branch protection with strict required checks (`CodeQL analysis`, `container`, `Dependency review`, `Python 3.12`, `Python 3.13`), required conversation resolution, force-push and deletion protection, Dependabot security updates, secret scanning, and push protection. Authenticated alert reads showed 0 Dependabot alerts, 0 secret-scanning alerts, 0 repository security advisories, and 10 CodeQL alerts with no open alerts (`8 fixed`, `2 dismissed`). Private vulnerability reporting still needs UI/API confirmation before public claims. |
+| Repository security settings | PASS / AUTHENTICATED READ | Authenticated GitHub API read confirmed `main` branch protection with strict required checks (`CodeQL analysis`, `container`, `Dependency review`, `Python 3.12`, `Python 3.13`), required conversation resolution, force-push and deletion protection, Dependabot security updates, secret scanning, push protection, private vulnerability reporting enabled, and security policy enabled. Authenticated alert reads showed 0 Dependabot alerts, 0 secret-scanning alerts, 0 repository security advisories, and 10 CodeQL alerts with no open alerts (`8 fixed`, `2 dismissed`). Latest `main` CodeQL workflow and GitHub CodeQL dynamic analysis runs both completed successfully on 2026-06-22 for commit `0e500d65d90fbda691d13e63ab58091e85083525`. |
 | External security review | BLOCKED_ON_EXTERNAL_VALIDATION | No external review is claimed |
 | New package publication | BLOCKED_ON_OWNER | Do not publish or overwrite package-index artifacts without explicit owner approval |
 
@@ -128,13 +128,16 @@ Authenticated read-only GitHub API checks showed:
 - Force pushes and branch deletion: disabled.
 - Dependabot security updates: enabled.
 - Secret scanning and push protection: enabled.
+- Private vulnerability reporting: enabled.
+- Security policy: enabled.
 - Dependabot alerts: 0.
 - Secret-scanning alerts: 0.
 - Repository security advisories: 0.
 - CodeQL alerts: 10 total, 0 open, 8 fixed, 2 dismissed.
-
-Private vulnerability reporting and latest public CodeQL run status still need
-UI/API confirmation before public claims.
+- Latest `main` `codeql` workflow run: success, run `27974809091`,
+  commit `0e500d65d90fbda691d13e63ab58091e85083525`.
+- Latest `main` GitHub CodeQL dynamic analysis run: success, run
+  `27974805527`, commit `0e500d65d90fbda691d13e63ab58091e85083525`.
 
 ## Exact Clean-Install Commands
 
@@ -168,10 +171,9 @@ uvx --from build/release-candidate/dist/actionlineage-0.1.0a3.tar.gz actionlinea
   long-description wording until a later owner-approved package upload.
 - Python `urllib` URL/TLS failures are mitigated for package and GitHub JSON
   metadata and project URL HEAD checks by bounded read-only `curl` fallbacks.
-- Some external repository security settings and alert counts were confirmed
-  through authenticated read-only GitHub API responses, but private
-  vulnerability reporting, latest public CodeQL status, and third-party review
-  still require external/UI validation before public claims.
+- External repository security settings, latest `main` CodeQL runs, and alert
+  counts were confirmed through authenticated read-only GitHub API responses;
+  third-party review still requires external validation before public claims.
 - Container publication remains preview and externally gated.
 
 ## Related Owner Docs
