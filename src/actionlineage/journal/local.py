@@ -8,7 +8,7 @@ import os
 import socket
 import time
 from collections.abc import Iterator
-from contextlib import suppress
+from contextlib import contextmanager, suppress
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from importlib.metadata import PackageNotFoundError, version
@@ -575,43 +575,7 @@ def _unlock_file(fd: int, *, path: Path, mode: str) -> None:
     os.close(fd)
 
 
-@dataclass(frozen=True, slots=True)
-class _JournalLock:
-    path: Path
-    mode: str
-    operation: str
-    timeout_seconds: float
-    poll_seconds: float
-    _fd: int | None = None
-
-    def __enter__(self) -> _JournalLock:
-        deadline = time.monotonic() + self.timeout_seconds
-        self.path.parent.mkdir(mode=PRIVATE_DIR_MODE, parents=True, exist_ok=True)
-        while True:
-            try:
-                object.__setattr__(
-                    self,
-                    "_fd",
-                    _lock_file(self.path, mode=self.mode, operation=self.operation),
-                )
-            except BlockingIOError:
-                if time.monotonic() >= deadline:
-                    metadata = _read_lock_metadata(self.path)
-                    raise JournalLockError(
-                        f"timed out acquiring journal lock: {self.path}; owner={metadata}"
-                    ) from None
-                time.sleep(self.poll_seconds)
-                continue
-            else:
-                return self
-
-    def __exit__(self, exc_type: object, exc_value: object, traceback: object) -> None:
-        if self._fd is None:
-            return
-        _unlock_file(self._fd, path=self.path, mode=self.mode)
-        object.__setattr__(self, "_fd", None)
-
-
+@contextmanager
 def _journal_lock(
     path: Path,
     *,
@@ -619,11 +583,24 @@ def _journal_lock(
     operation: str,
     timeout_seconds: float,
     poll_seconds: float,
-) -> _JournalLock:
-    return _JournalLock(
-        path=path,
-        mode=mode,
-        operation=operation,
-        timeout_seconds=timeout_seconds,
-        poll_seconds=poll_seconds,
-    )
+) -> Iterator[None]:
+    deadline = time.monotonic() + timeout_seconds
+    path.parent.mkdir(mode=PRIVATE_DIR_MODE, parents=True, exist_ok=True)
+    while True:
+        try:
+            fd = _lock_file(path, mode=mode, operation=operation)
+        except BlockingIOError:
+            if time.monotonic() >= deadline:
+                metadata = _read_lock_metadata(path)
+                raise JournalLockError(
+                    f"timed out acquiring journal lock: {path}; owner={metadata}"
+                ) from None
+            time.sleep(poll_seconds)
+            continue
+        else:
+            break
+
+    try:
+        yield
+    finally:
+        _unlock_file(fd, path=path, mode=mode)
