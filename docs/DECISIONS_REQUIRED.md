@@ -30,9 +30,9 @@ implementation change.
 | Gate | Evidence needed |
 | --- | --- |
 | Branch protection | Authenticated GitHub API output confirmed protected `main` on 2026-06-23; recheck before announcement if settings change |
-| Code scanning | Successful CodeQL run visible in GitHub |
-| Dependabot alerts/security updates | Dependabot security updates were enabled in authenticated GitHub API output on 2026-06-23; current alert status still needs UI/API confirmation |
-| Secret scanning and push protection | Secret scanning and push protection were enabled in authenticated GitHub API output on 2026-06-23; current alert status still needs UI/API confirmation |
+| Code scanning | Authenticated alert read on 2026-06-23 showed 10 CodeQL alerts, all non-open (`8 fixed`, `2 dismissed`); latest public CodeQL run status still needs UI/API confirmation before badge or announcement claims |
+| Dependabot alerts/security updates | Dependabot security updates were enabled and authenticated alert read showed 0 Dependabot alerts on 2026-06-23 |
+| Secret scanning and push protection | Secret scanning and push protection were enabled and authenticated alert read showed 0 secret-scanning alerts on 2026-06-23 |
 | Private vulnerability reporting | GitHub security settings confirmation |
 | Published packages | PyPI package page, TestPyPI package page, or GHCR package page |
 | GitHub Release object | Public GitHub Release page for `v0.1.0a3` with expected artifacts or a documented decision not to create one |

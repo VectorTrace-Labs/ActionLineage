@@ -276,9 +276,10 @@ See `docs/PACKAGE_MANAGERS.md`.
   concise quality/security evidence summary with
   `scripts/write_ci_quality_summary.py`.
 - Dependabot version updates are configured for uv, GitHub Actions, and Docker.
-- Dependabot alerts and Dependabot security updates require repository-setting
-  confirmation.
-- Secret scanning and push protection require repository-setting confirmation.
+- Authenticated GitHub reads on 2026-06-23 confirmed Dependabot security
+  updates, secret scanning, push protection, 0 Dependabot alerts, 0
+  secret-scanning alerts, 0 repository security advisories, and no open CodeQL
+  alerts.
 - Private vulnerability reporting requires repository-setting confirmation.
 
 ## Documentation Gates

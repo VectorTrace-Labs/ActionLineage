@@ -47,12 +47,12 @@ access. Codex must not perform these actions without explicit approval.
 
 Authenticated read-only GitHub API checks on 2026-06-23 confirmed branch
 protection on `main`, strict required checks, Dependabot security updates,
-secret scanning, and push protection. Reconfirm through GitHub UI or API before
+secret scanning, push protection, 0 Dependabot alerts, 0 secret-scanning
+alerts, 0 repository security advisories, and 10 CodeQL alerts with no open
+alerts (`8 fixed`, `2 dismissed`). Reconfirm through GitHub UI or API before
 public claims:
 
 - latest CodeQL status;
-- current Dependabot alert status;
-- current secret-scanning alert status;
 - private vulnerability reporting;
 - public GHCR package visibility, if a preview image is published.
 
