@@ -11,7 +11,7 @@ settings.
 | Item | Result |
 | --- | --- |
 | Branch | `codex/public-alpha-hardening` |
-| Audited implementation commit | `ee49f8136536f692edd480d456eaf370631891bd` before this audit-doc refresh |
+| Audited implementation commit | `4d2adec2e3f9bf7e732918e7e0c0063286596db2` before this audit-doc refresh |
 | Candidate version | `0.1.0a3` |
 | Recommendation | Do not republish immutable PyPI/TestPyPI files for `0.1.0a3`; create or repair the GitHub Release object only after owner review. |
 | Generated local manifest | `build/release-candidate/manifest.json` |
@@ -26,9 +26,9 @@ are not committed source files.
 | --- | --- | --- |
 | Dependency synchronization | PASS | `uv sync --locked --all-extras`; eval group reinstalled for eval lane |
 | Ruff lint | PASS | `uv run ruff check .` |
-| Ruff format check | PASS | `uv run ruff format --check .` |
+| Ruff format check | PASS | `uv run ruff format --check .`, 135 files already formatted |
 | Strict mypy | PASS | `uv run mypy src`, 56 source files |
-| Full pytest after release-proof workflow slice | PASS | `302 passed`; no warning summary |
+| Full pytest after online release-consistency hardening slice | PASS | `307 passed`; no warning summary |
 | Branch coverage with eval group | PASS | `298 passed`, 86.03 percent total coverage; no warning summary |
 | Compatibility tests | PASS | Included in full suite; golden journals and public API tests passed |
 | Property-based regression tests | PASS | Included in full suite through Hypothesis tests |
@@ -57,7 +57,7 @@ are not committed source files.
 | Release proof review index | PASS | `build/release-candidate/REVIEW_INDEX.md` generated from the local manifest; manifest-listed artifact hashes verified |
 | Release workflow artifact proof | PASS | `.github/workflows/release.yml` generates `build/release/manifest.json` and `build/release/REVIEW_INDEX.md`, includes both in checksums and attestations, and smoke-checks both after artifact download |
 | Release consistency, offline | PASS | 0 failures, 0 unknowns |
-| Release consistency, online JSON metadata | FAIL / OWNER-GATED | Package and GitHub JSON checks fall back from Python `urllib` to bounded read-only `curl` after local URL/TLS failures; this detects known public package metadata drift and the missing GitHub Release object |
+| Release consistency, online JSON metadata | FAIL / OWNER-GATED | `fail_count=5`, `unknown_count=7`; package and GitHub JSON checks fall back from Python `urllib` to bounded read-only `curl` after local URL/TLS failures; this detects known public package metadata drift and the missing GitHub Release object |
 | Project URL HEAD reachability | UNKNOWN in local TLS-constrained environments | Lower-priority URL HEAD checks still use Python `urllib` and may remain environment-sensitive |
 | Public state via independent curl spot-checks | PASS / BLOCKED | PyPI/TestPyPI expose `0.1.0a3`; GitHub tag exists; GitHub Release object for `v0.1.0a3` is absent |
 | Container build | NOT_IN_RELEASE_SCOPE | Preview container gates run in GitHub Actions on hosted Ubuntu |

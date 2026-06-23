@@ -312,11 +312,12 @@ def test_release_candidate_audit_prepares_without_publishing() -> None:
     assert "Release-candidate manifest generation" in audit
     assert "build/release-candidate/REVIEW_INDEX.md" in audit
     assert "Release proof review index" in audit
-    assert "ee49f8136536f692edd480d456eaf370631891bd" in audit
+    assert "4d2adec2e3f9bf7e732918e7e0c0063286596db2" in audit
     assert "Do not republish immutable PyPI/TestPyPI files" in audit
+    assert "135 files already formatted" in audit
     assert "298 passed" in audit
     assert "86.03 percent total coverage" in audit
-    assert "302 passed" in audit
+    assert "307 passed" in audit
     assert "no warning summary" in audit
     assert "23 package entries" in audit
     assert "23 direct dependencies checked, 0 issues" in audit
@@ -325,6 +326,7 @@ def test_release_candidate_audit_prepares_without_publishing() -> None:
     assert "build/release/manifest.json" in audit
     assert "build/release/REVIEW_INDEX.md" in audit
     assert "bounded read-only `curl`" in audit
+    assert "`fail_count=5`, `unknown_count=7`" in audit
     assert "Lower-priority URL HEAD checks" in audit
     assert "contract validate, case export, and static console export" in audit
     assert "47/47 declared capabilities covered" in audit
@@ -626,6 +628,7 @@ def test_public_claim_audit_tracks_package_description_drift() -> None:
     assert "PALPHA-013" in hardening_plan
     assert "PALPHA-014" in hardening_plan
     assert "MITIGATED_WITH_CURL_FALLBACK" in hardening_plan
+    assert "4d2adec2e3f9bf7e732918e7e0c0063286596db2" in hardening_plan
     assert "Public package long descriptions can lag" in hardening_plan
     assert "Local release-proof reproduction docs mixed" in hardening_plan
     assert "bounded read-only `curl` fallback" in audit
