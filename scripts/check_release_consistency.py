@@ -568,7 +568,7 @@ def _check_github(repository: str, expected_version: str, timeout_seconds: float
             )
         )
     if release_error is not None:
-        status = FAIL if "HTTP 404" in release_error else UNKNOWN
+        status = FAIL if _is_not_found_error(release_error) else UNKNOWN
         checks.append(
             Check(
                 id="online.github.release",
@@ -591,6 +591,10 @@ def _check_github(repository: str, expected_version: str, timeout_seconds: float
             )
         )
     return checks
+
+
+def _is_not_found_error(error: str) -> bool:
+    return "HTTP 404" in error or "returned error: 404" in error
 
 
 def _check_url_heads(project_urls: dict[str, str], timeout_seconds: float) -> list[Check]:
@@ -641,8 +645,47 @@ def _fetch_json(url: str, timeout_seconds: float) -> tuple[Any | None, str | Non
             return json.loads(response.read().decode("utf-8")), None
     except urllib.error.HTTPError as exc:
         return None, f"HTTP {exc.code}: {exc.reason}"
-    except (OSError, urllib.error.URLError, json.JSONDecodeError) as exc:
+    except json.JSONDecodeError as exc:
         return None, str(exc)
+    except (OSError, urllib.error.URLError) as exc:
+        return _fetch_json_with_curl(url, timeout_seconds, str(exc))
+
+
+def _fetch_json_with_curl(
+    url: str, timeout_seconds: float, original_error: str
+) -> tuple[Any | None, str | None]:
+    curl_timeout = max(1.0, timeout_seconds)
+    command = [
+        "curl",
+        "--fail",
+        "--silent",
+        "--show-error",
+        "--location",
+        "--max-time",
+        str(curl_timeout),
+        "--user-agent",
+        "actionlineage-release-consistency/0",
+        url,
+    ]
+    try:
+        result = subprocess.run(
+            command,
+            check=False,
+            capture_output=True,
+            text=True,
+            timeout=curl_timeout + 1.0,
+        )
+    except FileNotFoundError as exc:
+        return None, f"{original_error}; curl fallback unavailable: {exc}"
+    except subprocess.TimeoutExpired:
+        return None, f"{original_error}; curl fallback timed out after {curl_timeout} seconds"
+    if result.returncode != 0:
+        diagnostic = result.stderr.strip() or result.stdout.strip() or "no diagnostic"
+        return None, f"{original_error}; curl fallback failed ({result.returncode}): {diagnostic}"
+    try:
+        return json.loads(result.stdout), None
+    except json.JSONDecodeError as exc:
+        return None, f"{original_error}; curl fallback returned invalid JSON: {exc}"
 
 
 def _compare(

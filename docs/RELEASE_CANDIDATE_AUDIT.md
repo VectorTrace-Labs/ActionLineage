@@ -57,8 +57,9 @@ are not committed source files.
 | Release proof review index | PASS | `build/release-candidate/REVIEW_INDEX.md` generated from the local manifest; manifest-listed artifact hashes verified |
 | Release workflow artifact proof | PASS | `.github/workflows/release.yml` generates `build/release/manifest.json` and `build/release/REVIEW_INDEX.md`, includes both in checksums and attestations, and smoke-checks both after artifact download |
 | Release consistency, offline | PASS | 0 failures, 0 unknowns |
-| Release consistency, online via Python urllib | PASS with UNKNOWNs | 0 failures, 10 unknowns due local Python certificate-store failure |
-| Public state via curl | PASS / BLOCKED | PyPI/TestPyPI expose `0.1.0a3`; GitHub tag exists; GitHub Release object for `v0.1.0a3` is absent |
+| Release consistency, online JSON metadata | FAIL / OWNER-GATED | Package and GitHub JSON checks fall back from Python `urllib` to bounded read-only `curl` after local URL/TLS failures; this detects known public package metadata drift and the missing GitHub Release object |
+| Project URL HEAD reachability | UNKNOWN in local TLS-constrained environments | Lower-priority URL HEAD checks still use Python `urllib` and may remain environment-sensitive |
+| Public state via independent curl spot-checks | PASS / BLOCKED | PyPI/TestPyPI expose `0.1.0a3`; GitHub tag exists; GitHub Release object for `v0.1.0a3` is absent |
 | Container build | NOT_IN_RELEASE_SCOPE | Preview container gates run in GitHub Actions on hosted Ubuntu |
 | GitHub Release object for `v0.1.0a3` | BLOCKED_ON_OWNER | Creating or repairing release objects requires owner action |
 | Repository security settings | BLOCKED_ON_EXTERNAL_VALIDATION | Branch protection, secret scanning, push protection, private vulnerability reporting, Dependabot alert status, and latest CodeQL status require external validation |
@@ -137,8 +138,10 @@ uvx --from build/release-candidate/dist/actionlineage-0.1.0a3.tar.gz actionlinea
   blocker.
 - Existing public PyPI/TestPyPI metadata lacks project URLs and may retain stale
   long-description wording until a later owner-approved package upload.
-- Python `urllib` cannot complete HTTPS checks in this local environment, while
-  `curl` can. The audit records both paths.
+- Python `urllib` URL/TLS failures are mitigated for package and GitHub JSON
+  metadata by a bounded read-only `curl` fallback. Lower-priority project URL
+  HEAD checks can still remain UNKNOWN in local certificate-store constrained
+  environments.
 - External repository security settings and third-party review cannot be
   verified from local source alone.
 - Container publication remains preview and externally gated.

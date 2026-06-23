@@ -8,6 +8,8 @@ import zipfile
 from pathlib import Path
 from types import ModuleType
 
+import pytest
+
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 
 
@@ -83,6 +85,104 @@ def test_release_consistency_flags_stale_public_description_claims() -> None:
             "trusted_publishing_run_pending",
         ]
     }
+
+
+def test_fetch_json_falls_back_to_bounded_curl_after_url_error(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    checker = _load_checker()
+    url = "https://example.test/data.json"
+    observed_args: list[str] = []
+
+    def fail_urlopen(*_args: object, **_kwargs: object) -> object:
+        raise checker.urllib.error.URLError("certificate verify failed")
+
+    def fake_run(
+        args: list[str], *, check: bool, capture_output: bool, text: bool, timeout: float
+    ) -> object:
+        observed_args[:] = args
+        assert check is False
+        assert capture_output is True
+        assert text is True
+        assert timeout == 4.5
+        return checker.subprocess.CompletedProcess(args, 0, stdout='{"ok": true}', stderr="")
+
+    monkeypatch.setattr(checker.urllib.request, "urlopen", fail_urlopen)
+    monkeypatch.setattr(checker.subprocess, "run", fake_run)
+
+    data, error = checker._fetch_json(url, 3.5)
+
+    assert data == {"ok": True}
+    assert error is None
+    assert observed_args == [
+        "curl",
+        "--fail",
+        "--silent",
+        "--show-error",
+        "--location",
+        "--max-time",
+        "3.5",
+        "--user-agent",
+        "actionlineage-release-consistency/0",
+        url,
+    ]
+
+
+def test_fetch_json_reports_urllib_and_curl_fallback_failures(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    checker = _load_checker()
+
+    def fail_urlopen(*_args: object, **_kwargs: object) -> object:
+        raise checker.urllib.error.URLError("certificate verify failed")
+
+    def fake_run(
+        args: list[str], *, check: bool, capture_output: bool, text: bool, timeout: float
+    ) -> object:
+        assert check is False
+        assert capture_output is True
+        assert text is True
+        assert timeout == 4.5
+        return checker.subprocess.CompletedProcess(
+            args,
+            60,
+            stdout="",
+            stderr="curl: (60) SSL certificate problem",
+        )
+
+    monkeypatch.setattr(checker.urllib.request, "urlopen", fail_urlopen)
+    monkeypatch.setattr(checker.subprocess, "run", fake_run)
+
+    data, error = checker._fetch_json("https://example.test/data.json", 3.5)
+
+    assert data is None
+    assert error is not None
+    assert "certificate verify failed" in error
+    assert "curl fallback failed (60)" in error
+    assert "SSL certificate problem" in error
+
+
+def test_github_release_404_from_curl_fallback_is_a_failure(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    checker = _load_checker()
+
+    def fake_fetch_json(url: str, _timeout_seconds: float) -> tuple[object | None, str | None]:
+        if url.endswith("/tags"):
+            return [{"name": "v0.1.0a3"}], None
+        return (
+            None,
+            "urlopen TLS failure; curl fallback failed (56): "
+            "curl: (56) The requested URL returned error: 404",
+        )
+
+    monkeypatch.setattr(checker, "_fetch_json", fake_fetch_json)
+
+    checks = checker._check_github("VectorTrace-Labs/ActionLineage", "0.1.0a3", 10.0)
+
+    by_id = {check.id: check for check in checks}
+    assert by_id["online.github.tag"].status == "PASS"
+    assert by_id["online.github.release"].status == "FAIL"
 
 
 def _load_checker() -> ModuleType:

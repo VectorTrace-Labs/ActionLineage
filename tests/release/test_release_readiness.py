@@ -324,6 +324,8 @@ def test_release_candidate_audit_prepares_without_publishing() -> None:
     assert "Release workflow artifact proof" in audit
     assert "build/release/manifest.json" in audit
     assert "build/release/REVIEW_INDEX.md" in audit
+    assert "bounded read-only `curl`" in audit
+    assert "Lower-priority URL HEAD checks" in audit
     assert "contract validate, case export, and static console export" in audit
     assert "47/47 declared capabilities covered" in audit
     assert "236 files scanned, 0 leaks" in audit
@@ -623,9 +625,12 @@ def test_public_claim_audit_tracks_package_description_drift() -> None:
     assert "scripts/check_release_consistency.py" in audit
     assert "PALPHA-013" in hardening_plan
     assert "PALPHA-014" in hardening_plan
+    assert "MITIGATED_WITH_CURL_FALLBACK" in hardening_plan
     assert "Public package long descriptions can lag" in hardening_plan
     assert "Local release-proof reproduction docs mixed" in hardening_plan
-    assert "online checker detects known stale package-description claims" in scorecard
+    assert "bounded read-only `curl` fallback" in audit
+    assert "bounded read-only `curl` fallback" in scorecard
+    assert "Local Python certificate stores can block online release checks" in scorecard
 
 
 def test_review_process_keeps_ai_review_advisory() -> None:
