@@ -90,18 +90,25 @@ data, not universal performance guarantees.
 
 ## Phase Plan
 
-| Phase | Scope | Current status |
-| --- | --- | --- |
-| 0 | Baseline and public-claim audit | In progress |
-| 1 | Release and version consistency | In progress: checker added; release workflow now prepares bounded post-publication package-index verification after owner-approved publishing; GitHub Release object remains owner-gated |
-| 2 | Package metadata and discoverability | In progress: local metadata improved; public metadata waits for next release |
-| 3 | README landing experience and visual proof | In progress: generated demo evidence map and freshness check added; static console trace-ID, run-ID, and empty selector CLI paths now have coverage |
-| 4 | Clean installation and first-time-user testing | In progress: baseline public smoke completed; built wheel and sdist first-time-user smoke gate added to CI; first-time evaluator troubleshooting guide added for install, demo, path/browser, extras, offline/online, and release proof/review-index failures |
-| 5 | Visible quality and security evidence | In progress: baseline captured; CI now runs repository-local Markdown link and heading-fragment checking, dependency license reporting, an 85 percent branch-enabled total coverage floor, and a concise quality/security evidence summary |
-| 6 | Agent Validation Lab public evidence | In progress: deterministic no-model baseline report is generated into `docs/evidence/agent-validation-baseline.*` from 11 scorecards; scheduled no-model artifacts run on trusted default-branch code; optional live-model execution is gated on `GH_MODELS_TOKEN` and remains separate |
-| 7 | Reliability and adversarial hardening | In progress: SQLite projection handles close under warning-as-error coverage; static console context bounds, CSP, redaction, hostile note/saved-view escaping fixtures, run-ID CLI coverage, selector-exclusivity rejection, and empty selector no-match renderer/CLI fixtures added; verified-prefix recovery rejects in-place overwrite and streams output; journal verification rejects newline-less truncated final records; ambiguous HTTP observer matches remain unverified with fixture coverage; service-mode tests use a dev-only `httpx2` test-client backend so release proof remains warning-free without adding runtime TCB |
-| 8 | External review and community readiness | In progress: review guides, reproduction docs, structured feedback templates, good first issue candidates, generated manifest command, generated release-proof review index command, and review outreach drafts added; real review remains external-validation |
-| 9 | Release-candidate audit | In progress: local candidate audit refreshed against implementation commit `3ff4185b199fc74474f65dfa86d72441728a010d`; draft notes, owner checklist, generated manifest script, review index with release-consistency summaries, release-workflow artifact smoke and post-publication verification lane, dependency license report, online release-consistency evidence, and external gates are documented; publication remains owner-gated |
+This table separates repository-controlled hardening from owner or external
+validation. `Local complete` means the current branch has committed
+implementation, documentation, tests, or deterministic evidence for the stated
+scope; it does not claim publication, production readiness, or independent
+review. Owner or external gates stay open until there is public, independently
+verifiable evidence.
+
+| Phase | Scope | Repo-controlled status | Remaining gate or reason not fully done | ETA class |
+| --- | --- | --- | --- | --- |
+| 0 | Baseline and public-claim audit | Local complete for current branch: baseline measurements, public-claim scans, secret scan, SBOM, dependency audit, package smoke, and evaluation baseline were captured. | Refresh before final announcement or release-candidate cut. | Done locally; refresh-only |
+| 1 | Release and version consistency | Local complete except public release object: checker added; release workflow now prepares bounded post-publication package-index verification after owner-approved publishing. | GitHub Release object for `v0.1.0a3` remains owner-gated. | Blocked on owner action |
+| 2 | Package metadata and discoverability | Local complete: metadata and sdist hygiene were improved in source. | PyPI/TestPyPI pages keep old metadata until the next owner-approved package release. | Blocked on owner release |
+| 3 | README landing experience and visual proof | Local complete: generated demo evidence map and freshness check added; static console trace-ID, run-ID, empty-selector, and ambiguous-selector CLI paths now have coverage. | Optional outside evaluator feedback may still improve onboarding language. | Done locally |
+| 4 | Clean installation and first-time-user testing | Local complete: baseline public package smoke was captured; built wheel and sdist first-time-user smoke gate added to CI; evaluator troubleshooting guide added. | Post-publication smoke must run again after any new owner-approved package upload. | Done locally; rerun after release |
+| 5 | Visible quality and security evidence | Local complete: CI now runs repository-local Markdown link and heading-fragment checking, dependency license reporting, an 85 percent branch-enabled total coverage floor, dependency audit, and concise quality/security evidence summaries. | External repository security settings require owner-side confirmation. | Done locally; owner validation pending |
+| 6 | Agent Validation Lab public evidence | Local complete for no-model public-alpha evidence: deterministic baseline report is generated into `docs/evidence/agent-validation-baseline.*` from 11 scorecards; scheduled no-model artifacts run on trusted default-branch code. | Optional live-model evidence requires maintainer-provided `GH_MODELS_TOKEN`; no live-model claim is made. | Done locally for no-model evidence |
+| 7 | Reliability and adversarial hardening | Substantially complete locally: SQLite close handling, static console context bounds/CSP/redaction/escaping, run-ID CLI coverage, selector-exclusivity rejection, empty selector no-match renderer/CLI fixtures, verified-prefix recovery, truncated-journal rejection, ambiguous HTTP observer fixture behavior, and warning-free service-mode tests are covered. | One final repo-controlled adversarial sweep remains useful before calling this phase locally complete. | 1-2 focused hours |
+| 8 | External review and community readiness | Local preparation complete: review guides, reproduction docs, structured feedback templates, good first issue candidates, generated manifest command, generated release-proof review index command, and outreach drafts were added. | Actual independent review, outside adoption, or public feedback remains external validation. | External timeline |
+| 9 | Release-candidate audit | Prepared locally: draft notes, owner checklist, generated manifest script, review index with release-consistency summaries, release-workflow artifact smoke and post-publication verification lane, dependency license report, online release-consistency evidence, and external gates are documented. | Needs one final refresh against the final branch head after local hardening stops; publication remains owner-gated. | 1-2 focused hours after final local changes |
 
 ## Owner Gates
 
