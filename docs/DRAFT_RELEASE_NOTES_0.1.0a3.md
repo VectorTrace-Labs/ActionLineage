@@ -31,8 +31,8 @@ exports.
 
 ## Verification Snapshot
 
-- Full eval-group coverage run: 289 tests passed, 86.02 percent total coverage.
-- Clean tracked snapshot: 288 tests passed, 1 eval-only inspection test skipped
+- Full eval-group coverage run: 295 tests passed, 86.03 percent total coverage.
+- Clean tracked snapshot: 294 tests passed, 1 eval-only inspection test skipped
   under `--all-extras`.
 - Built wheel and source distribution both ran `actionlineage version`, demo
   run, journal verification, contract validation, case export, and static

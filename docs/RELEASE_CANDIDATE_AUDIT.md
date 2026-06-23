@@ -11,7 +11,7 @@ settings.
 | Item | Result |
 | --- | --- |
 | Branch | `codex/public-alpha-hardening` |
-| Audited implementation commit | `53126d609b445429194e6633f1ef843d00565607` before this audit-doc refresh |
+| Audited implementation commit | `c2dd2a95bb625f9274d5c0912b928c7d9c63bdf5` before this audit-doc refresh |
 | Candidate version | `0.1.0a3` |
 | Recommendation | Do not republish immutable PyPI/TestPyPI files for `0.1.0a3`; create or repair the GitHub Release object only after owner review. |
 | Generated local manifest | `build/release-candidate/manifest.json` |
@@ -27,15 +27,15 @@ are not committed source files.
 | Ruff lint | PASS | `uv run ruff check .` |
 | Ruff format check | PASS | `uv run ruff format --check .` |
 | Strict mypy | PASS | `uv run mypy src`, 56 source files |
-| Full pytest after all-extras sync | PASS | `288 passed, 1 skipped, 1 warning`; skipped eval-only inspection path is covered by eval-group run |
-| Branch coverage with eval group | PASS | `289 passed`, 86.02 percent total coverage |
+| Full pytest after all-extras sync | PASS | `294 passed, 1 skipped, 1 warning`; skipped eval-only inspection path is covered by eval-group run |
+| Branch coverage with eval group | PASS | `295 passed`, 86.03 percent total coverage |
 | Compatibility tests | PASS | Included in full suite; golden journals and public API tests passed |
 | Property-based regression tests | PASS | Included in full suite through Hypothesis tests |
 | Claim-language scan | PASS | `uv run python scripts/check_claims_language.py .` |
 | Secret scan | PASS | `uv run python scripts/secret_scan.py .` |
 | Dependency audit | PASS | `uv run pip-audit`, no known vulnerabilities |
 | Local Markdown link check | PASS | Repository-relative Markdown links resolved |
-| Clean tracked snapshot | PASS | `288 passed, 1 skipped, 1 warning` from `git archive HEAD` snapshot with `uv run --all-extras pytest` |
+| Clean tracked snapshot | PASS | `294 passed, 1 skipped, 1 warning` from `git archive HEAD` snapshot with `uv run --all-extras pytest` |
 | Wheel and sdist build | PASS | `uv build --out-dir build/release-candidate/dist` |
 | Built wheel metadata | PASS | Version `0.1.0a3`, `Requires-Python: >=3.12`, six project URLs |
 | Built sdist metadata | PASS | Version `0.1.0a3`, `Requires-Python: >=3.12`, six project URLs, no local cache entries |
@@ -63,10 +63,10 @@ are not committed source files.
 
 | Artifact | SHA256 |
 | --- | --- |
-| `build/release-candidate/dist/actionlineage-0.1.0a3-py3-none-any.whl` | `943eac5a50fa727979e0ecf232a93922c90de1b0db6c7d65d6e1aeaf9f3939e1` |
-| `build/release-candidate/dist/actionlineage-0.1.0a3.tar.gz` | `d9c6234de90fd1b13ca70fee3da3f74da81c688e7cf4b4143811470e3687fba7` |
-| `build/release-candidate/actionlineage-sbom.json` | `af3cc4f842480acb30fdf72c3735ba5f7fa2b41a14343b20c71c0a5fe91bb9ce` |
-| `build/release-candidate/actionlineage-release-provenance.json` | `063cf5a60c0828f4979664fe42a71d14c0a6f0d6d5b2e9858dcda51014c8e806` |
+| `build/release-candidate/dist/actionlineage-0.1.0a3-py3-none-any.whl` | `59425ec6fbdaf0593e9bfeef1fe55be28e0116c14b75e87d562c7f9f2be6cecb` |
+| `build/release-candidate/dist/actionlineage-0.1.0a3.tar.gz` | `ca8e70ae4dfb4190140e4d0a7fecaa580c15c6c8f7d3d1a1edf7343423eebbb4` |
+| `build/release-candidate/actionlineage-sbom.json` | `3e506978f9e721781e69fe074f4c4f9d6b364a0024ae39348fed5c59cbb1cf3b` |
+| `build/release-candidate/actionlineage-release-provenance.json` | `2899733720ffb424ccb976a2807768737231ab7e48c880cd9ffc77eca81932f7` |
 
 ## Agent Validation Baseline
 

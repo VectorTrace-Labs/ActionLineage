@@ -85,7 +85,7 @@ data, not universal performance guarantees.
 | 6 | Agent Validation Lab public evidence | In progress: deterministic no-model baseline report is generated into `docs/evidence/agent-validation-baseline.*` from 11 scorecards; scheduled no-model artifacts run on trusted default-branch code; optional live-model execution is gated on `GH_MODELS_TOKEN` and remains separate |
 | 7 | Reliability and adversarial hardening | In progress: SQLite projection handles close under warning-as-error coverage; static console context bounds and CSP added; verified-prefix recovery rejects in-place overwrite and streams output; journal verification rejects newline-less truncated final records; ambiguous HTTP observer matches remain unverified with fixture coverage |
 | 8 | External review and community readiness | In progress: review guides, reproduction docs, and structured feedback templates added; real review remains external-validation |
-| 9 | Release-candidate audit | In progress: local candidate audit refreshed against implementation commit `53126d609b445429194e6633f1ef843d00565607`; draft notes, owner checklist, generated manifest, artifact smoke, and external gates are documented; publication remains owner-gated |
+| 9 | Release-candidate audit | In progress: local candidate audit refreshed against implementation commit `c2dd2a95bb625f9274d5c0912b928c7d9c63bdf5`; draft notes, owner checklist, generated manifest, artifact smoke, and external gates are documented; publication remains owner-gated |
 
 ## Owner Gates
 
