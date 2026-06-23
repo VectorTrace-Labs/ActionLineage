@@ -395,11 +395,12 @@ def test_release_checklist_covers_required_gates() -> None:
         "actionlineage_evals public-report",
         "--json-output docs/evidence/agent-validation-baseline.json",
         "--markdown-output docs/evidence/agent-validation-baseline.md",
-        "uv build --out-dir /tmp/actionlineage-dist",
+        "uv build --out-dir build/release-candidate/dist",
         "scripts/generate_release_provenance.py",
-        "--dist-dir /tmp/actionlineage-dist",
+        "--dist-dir build/release-candidate/dist",
         "scripts/write_release_candidate_manifest.py",
         "--artifact-root build/release-candidate",
+        "--dist-dir build/release-candidate/dist",
         '--gate "ruff_check|PASS|uv run ruff check ."',
         "scripts/write_release_review_index.py",
         "--manifest build/release-candidate/manifest.json",
@@ -621,7 +622,9 @@ def test_public_claim_audit_tracks_package_description_drift() -> None:
     assert "stale GitHub Release or pending-publication claims" in audit
     assert "scripts/check_release_consistency.py" in audit
     assert "PALPHA-013" in hardening_plan
+    assert "PALPHA-014" in hardening_plan
     assert "Public package long descriptions can lag" in hardening_plan
+    assert "Local release-proof reproduction docs mixed" in hardening_plan
     assert "online checker detects known stale package-description claims" in scorecard
 
 

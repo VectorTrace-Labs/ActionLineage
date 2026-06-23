@@ -110,12 +110,13 @@ audited gate rows that should appear in the manifest:
 
 ```bash
 uv run python scripts/write_release_candidate_manifest.py \
-  --artifact-root build/release-candidate \
+  --artifact-root build/release-proof \
+  --dist-dir build/release-proof/dist \
   --gate "ruff_check|PASS|uv run ruff check ." \
-  --output build/release-candidate/manifest.json
+  --output build/release-proof/manifest.json
 uv run python scripts/write_release_review_index.py \
-  --manifest build/release-candidate/manifest.json \
-  --output build/release-candidate/REVIEW_INDEX.md
+  --manifest build/release-proof/manifest.json \
+  --output build/release-proof/REVIEW_INDEX.md
 ```
 
 ## Minimized Failure Bundles

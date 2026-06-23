@@ -41,6 +41,7 @@ reviewer index with explicit gate rows for the audit evidence you want listed:
 ```bash
 uv run python scripts/write_release_candidate_manifest.py \
   --artifact-root build/release-candidate \
+  --dist-dir build/release-candidate/dist \
   --gate "ruff_check|PASS|uv run ruff check ." \
   --output build/release-candidate/manifest.json
 uv run python scripts/write_release_review_index.py \

@@ -77,6 +77,7 @@ data, not universal performance guarantees.
 | PALPHA-011 | P2 | Local release-candidate manifest contents were documented but manifest generation itself was not a committed, repeatable script. | FIXED_IN_MANIFEST_GENERATOR_SLICE |
 | PALPHA-012 | P2 | The GitHub release artifact bundle did not yet generate or smoke-check the release-candidate manifest and review index produced by the local proof scripts. | FIXED_IN_RELEASE_WORKFLOW_PROOF_SLICE |
 | PALPHA-013 | P1 | Public package long descriptions can lag the corrected source README and still contain stale owner-gated GitHub Release wording until the next owner-approved package upload. | BLOCKED_ON_RELEASE |
+| PALPHA-014 | P2 | Local release-proof reproduction docs mixed `/tmp` distribution artifacts with `build/release-candidate` manifest inputs, making copy-paste verification harder. | FIXED_IN_RELEASE_PROOF_DOCS_SLICE |
 
 ## Phase Plan
 

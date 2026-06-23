@@ -142,25 +142,29 @@ docker run --rm -v "$PWD/build/docker-ci:/artifacts" \
 Generate local alpha artifacts without committing them:
 
 ```bash
-rm -rf /tmp/actionlineage-dist
-uv build --out-dir /tmp/actionlineage-dist
-uv run python scripts/generate_sbom.py --output /tmp/actionlineage-sbom.json
+rm -rf build/release-candidate
+mkdir -p build/release-candidate
+uv build --out-dir build/release-candidate/dist
+uv run python scripts/generate_sbom.py \
+  --output build/release-candidate/actionlineage-sbom.json
 uv run python scripts/check_dependency_licenses.py \
-  --output /tmp/actionlineage-license-report.json
+  --output build/release-candidate/actionlineage-license-report.json
 uv run python scripts/generate_release_provenance.py \
-  --dist-dir /tmp/actionlineage-dist \
-  --output /tmp/actionlineage-provenance.json
+  --dist-dir build/release-candidate/dist \
+  --output build/release-candidate/actionlineage-release-provenance.json
 ```
 
-When the release-candidate artifact directory is populated, generate the local
-manifest from the artifact bytes and evidence summaries, then generate a
-reviewer index that verifies the manifest-listed artifacts still match their
-recorded hashes. Repeat `--gate "name|STATUS|evidence"` for audited gate rows
-that should appear in the manifest:
+After the release-candidate artifact directory is populated, generate the local
+manifest from the artifact bytes and evidence summaries, explicitly pointing at
+the distribution directory, then generate a reviewer index that verifies the
+manifest-listed artifacts still match their recorded hashes. Repeat
+`--gate "name|STATUS|evidence"` for audited gate rows that should appear in the
+manifest:
 
 ```bash
 uv run python scripts/write_release_candidate_manifest.py \
   --artifact-root build/release-candidate \
+  --dist-dir build/release-candidate/dist \
   --gate "ruff_check|PASS|uv run ruff check ." \
   --output build/release-candidate/manifest.json
 uv run python scripts/write_release_review_index.py \
