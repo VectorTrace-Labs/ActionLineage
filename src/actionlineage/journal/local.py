@@ -564,17 +564,6 @@ def _lock_file(path: Path, *, mode: str, operation: str) -> int:
         raise
 
 
-def _unlock_file(fd: int, *, path: Path, mode: str) -> None:
-    if mode == "exclusive":
-        with suppress(OSError):
-            os.ftruncate(fd, 0)
-            os.fsync(fd)
-    if fcntl is not None:
-        with suppress(OSError):
-            fcntl.flock(fd, fcntl.LOCK_UN)
-    os.close(fd)
-
-
 @contextmanager
 def _journal_lock(
     path: Path,
@@ -603,4 +592,11 @@ def _journal_lock(
     try:
         yield
     finally:
-        _unlock_file(fd, path=path, mode=mode)
+        if mode == "exclusive":
+            with suppress(OSError):
+                os.ftruncate(fd, 0)
+                os.fsync(fd)
+        if fcntl is not None:
+            with suppress(OSError):
+                fcntl.flock(fd, fcntl.LOCK_UN)
+        os.close(fd)
