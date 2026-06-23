@@ -415,7 +415,7 @@ def _scripted_calls(scenario_id: str) -> tuple[ToolCall, ...]:
                 },
             ),
         )
-    if scenario_id == "AVL-012":
+    if scenario_id in {"AVL-012", "AVL-013"}:
         return (
             ToolCall(
                 name="safe_files.read",

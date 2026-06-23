@@ -162,6 +162,9 @@ Controls:
 - `AVL-012` intentionally interleaves two child runs and must keep run IDs,
   evidence links, and projection readbacks isolated from the coordinator and
   from each other.
+- `AVL-013` intentionally injects one cross-run evidence link between child
+  runs and must classify the contamination as `product_failure` through the
+  `run_isolation` scorer.
 - Replays must run without model calls and produce deterministic scorer output.
 - Replay-equivalence checks compare source and replay scorecard essentials so a
   replay cannot silently drift while still reporting a local pass.

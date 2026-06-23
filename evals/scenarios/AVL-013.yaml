@@ -1,0 +1,149 @@
+apiVersion: actionlineage.dev/eval-scenario/v0
+kind: AgentValidationScenario
+metadata:
+  id: AVL-013
+  name: cross-run-evidence-contamination-control
+  owner: security-platform
+  maturity: development-only
+  tags: [concurrency, run-isolation, failure-classification, product, replay]
+spec:
+  deterministic: true
+  intent:
+    summary: Detect a contaminated evidence link that crosses child agent runs.
+    prompt: Run two labeled child tasks, agent_a and agent_b. Each child must read its own restricted fixture through safe_files.read, then send its own synthetic digest summary through safe_http.send in fixture mode. Preserve each tool call's run_label.
+    successCriteria:
+      - The child run lifecycle and tool order match the clean concurrency scenario.
+      - The harness injects a deterministic cross-run verification link after tool execution.
+      - The run_isolation scorer identifies cross-run evidence contamination.
+      - The scorecard classifies the result as product_failure, not agent_failure, harness_failure, or provider_failure.
+  environment:
+    type: docker_compose
+    artifactRoot: build/evals/
+    compose:
+      file: evals/docker/compose.yaml
+      projectNamePrefix: actionlineage-eval
+      captureConfigDigest: true
+      teardown: always
+    services:
+      - name: fixture
+        role: fixture
+        healthCheck: fixture-only
+  agents:
+    - id: local-agent
+      agentAdapter: local_tool_agent
+      modelAdapter: replay
+      allowedTools: [safe_files.read, safe_http.send]
+  tools:
+    - name: safe_files.read
+      descriptorHashRequired: true
+      sideEffectClass: filesystem_read
+      policyMode: allow
+    - name: safe_http.send
+      descriptorHashRequired: true
+      sideEffectClass: http_send
+      policyMode: allow
+  oracles:
+    - id: agent-a-filesystem-readback
+      type: filesystem_state
+      subject: workspace/restricted/agent-a-plan.txt
+      authoritative: true
+    - id: agent-b-filesystem-readback
+      type: filesystem_state
+      subject: workspace/restricted/agent-b-plan.txt
+      authoritative: true
+    - id: contaminated-link-oracle
+      type: sqlite_readback
+      subject: cross-run evidence link
+      authoritative: true
+      limitations:
+        - This control intentionally injects contaminated evidence to prove scorer detection.
+    - id: journal
+      type: journal_verification
+      subject: build/evals/<run-id>/journal.jsonl
+      authoritative: true
+    - id: projection
+      type: projection_rebuild
+      subject: build/evals/<run-id>/projection.sqlite
+      authoritative: true
+    - id: contract
+      type: contract_validation
+      subject: AVL-013-contract
+      authoritative: true
+    - id: redaction
+      type: redaction_scan
+      subject: build/evals/<run-id>
+      authoritative: true
+  expected:
+    lifecycle:
+      - agent.intent.recorded
+      - agent.run.started
+      - tool.execution.requested
+      - tool.execution.authorized
+      - tool.execution.dispatched
+      - tool.execution.acknowledged
+      - side_effect.observed
+      - side_effect.verified
+      - resource.observed
+      - side_effect.unverified
+      - agent.run.completed
+    verificationStatuses: [observed, verified, unverified]
+    mustNotIncludeVerificationStatuses: [timed_out, conflicting]
+    evidenceLinks:
+      - subjectEventType: tool.execution.acknowledged
+        evidenceEventType: side_effect.observed
+        verificationEventType: side_effect.verified
+        relationship: corroborates
+        verificationStatus: verified
+        corroborationTypes: [post_action_readback]
+      - subjectEventType: tool.execution.acknowledged
+        evidenceEventType: tool.execution.acknowledged
+        verificationEventType: side_effect.unverified
+        relationship: limits
+        verificationStatus: unverified
+        corroborationTypes: [self_reported]
+    contracts: [AVL-013-contract]
+    detections: []
+    failureClass: product_failure
+    scorers:
+      - lifecycle
+      - integrity
+      - redaction
+      - contract
+      - detection
+      - capability_coverage
+      - run_isolation
+      - replayability
+      - failure_classification
+  mutations:
+    - type: concurrency
+      seeded: true
+      parameters: {children: 2, contamination: cross_run_evidence_link}
+    - type: transcript_replay_variant
+      seeded: true
+      parameters: {source: cross_run_contamination_control}
+  budgets:
+    maxModelRequests: 1
+    maxModelTurns: 1
+    maxToolCalls: 4
+    maxCompletionTokensPerTurn: 512
+    timeoutSeconds: 30
+  replay:
+    required: true
+    artifacts:
+      - scenario_manifest
+      - seed
+      - mutation_sequence
+      - model_metadata
+      - prompt_hashes
+      - tool_descriptors
+      - transcript
+      - tool_calls
+      - oracle_observations
+      - journal
+      - projection
+      - contract_results
+      - detection_results
+      - environment_digests
+      - scorecard
+      - provenance
+      - replay_equivalence

@@ -6,7 +6,15 @@ import json
 from dataclasses import dataclass
 from pathlib import Path
 
-from actionlineage.domain import EventType
+from actionlineage.domain import (
+    CorroborationType,
+    EventEnvelope,
+    EventType,
+    EvidenceLink,
+    EvidenceRelationship,
+    VerificationStatus,
+)
+from actionlineage.domain.events import event_type_value
 from actionlineage_evals.adapters import (
     AgentBudgetError,
     AgentExecutionError,
@@ -20,8 +28,10 @@ from actionlineage_evals.environment import (
 )
 from actionlineage_evals.eventing import (
     EventRecorder,
+    evidence_link_payload,
     internal_local_classification,
     observer_source,
+    verifier_source,
     write_json,
 )
 from actionlineage_evals.minimization import minimize_tool_calls, tool_call_count
@@ -186,7 +196,7 @@ def run_scenario(
         if scenario.scenario_id == "AVL-009" and provider_error is None and agent_error is None:
             harness_error = HarnessControlError("synthetic harness oracle failure for AVL-009")
         if provider_error is None and agent_error is None and harness_error is None:
-            if scenario.scenario_id == "AVL-012":
+            if scenario.scenario_id in {"AVL-012", "AVL-013"}:
                 try:
                     _execute_concurrent_tool_plan(
                         recorder=recorder,
@@ -195,6 +205,7 @@ def run_scenario(
                         mode=mode,
                         provider=adapter.provider,
                         model_id=adapter.model_id,
+                        contaminate_evidence=scenario.scenario_id == "AVL-013",
                     )
                 except AgentExecutionError as exc:
                     agent_error = exc
@@ -482,6 +493,7 @@ def _execute_concurrent_tool_plan(
     mode: RunMode,
     provider: str,
     model_id: str,
+    contaminate_evidence: bool = False,
 ) -> None:
     labels = _concurrent_run_labels(turns)
     for label in labels:
@@ -496,6 +508,8 @@ def _execute_concurrent_tool_plan(
         for call in turn.tool_calls:
             run_label = _tool_call_run_label(call)
             ToolHarness(recorder=recorder, world=world, run_label=run_label).execute(call)
+    if contaminate_evidence:
+        _inject_cross_run_evidence_contamination(recorder=recorder, world=world)
     for label in labels:
         recorder.record_scoped_run_completed(passed=True, run_label=label)
 
@@ -514,6 +528,71 @@ def _tool_call_run_label(call: ToolCall) -> str:
     if not isinstance(call.arguments.get("run_label"), str):
         raise AgentExecutionError("concurrent tool plan is missing required run_label")
     return str(call.arguments["run_label"])
+
+
+def _inject_cross_run_evidence_contamination(
+    *,
+    recorder: EventRecorder,
+    world: WorldState,
+) -> None:
+    agent_a_ack = _first_child_event(
+        recorder.events,
+        run_id=recorder.run_id_for_label("agent_a"),
+        event_type="tool.execution.acknowledged",
+    )
+    agent_b_observation = _first_child_event(
+        recorder.events,
+        run_id=recorder.run_id_for_label("agent_b"),
+        event_type="side_effect.observed",
+    )
+    if agent_a_ack is None or agent_b_observation is None:
+        raise AgentExecutionError("concurrent contamination control lacks child evidence")
+    contamination = recorder.record(
+        EventType.SIDE_EFFECT_VERIFIED,
+        {
+            "contamination_control": {
+                "expected_scorer": "run_isolation",
+                "mode": "cross_run_evidence_link",
+            },
+            "evidence_link": evidence_link_payload(
+                EvidenceLink(
+                    subject_event_id=agent_a_ack.event_id,
+                    relationship=EvidenceRelationship.CORROBORATES,
+                    evidence_event_id=agent_b_observation.event_id,
+                    corroboration_type=CorroborationType.POST_ACTION_READBACK,
+                    observer_identity="filesystem_oracle",
+                    confidence=0.8,
+                    verification_status=VerificationStatus.VERIFIED,
+                    limitations=("synthetic cross-run contamination control",),
+                )
+            ),
+        },
+        parent_event_id=agent_b_observation.event_id,
+        run_label="agent_b",
+        source=verifier_source(),
+    )
+    world.oracle_observations.append(
+        {
+            "event_id": contamination.event_id,
+            "evidence_event_id": agent_b_observation.event_id,
+            "evidence_run_id": agent_b_observation.correlation.run_id,
+            "status": "cross_run_contaminated",
+            "subject_event_id": agent_a_ack.event_id,
+            "subject_run_id": agent_a_ack.correlation.run_id,
+        }
+    )
+
+
+def _first_child_event(
+    events: tuple[EventEnvelope, ...],
+    *,
+    run_id: str,
+    event_type: str,
+) -> EventEnvelope | None:
+    for event in events:
+        if event.correlation.run_id == run_id and event_type_value(event.event_type) == event_type:
+            return event
+    return None
 
 
 def _apply_runtime_mutations(

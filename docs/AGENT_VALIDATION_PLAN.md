@@ -114,7 +114,7 @@ Current baseline-freshness slice:
 4. Fail on semantic evidence drift or eval-relevant input drift unless the
    committed baseline is refreshed in the same change.
 
-Current concurrent-run-isolation slice:
+Completed concurrent-run-isolation slice:
 
 1. Add `AVL-012 concurrent-run-isolation` as a deterministic no-model scenario
    with two labeled child runs and interleaved tool calls.
@@ -127,6 +127,21 @@ Current concurrent-run-isolation slice:
    and no longer listed as a known gap.
 5. Regenerate the committed no-model public baseline for 12 scorecards and
    48/48 declared capabilities.
+
+Current cross-run contamination-control slice:
+
+1. Add `AVL-013 cross-run-evidence-contamination-control` as a deterministic
+   no-model negative control that reuses the concurrent child-run shape.
+2. Inject one synthetic cross-run evidence link from one child run's
+   acknowledgement to another child run's observed side effect after the
+   tool-call plan completes.
+3. Extend the `run_isolation` scorer to classify cross-run evidence
+   contamination as `product_failure` while keeping agent, provider, and
+   harness failures distinct.
+4. Refresh semantic capability coverage so
+   `cross_run_evidence_contamination` is covered by an explicit scenario.
+5. Regenerate the committed no-model public baseline for 13 scorecards and
+   49/49 declared capabilities.
 
 Acceptance commands for this phase:
 
@@ -213,6 +228,7 @@ Implemented artifacts:
 - `evals/scenarios/AVL-010.yaml`
 - `evals/scenarios/AVL-011.yaml`
 - `evals/scenarios/AVL-012.yaml`
+- `evals/scenarios/AVL-013.yaml`
 - `evals/regressions/README.md`
 - `evals/actionlineage_evals/`
 - `evals/docker/`
@@ -485,6 +501,8 @@ Implemented eval runner:
 - `AVL-011` passes as a deterministic expected product-failure oracle-mismatch
   scenario.
 - `AVL-012` passes as a deterministic concurrent child-run isolation scenario.
+- `AVL-013` passes as a deterministic expected product-failure cross-run
+  evidence-contamination scenario.
 - `AVL-001` replay passes from a captured replay bundle.
 - Replay-artifact runs include replay-equivalence scorecards.
 - Run artifacts include provenance hashes and pass `audit-artifacts`.

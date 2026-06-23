@@ -44,12 +44,12 @@ PYTHONPATH=evals uv run --group eval python -m actionlineage_evals check-public-
 
 | Evidence | Current result |
 | --- | --- |
-| Scenario validation | 12 scenarios: `AVL-001` through `AVL-012` |
+| Scenario validation | 13 scenarios: `AVL-001` through `AVL-013` |
 | Scenario lint | 0 issues |
-| Capability coverage | 48/48 declared capabilities covered |
+| Capability coverage | 49/49 declared capabilities covered |
 | Eval import boundary | No ActionLineage core imports from eval-only packages |
-| Scripted no-model suite | 12 scorecards, 0 failed |
-| Artifact audit | 293 files scanned, 0 leaks |
+| Scripted no-model suite | 13 scorecards, 0 failed |
+| Artifact audit | 317 files scanned, 0 leaks |
 | Baseline freshness gate | Committed baseline is checked against regenerated no-model artifacts; provenance-only drift is allowed, input or semantic drift fails |
 | Scheduled no-model lane | Trusted default-branch workflow generates deterministic artifacts and public-report outputs without model credentials |
 | Scheduled live-model lane | Optional and skipped unless maintainers configure `GH_MODELS_TOKEN`; provider instability remains non-blocking |
@@ -65,7 +65,7 @@ Failure-class counts from the scripted baseline:
 | `inconclusive_budget_exhausted` | 1 | Expected budget-exhaustion control (`AVL-008`) |
 | `harness_failure` | 1 | Expected harness-failure control (`AVL-009`) |
 | `agent_failure` | 1 | Expected agent-failure control (`AVL-010`) |
-| `product_failure` | 1 | Expected product-failure oracle-mismatch control (`AVL-011`) |
+| `product_failure` | 2 | Expected product-failure controls (`AVL-011`, `AVL-013`) |
 
 Every listed control is expected to pass as a control scenario. The counts are
 not evidence that live model providers are reliable, and they do not promote the
@@ -87,6 +87,7 @@ Agent Validation Lab beyond `Local-proof` maturity.
 | `AVL-010` | Agent-failure control |
 | `AVL-011` | Product-failure oracle-mismatch control |
 | `AVL-012` | Concurrent child-run isolation |
+| `AVL-013` | Cross-run evidence contamination control |
 
 ## Known Gaps
 

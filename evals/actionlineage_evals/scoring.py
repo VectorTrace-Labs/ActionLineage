@@ -62,7 +62,7 @@ def score_run(
     scores.append(score_detections(scenario, detection_matches))
     scores.append(score_redaction(paths.run_dir, canary_values=canary_values))
     scores.append(score_capability_coverage(scenario))
-    if scenario.scenario_id == "AVL-012":
+    if scenario.scenario_id in {"AVL-012", "AVL-013"}:
         scores.append(score_run_isolation(paths, events))
     scores.append(score_replayability(paths))
     return tuple(scores)

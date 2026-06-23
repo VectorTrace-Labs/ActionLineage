@@ -105,7 +105,10 @@ agent-failure control. `AVL-011` is a product-failure oracle-mismatch control.
 `AVL-012` is a concurrent child-run isolation control that checks run IDs,
 evidence links, and projection readbacks for interleaved tool calls. These
 deterministic controls run in scripted and replay lanes rather than calling a
-live provider.
+live provider. `AVL-013` is a cross-run evidence contamination control: the
+harness deliberately injects one invalid evidence link between child runs, and
+the `run_isolation` scorer must classify it as `product_failure` without
+collapsing agent, provider, or harness failure classes.
 
 Replay runs include a `replay_equivalence` scorer. It compares semantic
 scorecard essentials from the source run with the replayed run, while ignoring

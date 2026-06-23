@@ -1,8 +1,8 @@
 {
   "artifact_root": "build/evals/public-alpha",
   "baseline_inputs": {
-    "digest": "sha256:432f0ce3a0ac2c743921b2102dfb87892c838892c14384c0abed2e31ba21bf9c",
-    "file_count": 77,
+    "digest": "sha256:6c7132203fbf92414147beb69da4d69b9c46802a41835c0208c911cff91aba3c",
+    "file_count": 78,
     "files": [
       {
         "path": ".github/uv-version.txt",
@@ -42,7 +42,7 @@
       },
       {
         "path": "evals/CAPABILITY_COVERAGE.yaml",
-        "sha256": "sha256:a3ac9a9ae770aaffc779610c64a86dc71a0ec6ac0c28eb23e151ad59ccb71020"
+        "sha256": "sha256:bc9e209b506269ec5d8d642cb2b7c222fe2d01dc0c8892600d2f32f028fea99e"
       },
       {
         "path": "evals/SCENARIO_SCHEMA.json",
@@ -58,7 +58,7 @@
       },
       {
         "path": "evals/actionlineage_evals/adapters.py",
-        "sha256": "sha256:b486989eab1e9860014285e6dcd0268be8ca2c27077c75438df38ce5240793a2"
+        "sha256": "sha256:b3553581e00ae8fc9f4f99c4f36de505b8683539db759b6c392928ad2c7451b0"
       },
       {
         "path": "evals/actionlineage_evals/artifact_audit.py",
@@ -106,7 +106,7 @@
       },
       {
         "path": "evals/actionlineage_evals/runner.py",
-        "sha256": "sha256:712dc0f14076adc12ee4d23c2bdfbfddf1c749dd3907b9792adf699ae491c7dd"
+        "sha256": "sha256:c3f7b92165d60389c29feba8d8a7c9eac357b01c5ac69c90c13615741dfcf0bb"
       },
       {
         "path": "evals/actionlineage_evals/scenarios.py",
@@ -114,7 +114,7 @@
       },
       {
         "path": "evals/actionlineage_evals/scoring.py",
-        "sha256": "sha256:a1e0b309928d06ba7e757dcc017c25e255da7253f0da0e62fab0edd11f6dea60"
+        "sha256": "sha256:52682f6da3230947f6c675a780abf6288e16db4c4ae60ff4102398a678397e0b"
       },
       {
         "path": "evals/actionlineage_evals/stateful.py",
@@ -191,6 +191,10 @@
       {
         "path": "evals/scenarios/AVL-012.yaml",
         "sha256": "sha256:4e4e6f8fe5deac516bbbce963c806a458ca63b592af6a5159c473a9347636f2d"
+      },
+      {
+        "path": "evals/scenarios/AVL-013.yaml",
+        "sha256": "sha256:d534c06b2ac82da9aefedcbf123c0762170a423648180a71a516ef2c80afe472"
       },
       {
         "path": "pyproject.toml",
@@ -337,8 +341,8 @@
     "schema_version": "actionlineage.dev/agent-validation-baseline-inputs-v0"
   },
   "capability_coverage": {
-    "capability_count": 48,
-    "covered_capability_count": 48,
+    "capability_count": 49,
+    "covered_capability_count": 49,
     "declared_scenario_mismatches": {},
     "known_gaps": [
       {
@@ -364,88 +368,91 @@
       "AVL-009",
       "AVL-010",
       "AVL-011",
-      "AVL-012"
+      "AVL-012",
+      "AVL-013"
     ],
     "stale_scenario_references": {},
     "strict": true,
     "uncovered_capabilities": []
   },
-  "commit_sha": "823c84ced66caf1b11345c97d49dd3e484580bb9",
+  "commit_sha": "841a759429ac66de9e2180550a4c25b114a886c8",
   "coverage": {
     "contract_coverage": {
       "failed": 1,
-      "passed": 11
+      "passed": 12
     },
     "detection_coverage": {
-      "matches": 12,
+      "matches": 16,
       "missing_rules": 0
     },
     "event_type_coverage": {
-      "agent.intent.recorded": 12,
-      "agent.run.completed": 10,
+      "agent.intent.recorded": 13,
+      "agent.run.completed": 13,
       "agent.run.failed": 4,
-      "agent.run.started": 14,
+      "agent.run.started": 17,
       "agent.tool.schema_changed": 1,
       "policy.decision": 2,
-      "resource.observed": 13,
+      "resource.observed": 15,
       "side_effect.conflict_detected": 1,
-      "side_effect.observed": 5,
+      "side_effect.observed": 7,
       "side_effect.timed_out": 1,
-      "side_effect.unverified": 5,
-      "side_effect.verified": 4,
-      "tool.execution.acknowledged": 11,
-      "tool.execution.authorized": 11,
-      "tool.execution.dispatched": 11,
+      "side_effect.unverified": 7,
+      "side_effect.verified": 7,
+      "tool.execution.acknowledged": 15,
+      "tool.execution.authorized": 15,
+      "tool.execution.dispatched": 15,
       "tool.execution.not_dispatched": 2,
-      "tool.execution.requested": 13
+      "tool.execution.requested": 17
     },
     "evidence_link_coverage": {
       "corroboration_types": {
         "independent_observer": 1,
-        "post_action_readback": 4,
-        "self_reported": 6
+        "post_action_readback": 7,
+        "self_reported": 8
       },
       "relationships": {
         "contradicts": 1,
-        "corroborates": 4,
-        "limits": 6
+        "corroborates": 7,
+        "limits": 8
       },
       "verification_statuses": {
         "conflicting": 1,
         "timed_out": 1,
-        "unverified": 5,
-        "verified": 4
+        "unverified": 7,
+        "verified": 7
       }
     },
     "lifecycle_transition_coverage": {
-      "agent.intent.recorded -> agent.run.started": 12,
-      "agent.run.completed -> agent.run.completed": 2,
+      "agent.intent.recorded -> agent.run.started": 13,
+      "agent.run.completed -> agent.run.completed": 4,
       "agent.run.started -> agent.run.failed": 4,
-      "agent.run.started -> agent.run.started": 2,
+      "agent.run.started -> agent.run.started": 4,
       "agent.run.started -> agent.tool.schema_changed": 1,
-      "agent.run.started -> tool.execution.requested": 7,
+      "agent.run.started -> tool.execution.requested": 8,
       "agent.tool.schema_changed -> tool.execution.requested": 1,
       "policy.decision -> tool.execution.not_dispatched": 2,
       "resource.observed -> agent.run.completed": 6,
       "resource.observed -> resource.observed": 4,
-      "resource.observed -> tool.execution.requested": 3,
+      "resource.observed -> tool.execution.requested": 5,
       "side_effect.conflict_detected -> resource.observed": 1,
       "side_effect.observed -> side_effect.conflict_detected": 1,
-      "side_effect.observed -> side_effect.verified": 4,
+      "side_effect.observed -> side_effect.verified": 6,
       "side_effect.timed_out -> resource.observed": 1,
       "side_effect.unverified -> agent.run.completed": 1,
       "side_effect.unverified -> resource.observed": 3,
-      "side_effect.unverified -> tool.execution.requested": 1,
-      "side_effect.verified -> resource.observed": 4,
-      "tool.execution.acknowledged -> side_effect.observed": 5,
+      "side_effect.unverified -> side_effect.verified": 1,
+      "side_effect.unverified -> tool.execution.requested": 2,
+      "side_effect.verified -> agent.run.completed": 1,
+      "side_effect.verified -> resource.observed": 6,
+      "tool.execution.acknowledged -> side_effect.observed": 7,
       "tool.execution.acknowledged -> side_effect.timed_out": 1,
-      "tool.execution.acknowledged -> side_effect.unverified": 5,
-      "tool.execution.authorized -> tool.execution.dispatched": 11,
-      "tool.execution.dispatched -> tool.execution.acknowledged": 11,
+      "tool.execution.acknowledged -> side_effect.unverified": 7,
+      "tool.execution.authorized -> tool.execution.dispatched": 15,
+      "tool.execution.dispatched -> tool.execution.acknowledged": 15,
       "tool.execution.not_dispatched -> agent.run.completed": 1,
       "tool.execution.not_dispatched -> tool.execution.requested": 1,
       "tool.execution.requested -> policy.decision": 2,
-      "tool.execution.requested -> tool.execution.authorized": 11
+      "tool.execution.requested -> tool.execution.authorized": 15
     }
   },
   "environment_identifiers": [
@@ -462,7 +469,7 @@
       "harness_failure": 1,
       "inconclusive_budget_exhausted": 1,
       "none": 7,
-      "product_failure": 1,
+      "product_failure": 2,
       "provider_failure": 1
     },
     "expected_control_scenarios": [
@@ -493,6 +500,13 @@
         ],
         "failure_class": "product_failure",
         "scenario_id": "AVL-011"
+      },
+      {
+        "failed_scores": [
+          "run_isolation"
+        ],
+        "failure_class": "product_failure",
+        "scenario_id": "AVL-013"
       }
     ]
   },
@@ -500,38 +514,38 @@
     "score_counts": {
       "capability_coverage": {
         "failed": 0,
-        "passed": 12
+        "passed": 13
       },
       "contract": {
         "failed": 1,
-        "passed": 11
+        "passed": 12
       },
       "detection": {
         "failed": 0,
-        "passed": 12
+        "passed": 13
       },
       "integrity": {
         "failed": 0,
-        "passed": 12
+        "passed": 13
       },
       "lifecycle": {
         "failed": 1,
-        "passed": 11
+        "passed": 12
       },
       "projection_rebuild": {
         "failed": 0,
-        "passed": 12
+        "passed": 13
       },
       "redaction": {
         "failed": 0,
-        "passed": 12
+        "passed": 13
       },
       "replayability": {
         "failed": 0,
-        "passed": 12
+        "passed": 13
       },
       "run_isolation": {
-        "failed": 0,
+        "failed": 1,
         "passed": 1
       }
     },
@@ -1254,6 +1268,81 @@
         "unverified",
         "verified"
       ]
+    },
+    {
+      "artifact_paths": {
+        "capability_coverage": "build/evals/public-alpha/avl-013-scripted-seed-0/capability-coverage.json",
+        "environment": "build/evals/public-alpha/avl-013-scripted-seed-0/environment.json",
+        "journal": "build/evals/public-alpha/avl-013-scripted-seed-0/journal.jsonl",
+        "mutation_sequence": "build/evals/public-alpha/avl-013-scripted-seed-0/mutation-sequence.json",
+        "oracle_observations": "build/evals/public-alpha/avl-013-scripted-seed-0/oracle-observations.jsonl",
+        "provenance": "build/evals/public-alpha/avl-013-scripted-seed-0/provenance.json",
+        "replay_bundle": "build/evals/public-alpha/avl-013-scripted-seed-0/replay-bundle",
+        "scorecard": "build/evals/public-alpha/avl-013-scripted-seed-0/scorecard.json",
+        "tool_calls": "build/evals/public-alpha/avl-013-scripted-seed-0/tool-calls.json",
+        "transcript": "build/evals/public-alpha/avl-013-scripted-seed-0/transcript.json",
+        "triage": "build/evals/public-alpha/avl-013-scripted-seed-0/triage.md"
+      },
+      "capabilities": [
+        "intent_recorded",
+        "run_started",
+        "multi_agent_concurrency",
+        "cross_run_evidence_contamination",
+        "multi_tool_causal_chain",
+        "ordered_tool_transcript",
+        "tool_descriptor_hash",
+        "tool_requested",
+        "tool_authorized",
+        "tool_dispatched",
+        "tool_acknowledged",
+        "side_effect_observed",
+        "side_effect_verified",
+        "side_effect_unverified",
+        "evidence_link_corroborates_acknowledgement",
+        "acknowledgement_not_side_effect_evidence",
+        "provider_independent_oracle",
+        "product_failure_control",
+        "journal_integrity",
+        "projection_rebuild",
+        "contract_validation",
+        "transcript_replay",
+        "replay_equivalence",
+        "artifact_provenance",
+        "artifact_redaction_audit",
+        "parallel_safe_docker"
+      ],
+      "descriptor_hashes": [
+        "sha256:28a663c05fd9c953590ceae5c0728d09653a5cc49d793a7b9c8567d1bc6a156f",
+        "sha256:3e734c3bd3fbdafee63b1ecf1e720dd396dd7b6f5ddd2760e7cfbac666e21882"
+      ],
+      "event_count": 32,
+      "event_types": [
+        "agent.intent.recorded",
+        "agent.run.completed",
+        "agent.run.started",
+        "resource.observed",
+        "side_effect.observed",
+        "side_effect.unverified",
+        "side_effect.verified",
+        "tool.execution.acknowledged",
+        "tool.execution.authorized",
+        "tool.execution.dispatched",
+        "tool.execution.requested"
+      ],
+      "expected_failure_class": "product_failure",
+      "failure_class": "product_failure",
+      "failure_fingerprint": "sha256:4a483d17910e8d6ded020741211d4b04c7d7532d9761aa938ad506a8158b6a1f",
+      "mode": "scripted",
+      "model_adapter": "scripted",
+      "passed": true,
+      "scenario_id": "AVL-013",
+      "scenario_name": "cross-run-evidence-contamination-control",
+      "seed": 0,
+      "verification_statuses": [
+        "observed",
+        "unverified",
+        "verified"
+      ]
     }
   ],
   "scenario_ids": [
@@ -1268,7 +1357,8 @@
     "AVL-009",
     "AVL-010",
     "AVL-011",
-    "AVL-012"
+    "AVL-012",
+    "AVL-013"
   ],
   "scenario_schema": {
     "api_versions": [
@@ -1282,12 +1372,12 @@
     0
   ],
   "source_commits": [
-    "823c84ced66caf1b11345c97d49dd3e484580bb9"
+    "841a759429ac66de9e2180550a4c25b114a886c8"
   ],
   "suite": {
     "failed_count": 0,
-    "scenario_count": 12,
-    "scorecard_count": 12
+    "scenario_count": 13,
+    "scorecard_count": 13
   },
   "tool_schema_hashes": [
     {

@@ -80,6 +80,7 @@ def test_scenarios_and_capability_coverage_validate() -> None:
         "AVL-010",
         "AVL-011",
         "AVL-012",
+        "AVL-013",
     ]
     assert coverage["ok"] is True
     assert coverage["scenario_ids"] == [
@@ -95,6 +96,7 @@ def test_scenarios_and_capability_coverage_validate() -> None:
         "AVL-010",
         "AVL-011",
         "AVL-012",
+        "AVL-013",
     ]
     assert coverage["uncovered_capabilities"] == []
     lint = lint_scenarios(
@@ -149,7 +151,7 @@ def test_public_agent_validation_evidence_doc_matches_registry() -> None:
             "no_model": True,
         }
     ]
-    assert public_report["failure_classification"]["counts"]["product_failure"] == 1
+    assert public_report["failure_classification"]["counts"]["product_failure"] == 2
     assert public_report["failure_classification"]["expected_control_scenarios"]
     assert public_report["tool_schema_hashes"]
     assert "Source commit under evaluation" in public_report_md
@@ -361,6 +363,7 @@ def test_scripted_suite_runs_all_scenarios_and_replay(tmp_path: Path) -> None:
         "AVL-010",
         "AVL-011",
         "AVL-012",
+        "AVL-013",
     ]
     for scenario_result in result.results:
         expected_failure = {
@@ -369,6 +372,7 @@ def test_scripted_suite_runs_all_scenarios_and_replay(tmp_path: Path) -> None:
             "AVL-008": FailureClass.BUDGET,
             "AVL-009": FailureClass.HARNESS,
             "AVL-010": FailureClass.AGENT,
+            "AVL-013": FailureClass.PRODUCT,
         }.get(scenario_result.scenario_id)
         assert scenario_result.failure_class == expected_failure
         assert scenario_result.artifacts.replay_bundle_path.exists()
@@ -494,12 +498,35 @@ def test_scripted_suite_runs_all_scenarios_and_replay(tmp_path: Path) -> None:
     assert run_isolation["details"]["interleaving_transitions"] == 3
     assert all(count > 0 for count in run_isolation["details"]["projection_event_counts"].values())
 
+    avl013_scorecard = json.loads(
+        (tmp_path / "evals" / "avl-013-scripted-seed-0" / "scorecard.json").read_text(
+            encoding="utf-8"
+        )
+    )
+    assert avl013_scorecard["passed"] is True
+    assert avl013_scorecard["failure_class"] == "product_failure"
+    assert avl013_scorecard["agent_error"] is None
+    assert avl013_scorecard["provider_error"] is None
+    assert avl013_scorecard["harness_error"] is None
+    contaminated_run_isolation = next(
+        score for score in avl013_scorecard["scores"] if score["name"] == "run_isolation"
+    )
+    assert contaminated_run_isolation["ok"] is False
+    assert contaminated_run_isolation["failure_class"] == "product_failure"
+    assert len(contaminated_run_isolation["details"]["cross_run_evidence_links"]) == 1
+    contaminated_link = contaminated_run_isolation["details"]["cross_run_evidence_links"][0]
+    assert contaminated_link["event_run_id"] == "run_avl-013_agent_b_0000"
+    assert contaminated_link["subject_run_id"] == "run_avl-013_agent_a_0000"
+    assert contaminated_link["evidence_run_id"] == "run_avl-013_agent_b_0000"
+    assert contaminated_run_isolation["details"]["coordinator_tool_events"] == []
+
     suite_summary = json.loads((tmp_path / "evals" / "suite-summary.json").read_text())
     assert suite_summary["schema_version"] == "actionlineage.dev/eval-suite-summary/v0"
-    assert suite_summary["failure_class_counts"]["product_failure"] == 1
+    assert suite_summary["failure_class_counts"]["product_failure"] == 2
     summary_by_id = {item["scenario_id"]: item for item in suite_summary["scenarios"]}
     assert summary_by_id["AVL-001"]["failure_fingerprint"] is None
     assert summary_by_id["AVL-011"]["failure_fingerprint"].startswith("sha256:")
+    assert summary_by_id["AVL-013"]["failure_fingerprint"].startswith("sha256:")
 
     avl001_oracles = [
         json.loads(line)
@@ -527,7 +554,7 @@ def test_scripted_suite_runs_all_scenarios_and_replay(tmp_path: Path) -> None:
         replay_artifact_root=tmp_path / "artifact-replay",
     )
     assert replayed_artifacts.passed is True
-    assert len(replayed_artifacts.results) == 12
+    assert len(replayed_artifacts.results) == 13
     avl010_replay_scorecard = json.loads(
         (
             tmp_path
