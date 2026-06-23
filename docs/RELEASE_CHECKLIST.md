@@ -192,8 +192,13 @@ Required workflow properties:
   `contents: read`, and `id-token: write` so it can attest artifacts before
   upload.
 - artifact smoke job has only job-level `actions: read`; it downloads the
-  artifact bundle with GitHub CLI, verifies `SHA256SUMS.txt`, and asserts both
-  wheel and source distribution files are present.
+  artifact bundle with GitHub CLI, verifies `SHA256SUMS.txt`, and asserts the
+  wheel, source distribution, release-candidate manifest, and review index are
+  present.
+- build job generates `build/release/manifest.json` with
+  `scripts/write_release_candidate_manifest.py --artifact-root build/release
+  --dist-dir dist`, then generates `build/release/REVIEW_INDEX.md` before
+  checksums and attestations.
 - GHCR publishing job has `packages: write`, builds from
   `deploy/docker/Dockerfile`, smoke-tests the image, and pushes only versioned
   tags.

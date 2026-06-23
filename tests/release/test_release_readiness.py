@@ -471,6 +471,15 @@ def test_release_workflow_builds_attests_and_uses_trusted_publishing() -> None:
     assert "name: Dependency license check" in workflow
     assert "name: Generate dependency license report" in workflow
     assert "build/release/actionlineage-license-report.json" in workflow
+    assert "name: Generate release candidate manifest" in workflow
+    assert "scripts/write_release_candidate_manifest.py" in workflow
+    assert "--artifact-root build/release" in workflow
+    assert "--dist-dir dist" in workflow
+    assert '--audited-implementation-commit "$GITHUB_SHA"' in workflow
+    assert "build/release/manifest.json" in workflow
+    assert "name: Generate release proof review index" in workflow
+    assert "scripts/write_release_review_index.py" in workflow
+    assert "build/release/REVIEW_INDEX.md" in workflow
     assert "name: Smoke test release artifact bundle" in workflow
     assert "name: Attest release artifacts" not in workflow
     assert "needs: verify" in workflow
@@ -486,6 +495,10 @@ def test_release_workflow_builds_attests_and_uses_trusted_publishing() -> None:
     assert 'gh run download "${GITHUB_RUN_ID}" --repo "${GITHUB_REPOSITORY}"' in workflow
     assert "actions: read" in workflow
     assert "sha256sum -c build/release/SHA256SUMS.txt" in workflow
+    assert "test -f build/release/manifest.json" in workflow
+    assert "test -f build/release/REVIEW_INDEX.md" in workflow
+    assert "actionlineage.dev/release-candidate-manifest-v0" in workflow
+    assert "ActionLineage Release Proof Review Index" in workflow
     assert """name '*.whl'""" in workflow
     assert """name '*.tar.gz'""" in workflow
     assert "repository-url: https://test.pypi.org/legacy/" in workflow

@@ -84,6 +84,22 @@ jobs:
           uv run python scripts/generate_release_provenance.py \
             --dist-dir dist \
             --output build/release/actionlineage-provenance.json
+      - name: Generate release candidate manifest
+        run: |
+          uv run python scripts/write_release_candidate_manifest.py \
+            --artifact-root build/release \
+            --dist-dir dist \
+            --audited-implementation-commit "$GITHUB_SHA" \
+            --gate "release_verify|PASS|release.yml verify job passed on Python 3.12 and 3.13" \
+            --gate "wheel_sdist_build|PASS|uv build --out-dir dist" \
+            --gate "dependency_license_check|PASS|dependency license report generated without issues" \
+            --output build/release/manifest.json
+      - name: Generate release proof review index
+        run: |
+          uv run python scripts/write_release_review_index.py \
+            --manifest build/release/manifest.json \
+            --repository-root . \
+            --output build/release/REVIEW_INDEX.md
       - name: Generate checksums
         run: sha256sum dist/* build/release/* > build/release/SHA256SUMS.txt
       - name: Generate artifact attestations
@@ -118,6 +134,10 @@ jobs:
           sha256sum -c build/release/SHA256SUMS.txt
           test -n "$(find dist -maxdepth 1 -name '*.whl' -print -quit)"
           test -n "$(find dist -maxdepth 1 -name '*.tar.gz' -print -quit)"
+          test -f build/release/manifest.json
+          test -f build/release/REVIEW_INDEX.md
+          grep -q "actionlineage.dev/release-candidate-manifest-v0" build/release/manifest.json
+          grep -q "ActionLineage Release Proof Review Index" build/release/REVIEW_INDEX.md
 
   publish-ghcr:
     name: Publish GHCR image

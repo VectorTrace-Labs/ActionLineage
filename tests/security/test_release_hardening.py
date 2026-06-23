@@ -391,7 +391,8 @@ def test_release_candidate_manifest_summarizes_local_proof_artifacts(tmp_path: P
         encoding="utf-8",
     )
     artifact_root = tmp_path / "build" / "release-candidate"
-    dist_dir = artifact_root / "dist"
+    dist_dir = tmp_path / "dist"
+    artifact_root.mkdir(parents=True)
     dist_dir.mkdir(parents=True)
     wheel = dist_dir / "actionlineage-0.1.0a3-py3-none-any.whl"
     sdist = dist_dir / "actionlineage-0.1.0a3.tar.gz"
@@ -445,6 +446,7 @@ def test_release_candidate_manifest_summarizes_local_proof_artifacts(tmp_path: P
     result = writer.build_release_candidate_manifest(
         project_path=project_path,
         artifact_root=artifact_root,
+        dist_dir=dist_dir,
         repository_root=tmp_path,
         audited_implementation_commit="abc123",
         generated_at=datetime(2026, 6, 23, tzinfo=UTC),
@@ -483,10 +485,10 @@ def test_release_candidate_manifest_summarizes_local_proof_artifacts(tmp_path: P
     }
     artifacts = {row["path"]: row for row in manifest["artifacts"]}
     assert (
-        artifacts["build/release-candidate/dist/actionlineage-0.1.0a3-py3-none-any.whl"]["sha256"]
+        artifacts["dist/actionlineage-0.1.0a3-py3-none-any.whl"]["sha256"]
         == hashlib.sha256(b"wheel").hexdigest()
     )
-    assert artifacts["build/release-candidate/dist/actionlineage-0.1.0a3.tar.gz"]["size_bytes"] == 5
+    assert artifacts["dist/actionlineage-0.1.0a3.tar.gz"]["size_bytes"] == 5
     assert "build/release-candidate/coverage.xml" in artifacts
     assert manifest["gates"] == [
         {
@@ -517,7 +519,7 @@ def test_release_candidate_manifest_requires_core_release_artifacts(tmp_path: Pa
 
     assert not result.ok
     assert {issue["code"] for issue in result.issues} == {"required_artifact_missing"}
-    assert len(result.issues) == 6
+    assert len(result.issues) == 5
 
 
 def test_release_review_index_verifies_manifest_artifacts(tmp_path: Path) -> None:
@@ -535,6 +537,7 @@ def test_release_review_index_verifies_manifest_artifacts(tmp_path: Path) -> Non
             {
                 "schema_version": "actionlineage.dev/release-candidate-manifest-v0",
                 "release": "0.1.0a3",
+                "artifact_root": "build/release-candidate",
                 "audited_implementation_commit": "abc123",
                 "generated_at": "2026-06-23T00:00:00Z",
                 "artifacts": [
@@ -617,6 +620,7 @@ def test_release_review_index_fails_on_artifact_hash_mismatch(tmp_path: Path) ->
             {
                 "schema_version": "actionlineage.dev/release-candidate-manifest-v0",
                 "release": "0.1.0a3",
+                "artifact_root": "build/release-candidate",
                 "artifacts": [
                     {
                         "path": str(artifact.relative_to(tmp_path)),

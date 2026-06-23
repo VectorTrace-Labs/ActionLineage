@@ -206,8 +206,6 @@ def _render_markdown(
     gate_rows = _gate_rows(manifest)
     gate_counts = Counter(row["status"] for row in gate_rows)
     passing_artifacts = sum(1 for check in checks if check.status == "PASS")
-    wheel_name = f"actionlineage-{release}-py3-none-any.whl"
-    sdist_name = f"actionlineage-{release}.tar.gz"
     lines = [
         "# ActionLineage Release Proof Review Index",
         "",
@@ -262,9 +260,7 @@ def _render_markdown(
             "release assets:",
             "",
             "```bash",
-            "shasum -a 256 -c build/release-candidate/SHA256SUMS.txt",
-            f"uvx --from build/release-candidate/dist/{wheel_name} actionlineage version",
-            f"uvx --from build/release-candidate/dist/{sdist_name} actionlineage version",
+            *_reviewer_commands(manifest=manifest, manifest_path=manifest_path, checks=checks),
             "```",
             "",
             "Owner-gated actions remain separate: do not push, tag, publish, upload, or create a "
@@ -273,6 +269,41 @@ def _render_markdown(
         ]
     )
     return "\n".join(lines)
+
+
+def _reviewer_commands(
+    *,
+    manifest: Mapping[str, Any],
+    manifest_path: Path,
+    checks: Sequence[ArtifactCheck],
+) -> tuple[str, ...]:
+    artifact_root = _string_value(manifest, "artifact_root") or manifest_path.parent.as_posix()
+    checksum_path = (
+        _artifact_path_with_name(checks, "SHA256SUMS.txt") or f"{artifact_root}/SHA256SUMS.txt"
+    )
+    wheel_path = _artifact_path_with_suffix(checks, ".whl") or "dist/actionlineage-<version>.whl"
+    sdist_path = (
+        _artifact_path_with_suffix(checks, ".tar.gz") or "dist/actionlineage-<version>.tar.gz"
+    )
+    return (
+        f"shasum -a 256 -c {checksum_path}",
+        f"uvx --from {wheel_path} actionlineage version",
+        f"uvx --from {sdist_path} actionlineage version",
+    )
+
+
+def _artifact_path_with_name(checks: Sequence[ArtifactCheck], name: str) -> str | None:
+    for check in checks:
+        if Path(check.path).name == name:
+            return check.path
+    return None
+
+
+def _artifact_path_with_suffix(checks: Sequence[ArtifactCheck], suffix: str) -> str | None:
+    for check in checks:
+        if check.path.endswith(suffix):
+            return check.path
+    return None
 
 
 def _gate_rows(manifest: Mapping[str, Any]) -> tuple[dict[str, str], ...]:

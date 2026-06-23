@@ -21,12 +21,13 @@ Every run performs these stages:
    audit.
 2. Build the wheel and source distribution.
 3. Generate SBOM, dependency license report, local release provenance, and
-   checksums.
-4. Generate GitHub artifact attestations for the built artifacts.
-5. Upload the release artifact bundle.
-6. Download the artifact bundle with GitHub CLI and verify checksums plus wheel
-   and source distribution presence.
-7. Build, smoke-test, and publish a version-tagged GHCR container image.
+   release-candidate manifest and review index.
+4. Generate checksums over the final release artifact bundle.
+5. Generate GitHub artifact attestations for the built artifacts.
+6. Upload the release artifact bundle.
+7. Download the artifact bundle with GitHub CLI and verify checksums plus wheel,
+   source distribution, manifest, and review-index presence.
+8. Build, smoke-test, and publish a version-tagged GHCR container image.
 
 Manual runs can additionally choose `publish_target`:
 

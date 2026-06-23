@@ -17,14 +17,13 @@ from typing import Any
 
 MANIFEST_SCHEMA_VERSION = "actionlineage.dev/release-candidate-manifest-v0"
 REQUIRED_ARTIFACT_PATTERNS = (
-    "dist/*.whl",
-    "dist/*.tar.gz",
     "actionlineage-sbom.json",
     "actionlineage-license-report.json",
     "actionlineage-release-provenance.json",
-    "SHA256SUMS.txt",
 )
+REQUIRED_DIST_PATTERNS = ("*.whl", "*.tar.gz")
 OPTIONAL_ARTIFACT_PATTERNS = (
+    "SHA256SUMS.txt",
     "coverage.xml",
     "release-consistency-offline.json",
     "release-consistency-online.json",
@@ -44,6 +43,7 @@ def build_release_candidate_manifest(
     *,
     project_path: Path,
     artifact_root: Path,
+    dist_dir: Path | None = None,
     repository_root: Path,
     audited_implementation_commit: str | None = None,
     gates: Sequence[Mapping[str, str]] = (),
@@ -53,11 +53,13 @@ def build_release_candidate_manifest(
 
     repository_root = repository_root.resolve()
     artifact_root = artifact_root.resolve()
+    resolved_dist_dir = (dist_dir or artifact_root / "dist").resolve()
     project = tomllib.loads(project_path.read_text(encoding="utf-8"))["project"]
     release = str(project["version"])
     issues: list[dict[str, str]] = []
     artifacts, artifact_issues = _artifact_rows(
         artifact_root=artifact_root,
+        dist_dir=resolved_dist_dir,
         repository_root=repository_root,
     )
     issues.extend(artifact_issues)
@@ -103,6 +105,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         result = build_release_candidate_manifest(
             project_path=args.project,
             artifact_root=args.artifact_root,
+            dist_dir=args.dist_dir,
             repository_root=args.repository_root,
             audited_implementation_commit=args.audited_implementation_commit,
             gates=gates,
@@ -136,6 +139,11 @@ def _parse_args(argv: Sequence[str]) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--project", type=Path, default=Path("pyproject.toml"))
     parser.add_argument("--artifact-root", type=Path, default=Path("build/release-candidate"))
+    parser.add_argument(
+        "--dist-dir",
+        type=Path,
+        help="Directory containing built wheel and sdist files. Defaults to ARTIFACT_ROOT/dist.",
+    )
     parser.add_argument("--repository-root", type=Path, default=Path("."))
     parser.add_argument(
         "--audited-implementation-commit",
@@ -159,10 +167,22 @@ def _parse_args(argv: Sequence[str]) -> argparse.Namespace:
 def _artifact_rows(
     *,
     artifact_root: Path,
+    dist_dir: Path,
     repository_root: Path,
 ) -> tuple[list[dict[str, Any]], list[dict[str, str]]]:
     issues: list[dict[str, str]] = []
     artifact_paths: set[Path] = set()
+    for pattern in REQUIRED_DIST_PATTERNS:
+        matches = tuple(path for path in dist_dir.glob(pattern) if path.is_file())
+        if not matches:
+            issues.append(
+                {
+                    "code": "required_artifact_missing",
+                    "path": str(dist_dir / pattern),
+                    "message": f"required distribution artifact pattern did not match: {pattern}",
+                }
+            )
+        artifact_paths.update(matches)
     for pattern in REQUIRED_ARTIFACT_PATTERNS:
         matches = tuple(path for path in artifact_root.glob(pattern) if path.is_file())
         if not matches:
