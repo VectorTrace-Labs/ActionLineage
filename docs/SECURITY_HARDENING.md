@@ -86,6 +86,10 @@ Security regression fixtures live in `tests/fixtures/adversarial/` and cover:
 Fixtures are intentionally local and deterministic. They do not require live
 cloud credentials, model providers, or internet access.
 
+Component-local security regressions also cover static console context
+rendering: hostile note and saved-view fields are escaped, secret-like canaries
+are redacted, and annotations remain non-canonical review metadata.
+
 ## Supply Chain
 
 - Keep core dependencies small and documented.

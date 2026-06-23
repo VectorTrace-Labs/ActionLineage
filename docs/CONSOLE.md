@@ -92,6 +92,8 @@ reviewed input for future native shells and remains a rendered view.
 - Missing observations are displayed as missing observations only.
 - Case notes and saved views are rendered annotations, not journal evidence.
 - Console context text is passed through the redaction policy before rendering.
+- Hostile-looking filenames, HTML-like text, and link-like strings in context
+  are rendered as escaped text rather than active markup or links.
 - Console context files are bounded to 64 KiB by default and notes or saved
   views are bounded to 50 items each. Oversized context fails closed before
   rendering.

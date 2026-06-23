@@ -158,38 +158,40 @@ Out of scope:
 - Adding a new package manager support claim.
 - Adding screenshots or generated artifacts.
 
-## Candidate 5: Add A Hostile Static-Console Context Fixture
+## Candidate 5: Add An Empty Static-Console Timeline Fixture
 
-Suggested labels: `good first issue`, `security`, `console`.
+Suggested labels: `good first issue`, `tests`, `console`.
 
 Why it helps:
 
-The static console is an onboarding and review artifact. A small hostile-input
-fixture can keep escaping, redaction, and context bounds easy to audit.
+The static console is an onboarding and review artifact. A focused empty
+timeline fixture can keep zero-result selectors clear without implying that no
+action occurred.
 
 Suggested scope:
 
 - Add a focused case to `tests/console/test_static_console.py`.
-- Use synthetic note or saved-view text with HTML-like content, unusual Unicode,
-  or a hostile-looking filename.
-- Keep the fixture free of real secrets.
+- Build a `TimelineResult` with no events and render it with
+  `render_console_html`.
+- Keep the fixture independent of the demo database.
 
 Acceptance criteria:
 
-- Rendered HTML escapes attacker-controlled text.
-- Secret-like canaries are redacted before rendering.
-- Oversized or excessive context remains bounded.
-- The test does not load remote resources.
+- The rendered HTML clearly shows an empty timeline, graph, and evidence-link
+  state.
+- Status counts remain zero.
+- Wording does not treat an empty timeline as evidence that no action occurred.
+- The output still includes the restrictive Content Security Policy.
 
 Suggested verification:
 
 ```bash
 uv run pytest tests/console/test_static_console.py
-uv run python scripts/secret_scan.py .
+uv run python scripts/check_claims_language.py .
 ```
 
 Out of scope:
 
 - Adding JavaScript frameworks.
 - Changing canonical evidence semantics.
-- Treating analyst annotations as journal evidence.
+- Changing projection query behavior.

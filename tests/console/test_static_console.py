@@ -150,6 +150,59 @@ def test_write_console_renders_sanitized_notes_and_saved_views(tmp_path: Path) -
     assert "Token=[REDACTED:secret]" in html
 
 
+def test_write_console_escapes_hostile_context_fields_and_redacts_canaries(
+    tmp_path: Path,
+) -> None:
+    demo = run_demo(tmp_path / "demo")
+    output_path = tmp_path / "console" / "hostile-context.html"
+    bearer_canary = "Bearer fake12345"
+    token_canary = "contextcanarytoken"
+    note = ConsoleNote(
+        title='"><script>alert("note")</script>',
+        body=(
+            "../../case<script>.html\n"
+            f"<img src=x onerror=alert(1)> {bearer_canary} token={token_canary}"
+        ),
+        event_id='evt_demo_07"><img src=x onerror=alert(1)>',
+        author='analyst <a href="javascript:alert(1)">link</a>',
+    )
+    saved_view = ConsoleSavedView(
+        name="<svg onload=alert(1)> reviewer view",
+        query='verification_status:verified"><script>alert(1)</script>',
+        description="file=../../evil<script>.html; javascript:alert(1); api_key=HOSTILEKEY123",
+    )
+
+    export = write_console(
+        demo.database_path,
+        output_path,
+        trace_id=demo.trace_id,
+        notes=(note,),
+        saved_views=(saved_view,),
+    )
+    html = output_path.read_text(encoding="utf-8")
+    lowercase_html = html.lower()
+
+    assert export.event_count == demo.verification.records_verified
+    assert export.note_count == 1
+    assert export.saved_view_count == 1
+    assert "Analyst annotations are not journal evidence" in html
+    assert "<script" not in lowercase_html
+    assert "<img" not in lowercase_html
+    assert "<svg onload" not in lowercase_html
+    assert "<a href" not in lowercase_html
+    assert 'href="javascript:' not in lowercase_html
+    assert "&lt;script&gt;alert" in html
+    assert "&lt;svg onload=alert(1)&gt;" in html
+    assert "&lt;img src=x onerror=alert(1)&gt;" in html
+    assert "evt_demo_07&quot;&gt;&lt;img src=x onerror=alert(1)&gt;" in html
+    assert "fake12345" not in html
+    assert "contextcanarytoken" not in html
+    assert "HOSTILEKEY123" not in html
+    assert "Bearer [REDACTED:bearer_token]" in html
+    assert "token=[REDACTED:secret]" in html
+    assert "api_key=[REDACTED:secret]" in html
+
+
 def test_console_cli_loads_case_context_file(tmp_path: Path) -> None:
     demo = run_demo(tmp_path / "demo")
     output_path = tmp_path / "console.html"
