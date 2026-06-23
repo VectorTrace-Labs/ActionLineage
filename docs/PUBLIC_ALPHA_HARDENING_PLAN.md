@@ -72,6 +72,7 @@ data, not universal performance guarantees.
 | PALPHA-006 | P1 | Public package metadata on PyPI/TestPyPI has no project URLs until a later owner-approved release uploads corrected metadata. | BLOCKED_ON_RELEASE |
 | PALPHA-007 | P2 | Local Python `urllib` could not verify PyPI TLS due to local certificate-store configuration, while browser/curl checks succeeded. | ENVIRONMENT_LIMITATION |
 | PALPHA-008 | P2 | Service-mode verification emitted Starlette/FastAPI test-client deprecation warnings unless the dev-only `httpx2` backend was installed. | FIXED_IN_TEST_CLIENT_SLICE |
+| PALPHA-009 | P2 | Local release proof documented license review expectations but lacked an executable dependency license report gate. | FIXED_IN_LICENSE_GATE_SLICE |
 
 ## Phase Plan
 
@@ -82,11 +83,11 @@ data, not universal performance guarantees.
 | 2 | Package metadata and discoverability | In progress: local metadata improved; public metadata waits for next release |
 | 3 | README landing experience and visual proof | In progress: generated demo evidence map and freshness check added |
 | 4 | Clean installation and first-time-user testing | In progress: baseline public smoke completed; built wheel and sdist first-time-user smoke gate added to CI; first-time evaluator troubleshooting guide added for install, demo, path/browser, extras, and offline/online failures |
-| 5 | Visible quality and security evidence | In progress: baseline captured; CI now runs repository-local Markdown link checking, an 85 percent branch-enabled total coverage floor, and a concise quality/security evidence summary |
+| 5 | Visible quality and security evidence | In progress: baseline captured; CI now runs repository-local Markdown link checking, dependency license reporting, an 85 percent branch-enabled total coverage floor, and a concise quality/security evidence summary |
 | 6 | Agent Validation Lab public evidence | In progress: deterministic no-model baseline report is generated into `docs/evidence/agent-validation-baseline.*` from 11 scorecards; scheduled no-model artifacts run on trusted default-branch code; optional live-model execution is gated on `GH_MODELS_TOKEN` and remains separate |
 | 7 | Reliability and adversarial hardening | In progress: SQLite projection handles close under warning-as-error coverage; static console context bounds and CSP added; verified-prefix recovery rejects in-place overwrite and streams output; journal verification rejects newline-less truncated final records; ambiguous HTTP observer matches remain unverified with fixture coverage; service-mode tests use a dev-only `httpx2` test-client backend so release proof remains warning-free without adding runtime TCB |
 | 8 | External review and community readiness | In progress: review guides, reproduction docs, and structured feedback templates added; real review remains external-validation |
-| 9 | Release-candidate audit | In progress: local candidate audit refreshed against implementation commit `fabe4888d5acb9fe8f932926b8b549cb39895ae0`; draft notes, owner checklist, generated manifest, artifact smoke, and external gates are documented; publication remains owner-gated |
+| 9 | Release-candidate audit | In progress: local candidate audit refreshed against implementation commit `4bf6246fcfbfd1ff497842c68f4214d3efc6bb67`; draft notes, owner checklist, generated manifest, artifact smoke, dependency license report, and external gates are documented; publication remains owner-gated |
 
 ## Owner Gates
 

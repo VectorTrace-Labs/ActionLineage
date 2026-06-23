@@ -31,10 +31,11 @@ exports.
 
 ## Verification Snapshot
 
-- Full eval-group coverage run: 296 tests passed, 86.03 percent total coverage,
+- Full eval-group coverage run: 298 tests passed, 86.03 percent total coverage,
   with no warning summary.
-- Clean tracked snapshot: 295 tests passed, 1 eval-only inspection test skipped
+- Clean tracked snapshot: 297 tests passed, 1 eval-only inspection test skipped
   under `--all-extras`, with no warning summary.
+- Dependency license report: 23 direct dependencies checked, 0 issues.
 - Built wheel and source distribution both ran `actionlineage version`, demo
   run, journal verification, contract validation, case export, and static
   console export successfully.

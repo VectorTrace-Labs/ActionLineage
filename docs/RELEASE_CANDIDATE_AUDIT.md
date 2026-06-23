@@ -11,7 +11,7 @@ settings.
 | Item | Result |
 | --- | --- |
 | Branch | `codex/public-alpha-hardening` |
-| Audited implementation commit | `fabe4888d5acb9fe8f932926b8b549cb39895ae0` before this audit-doc refresh |
+| Audited implementation commit | `4bf6246fcfbfd1ff497842c68f4214d3efc6bb67` before this audit-doc refresh |
 | Candidate version | `0.1.0a3` |
 | Recommendation | Do not republish immutable PyPI/TestPyPI files for `0.1.0a3`; create or repair the GitHub Release object only after owner review. |
 | Generated local manifest | `build/release-candidate/manifest.json` |
@@ -27,15 +27,16 @@ are not committed source files.
 | Ruff lint | PASS | `uv run ruff check .` |
 | Ruff format check | PASS | `uv run ruff format --check .` |
 | Strict mypy | PASS | `uv run mypy src`, 56 source files |
-| Full pytest after all-extras sync | PASS | `295 passed, 1 skipped`; skipped eval-only inspection path is covered by eval-group run; no warning summary |
-| Branch coverage with eval group | PASS | `296 passed`, 86.03 percent total coverage; no warning summary |
+| Full pytest after all-extras sync | PASS | `297 passed, 1 skipped`; skipped eval-only inspection path is covered by eval-group run; no warning summary |
+| Branch coverage with eval group | PASS | `298 passed`, 86.03 percent total coverage; no warning summary |
 | Compatibility tests | PASS | Included in full suite; golden journals and public API tests passed |
 | Property-based regression tests | PASS | Included in full suite through Hypothesis tests |
 | Claim-language scan | PASS | `uv run python scripts/check_claims_language.py .` |
 | Secret scan | PASS | `uv run python scripts/secret_scan.py .` |
+| Dependency license check | PASS | 23 direct dependencies checked, 0 issues |
 | Dependency audit | PASS | `uv run pip-audit`, no known vulnerabilities |
 | Local Markdown link check | PASS | Repository-relative Markdown links resolved |
-| Clean tracked snapshot | PASS | `295 passed, 1 skipped` from `git archive HEAD` snapshot with `uv run --all-extras pytest`; no warning summary |
+| Clean tracked snapshot | PASS | `297 passed, 1 skipped` from `git archive HEAD` snapshot with `uv run --all-extras pytest`; no warning summary |
 | Wheel and sdist build | PASS | `uv build --out-dir build/release-candidate/dist` |
 | Built wheel metadata | PASS | Version `0.1.0a3`, `Requires-Python: >=3.12`, six project URLs |
 | Built sdist metadata | PASS | Version `0.1.0a3`, `Requires-Python: >=3.12`, six project URLs, no local cache entries |
@@ -48,6 +49,7 @@ are not committed source files.
 | Static console export | PASS | `build/release-candidate/console.html` |
 | Demo evidence map freshness | PASS | SVG and JSON generated from `incident.json` and checked fresh |
 | SBOM generation | PASS | 23 package entries |
+| Dependency license report | PASS | `build/release-candidate/actionlineage-license-report.json` |
 | Release provenance generation | PASS | 2 artifact subjects |
 | SHA256 checksums | PASS | `build/release-candidate/SHA256SUMS.txt` |
 | Release consistency, offline | PASS | 0 failures, 0 unknowns |
@@ -64,9 +66,10 @@ are not committed source files.
 | Artifact | SHA256 |
 | --- | --- |
 | `build/release-candidate/dist/actionlineage-0.1.0a3-py3-none-any.whl` | `e3460120c7d85cfe8fa46f3bf5e8dc66f7e3ecb899979967d662b0072f800cae` |
-| `build/release-candidate/dist/actionlineage-0.1.0a3.tar.gz` | `3efc8ba6ba53b8a1e463a0aafb28dc313c410e2c9df2b0b449c17033f8211a8a` |
-| `build/release-candidate/actionlineage-sbom.json` | `10844f3b3c830eb0f6c60bf70879ff15fdcfd3c9b6c8bf99a3c1e7d2608f3f98` |
-| `build/release-candidate/actionlineage-release-provenance.json` | `74edac3ae7bcfa8c487ceb046574e72eaa5712fc6c0403788b78d7d6e890372f` |
+| `build/release-candidate/dist/actionlineage-0.1.0a3.tar.gz` | `488ff0ebf8bee34426ec9787d8aaacf829f2f5efc146073a0ba4eaa2b73bcbb6` |
+| `build/release-candidate/actionlineage-sbom.json` | `3c69f5f1bec06abd9c260cc748a010cebfa22a1cea9a6b7ed8e7c0555cfb072a` |
+| `build/release-candidate/actionlineage-license-report.json` | `8aaaaaa19f63c34ba9a164daff8c63d43315e35450b9cea912a40b0514698e7e` |
+| `build/release-candidate/actionlineage-release-provenance.json` | `6c8003b10261b38e501ca1c0cfe645828a0ae59436c258ac147e69ff6db93d50` |
 
 ## Agent Validation Baseline
 
