@@ -48,10 +48,12 @@ supported, local-proof, preview, planned, and external-validation labels.
 
 ## Release And External Validation
 
-- The `v0.1.0a4` tag, GitHub Release object, and package uploads remain
-  owner-gated external release actions.
+- The `v0.1.0a5` tag, GitHub Release object, and package uploads remain
+  owner-gated external release actions. The earlier `v0.1.0a4` tag exists, but
+  its release artifact workflow failed before artifact upload or package
+  publication and must not be treated as the public package release.
 - Existing public `0.1.0a3` package metadata project URLs require the
-  owner-approved `0.1.0a4` package release to appear on PyPI/TestPyPI.
+  owner-approved `0.1.0a5` package release to appear on PyPI/TestPyPI.
 - Authenticated GitHub reads confirmed branch protection, secret scanning, push
   protection, private vulnerability reporting, a repository security policy,
   Dependabot security updates, 0 Dependabot alerts, 0 secret-scanning alerts, 0

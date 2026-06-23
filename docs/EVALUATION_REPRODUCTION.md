@@ -11,15 +11,15 @@ blocks these commands, see `docs/TROUBLESHOOTING.md`.
 
 ## Published Package Smoke
 
-After the owner-approved `0.1.0a4` publication, run:
+After the owner-approved `0.1.0a5` publication, run:
 
 ```bash
-uvx --prerelease allow --from actionlineage==0.1.0a4 actionlineage version
-uvx --prerelease allow --from actionlineage==0.1.0a4 actionlineage demo run --output-dir actionlineage-pypi-demo
-uvx --prerelease allow --from actionlineage==0.1.0a4 actionlineage journal verify actionlineage-pypi-demo/evidence.jsonl
+uvx --prerelease allow --from actionlineage==0.1.0a5 actionlineage version
+uvx --prerelease allow --from actionlineage==0.1.0a5 actionlineage demo run --output-dir actionlineage-pypi-demo
+uvx --prerelease allow --from actionlineage==0.1.0a5 actionlineage journal verify actionlineage-pypi-demo/evidence.jsonl
 ```
 
-Expected package version after publication: `0.1.0a4`. Until that owner gate
+Expected package version after publication: `0.1.0a5`. Until that owner gate
 is complete, `0.1.0a3` remains the latest public package and the source checkout
 commands below are the deterministic evaluation path for this branch.
 

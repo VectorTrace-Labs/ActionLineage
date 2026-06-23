@@ -30,23 +30,23 @@ unredacted production journals.
 
 ## Prerelease Installation
 
-`0.1.0a4` is the corrective release-prep prerelease. After it is published,
+`0.1.0a5` is the corrective release-prep prerelease. After it is published,
 tools that resolve package versions may require an explicit prerelease opt-in.
-If `0.1.0a4` cannot be resolved, the owner publication gate is not complete yet;
+If `0.1.0a5` cannot be resolved, the owner publication gate is not complete yet;
 use the repository checkout path or the latest public `0.1.0a3` package instead.
 
 Preferred public smoke path:
 
 ```bash
-uvx --prerelease allow --from actionlineage==0.1.0a4 actionlineage version
-uvx --prerelease allow --from actionlineage==0.1.0a4 actionlineage demo run --output-dir actionlineage-demo
-uvx --prerelease allow --from actionlineage==0.1.0a4 actionlineage journal verify actionlineage-demo/evidence.jsonl
+uvx --prerelease allow --from actionlineage==0.1.0a5 actionlineage version
+uvx --prerelease allow --from actionlineage==0.1.0a5 actionlineage demo run --output-dir actionlineage-demo
+uvx --prerelease allow --from actionlineage==0.1.0a5 actionlineage journal verify actionlineage-demo/evidence.jsonl
 ```
 
 Equivalent `pipx` shape:
 
 ```bash
-pipx run --pip-args="--pre" --spec actionlineage==0.1.0a4 actionlineage version
+pipx run --pip-args="--pre" --spec actionlineage==0.1.0a5 actionlineage version
 ```
 
 Equivalent `pip` shape for a disposable virtual environment:
@@ -55,7 +55,7 @@ Equivalent `pip` shape for a disposable virtual environment:
 python -m venv .venv-actionlineage
 . .venv-actionlineage/bin/activate
 python -m pip install --upgrade pip
-python -m pip install --pre actionlineage==0.1.0a4
+python -m pip install --pre actionlineage==0.1.0a5
 actionlineage version
 ```
 
@@ -83,17 +83,17 @@ python -c "import sys; print(sys.executable)"
 For `uvx`, choose a supported interpreter explicitly when needed:
 
 ```bash
-uvx --python 3.12 --prerelease allow --from actionlineage==0.1.0a4 actionlineage version
+uvx --python 3.12 --prerelease allow --from actionlineage==0.1.0a5 actionlineage version
 ```
 
 ## uv, pipx, And pip Behavior
 
-- Use `uvx --prerelease allow --from actionlineage==0.1.0a4 actionlineage ...`
+- Use `uvx --prerelease allow --from actionlineage==0.1.0a5 actionlineage ...`
   when you want a one-command public package evaluation.
-- Use `pipx run --spec actionlineage==0.1.0a4 actionlineage ...` when your
+- Use `pipx run --spec actionlineage==0.1.0a5 actionlineage ...` when your
   normal Python CLI workflow is `pipx`; add `--pip-args="--pre"` if resolution
   refuses prereleases.
-- Use `pip install --pre actionlineage==0.1.0a4` only inside a disposable
+- Use `pip install --pre actionlineage==0.1.0a5` only inside a disposable
   virtual environment.
 - Use `uv sync --locked --all-extras` only from a repository checkout.
 

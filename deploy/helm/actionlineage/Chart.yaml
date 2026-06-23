@@ -2,5 +2,5 @@ apiVersion: v2
 name: actionlineage
 description: Optional ActionLineage evidence service deployment.
 type: application
-version: 0.1.0-a4
-appVersion: "0.1.0a4"
+version: 0.1.0-a5
+appVersion: "0.1.0a5"
