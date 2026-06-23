@@ -132,6 +132,48 @@ def test_markdown_link_check_handles_reference_links_and_file_uris(tmp_path: Pat
     assert [issue.code for issue in result.issues] == ["file_uri"]
 
 
+def test_markdown_link_check_validates_local_heading_fragments(tmp_path: Path) -> None:
+    checker = _load_script("check_markdown_links")
+    docs_dir = tmp_path / "docs"
+    docs_dir.mkdir()
+    (docs_dir / "guide.md").write_text(
+        "# Quick Start\n"
+        "\n"
+        "## Duplicate\n"
+        "## Duplicate\n"
+        '<a id="explicit-anchor"></a>\n'
+        "```md\n"
+        "# Ignored Heading\n"
+        "```\n",
+        encoding="utf-8",
+    )
+    readme = tmp_path / "README.md"
+    readme.write_text(
+        "# Local Section\n"
+        "[valid](docs/guide.md#quick-start)\n"
+        "[duplicate](docs/guide.md#duplicate-1)\n"
+        "[explicit](docs/guide.md#explicit-anchor)\n"
+        "[same](#local-section)\n"
+        "[missing-file-fragment](docs/guide.md#not-here)\n"
+        "[missing-same-fragment](#not-local)\n"
+        "[external](https://example.com/actionlineage#ignored)\n",
+        encoding="utf-8",
+    )
+
+    result = checker.scan_paths([tmp_path], repository_root=tmp_path)
+
+    assert not result.ok
+    assert result.checked_links == 6
+    assert [issue.code for issue in result.issues] == [
+        "missing_fragment",
+        "missing_fragment",
+    ]
+    assert [issue.target for issue in result.issues] == [
+        "docs/guide.md#not-here",
+        "#not-local",
+    ]
+
+
 def test_public_quickstart_smoke_runs_local_cli(tmp_path: Path) -> None:
     smoker = _load_script("smoke_public_quickstart")
 

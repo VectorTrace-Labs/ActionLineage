@@ -81,6 +81,7 @@ data, not universal performance guarantees.
 | PALPHA-015 | P1 | Owner-approved TestPyPI/PyPI publication jobs did not yet have a bounded, clean-environment post-publication verification lane for the exact published tag version. | FIXED_IN_POST_PUBLICATION_VERIFY_SLICE |
 | PALPHA-016 | P2 | Review outreach had only an inline announcement note and lacked a maintainer-reviewable release/evaluation announcement plus technical article outline. | FIXED_IN_OUTREACH_DRAFTS_SLICE |
 | PALPHA-017 | P2 | Good first issue ideas were only short bullets, not maintainer-ready candidates with scope, acceptance criteria, verification commands, and out-of-scope boundaries. | FIXED_IN_GOOD_FIRST_ISSUES_SLICE |
+| PALPHA-018 | P2 | The repository-local Markdown link checker validated local files but did not catch stale same-document or `file.md#heading` fragments in reviewer-facing docs. | FIXED_IN_MARKDOWN_FRAGMENT_CHECK_SLICE |
 
 ## Phase Plan
 
@@ -91,7 +92,7 @@ data, not universal performance guarantees.
 | 2 | Package metadata and discoverability | In progress: local metadata improved; public metadata waits for next release |
 | 3 | README landing experience and visual proof | In progress: generated demo evidence map and freshness check added |
 | 4 | Clean installation and first-time-user testing | In progress: baseline public smoke completed; built wheel and sdist first-time-user smoke gate added to CI; first-time evaluator troubleshooting guide added for install, demo, path/browser, extras, offline/online, and release proof/review-index failures |
-| 5 | Visible quality and security evidence | In progress: baseline captured; CI now runs repository-local Markdown link checking, dependency license reporting, an 85 percent branch-enabled total coverage floor, and a concise quality/security evidence summary |
+| 5 | Visible quality and security evidence | In progress: baseline captured; CI now runs repository-local Markdown link and heading-fragment checking, dependency license reporting, an 85 percent branch-enabled total coverage floor, and a concise quality/security evidence summary |
 | 6 | Agent Validation Lab public evidence | In progress: deterministic no-model baseline report is generated into `docs/evidence/agent-validation-baseline.*` from 11 scorecards; scheduled no-model artifacts run on trusted default-branch code; optional live-model execution is gated on `GH_MODELS_TOKEN` and remains separate |
 | 7 | Reliability and adversarial hardening | In progress: SQLite projection handles close under warning-as-error coverage; static console context bounds and CSP added; verified-prefix recovery rejects in-place overwrite and streams output; journal verification rejects newline-less truncated final records; ambiguous HTTP observer matches remain unverified with fixture coverage; service-mode tests use a dev-only `httpx2` test-client backend so release proof remains warning-free without adding runtime TCB |
 | 8 | External review and community readiness | In progress: review guides, reproduction docs, structured feedback templates, good first issue candidates, generated manifest command, generated release-proof review index command, and review outreach drafts added; real review remains external-validation |

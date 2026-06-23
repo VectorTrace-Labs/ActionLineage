@@ -211,7 +211,7 @@ def test_external_review_docs_prepare_review_without_claiming_validation() -> No
     assert "docs/GOOD_FIRST_ISSUES.md" in docs["external"]
     assert "Good First Issue Candidates" in docs["good_first"]
     assert "Candidate 1: Extend Ambiguous HTTP Correlation Coverage" in docs["good_first"]
-    assert "Candidate 2: Validate Markdown Fragment Links Locally" in docs["good_first"]
+    assert "Candidate 2: Add Reference-Style Fragment Link Coverage" in docs["good_first"]
     assert "Candidate 3: Add A Future Event Compatibility Fixture" in docs["good_first"]
     assert "Candidate 4: Add One Failed-Prerequisite Troubleshooting Example" in docs["good_first"]
     assert "Candidate 5: Add A Hostile Static-Console Context Fixture" in docs["good_first"]
@@ -465,6 +465,7 @@ def test_release_checklist_covers_required_gates() -> None:
         "Post-publication verification",
         "scripts/smoke_public_quickstart.py",
         "actionlineage-post-publication-*",
+        "local Markdown heading fragments resolve",
         "GHCR preview container images remain version-tagged",
         "packages: write",
         "deploy/docker/Dockerfile",
@@ -700,9 +701,11 @@ def test_public_claim_audit_tracks_package_description_drift() -> None:
     assert "PALPHA-015" in hardening_plan
     assert "PALPHA-016" in hardening_plan
     assert "PALPHA-017" in hardening_plan
+    assert "PALPHA-018" in hardening_plan
     assert "FIXED_IN_POST_PUBLICATION_VERIFY_SLICE" in hardening_plan
     assert "FIXED_IN_OUTREACH_DRAFTS_SLICE" in hardening_plan
     assert "FIXED_IN_GOOD_FIRST_ISSUES_SLICE" in hardening_plan
+    assert "FIXED_IN_MARKDOWN_FRAGMENT_CHECK_SLICE" in hardening_plan
     assert "MITIGATED_WITH_CURL_FALLBACK" in hardening_plan
     assert "3ff4185b199fc74474f65dfa86d72441728a010d" in hardening_plan
     assert "Public package long descriptions can lag" in hardening_plan

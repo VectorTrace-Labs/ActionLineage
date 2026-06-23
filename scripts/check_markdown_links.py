@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Check repository-local Markdown links without network access."""
+"""Check repository-local Markdown links and heading fragments without network access."""
 
 from __future__ import annotations
 
@@ -9,6 +9,7 @@ import re
 import sys
 from collections.abc import Iterator, Sequence
 from dataclasses import asdict, dataclass
+from functools import cache
 from pathlib import Path
 from urllib.parse import unquote
 
@@ -28,6 +29,11 @@ EXCLUDED_DIR_NAMES = {
 REFERENCE_LINK_PATTERN = re.compile(r"^\s{0,3}\[[^\]\n]+]:\s*(?P<target>\S+)")
 INLINE_LINK_PATTERN = re.compile(r"(?P<image>!)?\[[^\]\n]*]\((?P<target>[^)\n]+)\)")
 SCHEME_PATTERN = re.compile(r"^[A-Za-z][A-Za-z0-9+.-]*:")
+HEADING_PATTERN = re.compile(r"^\s{0,3}#{1,6}\s+(?P<heading>.*?)\s*#*\s*$")
+HTML_ANCHOR_PATTERN = re.compile(
+    r"""<a\s+[^>]*(?:id|name)=["'](?P<anchor>[^"']+)["']""",
+    re.IGNORECASE,
+)
 
 
 @dataclass(frozen=True, slots=True)
@@ -71,7 +77,7 @@ def scan_paths(paths: Sequence[Path], *, repository_root: Path) -> LinkCheckResu
         files_scanned += 1
         for line_number, target in _iter_markdown_targets(markdown_path):
             normalized_target = _link_destination(target)
-            if normalized_target is None or _is_external_or_anchor(normalized_target):
+            if normalized_target is None or _is_external(normalized_target):
                 continue
 
             checked_links += 1
@@ -135,9 +141,9 @@ def _link_destination(raw_target: str) -> str | None:
     return target.split(maxsplit=1)[0].strip()
 
 
-def _is_external_or_anchor(target: str) -> bool:
+def _is_external(target: str) -> bool:
     lowered = target.lower()
-    if lowered.startswith(("#", "http://", "https://", "mailto:", "tel:")):
+    if lowered.startswith(("http://", "https://", "mailto:", "tel:")):
         return True
     return bool(SCHEME_PATTERN.match(target)) and not lowered.startswith("file:")
 
@@ -160,11 +166,15 @@ def _check_local_target(
             ),
         )
 
-    local_target = unquote(target.split("#", 1)[0])
-    if not local_target:
+    local_target, fragment = _split_fragment(target)
+    if not local_target and fragment is None:
         return ()
 
-    candidate = (markdown_path.parent / local_target).resolve(strict=False)
+    candidate = (
+        markdown_path.resolve(strict=False)
+        if not local_target
+        else (markdown_path.parent / local_target).resolve(strict=False)
+    )
     try:
         candidate.relative_to(repository_root)
     except ValueError:
@@ -189,7 +199,88 @@ def _check_local_target(
             ),
         )
 
+    if fragment is not None and candidate.suffix.lower() == ".md":
+        return _check_markdown_fragment(
+            markdown_path=markdown_path,
+            line_number=line_number,
+            target=target,
+            target_path=candidate,
+            fragment=fragment,
+        )
+
     return ()
+
+
+def _split_fragment(target: str) -> tuple[str, str | None]:
+    local_target, separator, fragment = target.partition("#")
+    return unquote(local_target), unquote(fragment) if separator else None
+
+
+def _check_markdown_fragment(
+    *,
+    markdown_path: Path,
+    line_number: int,
+    target: str,
+    target_path: Path,
+    fragment: str,
+) -> tuple[LinkIssue, ...]:
+    if fragment == "":
+        return ()
+    anchors = _markdown_anchors(target_path)
+    normalized = _normalize_anchor(fragment)
+    if normalized in anchors:
+        return ()
+    return (
+        _issue(
+            markdown_path,
+            line_number,
+            target,
+            "missing_fragment",
+            "Markdown heading fragment target does not exist",
+        ),
+    )
+
+
+@cache
+def _markdown_anchors(path: Path) -> frozenset[str]:
+    anchors: set[str] = set()
+    heading_counts: dict[str, int] = {}
+    in_fence = False
+    for line in path.read_text(encoding="utf-8").splitlines():
+        stripped = line.lstrip()
+        if stripped.startswith(("```", "~~~")):
+            in_fence = not in_fence
+            continue
+        if in_fence:
+            continue
+
+        for match in HTML_ANCHOR_PATTERN.finditer(line):
+            anchors.add(_normalize_anchor(match.group("anchor")))
+
+        heading_match = HEADING_PATTERN.match(line)
+        if heading_match is None:
+            continue
+        base_anchor = _slugify_heading(heading_match.group("heading"))
+        if not base_anchor:
+            continue
+        count = heading_counts.get(base_anchor, 0)
+        heading_counts[base_anchor] = count + 1
+        anchors.add(base_anchor if count == 0 else f"{base_anchor}-{count}")
+    return frozenset(anchors)
+
+
+def _slugify_heading(heading: str) -> str:
+    cleaned = re.sub(r"<[^>]+>", "", heading)
+    cleaned = re.sub(r"`([^`]*)`", r"\1", cleaned)
+    cleaned = re.sub(r"\[([^\]]+)]\([^)]+\)", r"\1", cleaned)
+    cleaned = cleaned.replace("&amp;", " and ")
+    cleaned = re.sub(r"[^\w\s-]", "", cleaned.lower(), flags=re.UNICODE)
+    cleaned = re.sub(r"[\s_]+", "-", cleaned.strip())
+    return re.sub(r"-+", "-", cleaned).strip("-")
+
+
+def _normalize_anchor(anchor: str) -> str:
+    return anchor.strip().lower()
 
 
 def _issue(path: Path, line_number: int, target: str, code: str, message: str) -> LinkIssue:

@@ -290,7 +290,7 @@ See `docs/PACKAGE_MANAGERS.md`.
   review-index diagnostics, and safe failure reports.
 - API, CLI, schema, tutorial, migration, FAQ, security, privacy, and operations
   docs are present.
-- Repository-relative Markdown links resolve with
+- Repository-relative Markdown links and local Markdown heading fragments resolve with
   `uv run python scripts/check_markdown_links.py .`.
 - Public claims avoid unsupported wording.
 - Preview, planned, and external-validation-required features are not

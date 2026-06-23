@@ -45,28 +45,30 @@ Out of scope:
 - Changing verification thresholds.
 - Promoting preview observers to alpha-supported status.
 
-## Candidate 2: Validate Markdown Fragment Links Locally
+## Candidate 2: Add Reference-Style Fragment Link Coverage
 
 Suggested labels: `good first issue`, `docs`, `quality`.
 
 Why it helps:
 
-The repository-local Markdown checker already catches missing files and unsafe
-local links without network access. Fragment validation would make review docs
-less likely to drift as headings change.
+The repository-local Markdown checker catches missing files, unsafe local
+links, same-document anchors, and `file.md#heading` fragments without network
+access. A small reference-style regression would make future parser changes
+easier to review.
 
 Suggested scope:
 
-- Extend `scripts/check_markdown_links.py` to validate `file.md#heading`
-  fragments for repository-local Markdown files.
-- Add focused tests in `tests/security/test_release_hardening.py`.
-- Keep `#same-document` anchors network-free and deterministic.
+- Add a focused reference-link test in
+  `tests/security/test_release_hardening.py`.
+- Use a reference definition with a local Markdown fragment and an optional
+  title.
+- Keep the test network-free and deterministic.
 
 Acceptance criteria:
 
 - Existing link-check tests still pass.
-- A valid heading fragment passes.
-- A missing heading fragment reports a clear machine-readable issue code.
+- A valid reference-style heading fragment passes.
+- A missing reference-style heading fragment reports `missing_fragment`.
 - External `http`, `https`, `mailto`, and `tel` links remain out of scope.
 
 Suggested verification:
