@@ -1,6 +1,6 @@
 # Troubleshooting First-Time Evaluation
 
-Last reviewed: 2026-06-22.
+Last reviewed: 2026-06-23.
 
 This guide is for public-alpha evaluators running the package, demo, or local
 release proof for the first time. It does not change the supported surface in
@@ -178,6 +178,40 @@ Offline-capable after dependencies are installed:
 - `actionlineage journal verify`;
 - projection timeline, case export, graph export, and static console export;
 - no-model Agent Validation scripted scenarios from a prepared checkout.
+
+## Release Proof And Review Index Issues
+
+Local release proof commands write generated artifacts under `build/`, `dist/`,
+or a temporary directory. Do not edit generated proof files by hand, and do not
+treat a local troubleshooting run as publication or external-validation
+evidence.
+
+If `scripts/check_release_consistency.py --dist-dir ... --output ...` fails in
+offline mode:
+
+- confirm the wheel and sdist were rebuilt from the current checkout;
+- inspect `release-consistency-offline.json` for `FAIL` or `UNKNOWN` checks;
+- fix local version, changelog, README install pins, metadata, or distribution
+  contents before regenerating the manifest.
+
+If an online release-consistency report fails:
+
+- distinguish local package metadata from owner-gated public state;
+- missing GitHub Release objects and stale PyPI/TestPyPI long descriptions are
+  release/publication gates, not a reason to republish immutable artifacts from
+  a local troubleshooting run;
+- local project URL `HEAD` checks can be `UNKNOWN` in certificate-store
+  constrained environments even when JSON metadata checks succeed through the
+  bounded read-only `curl` fallback.
+
+If `scripts/write_release_review_index.py` reports `HASH_MISMATCH`, `MISSING`,
+or `malformed_release_consistency_report`:
+
+- regenerate the release proof artifact directory from a clean `build/` path or
+  temporary path;
+- rerun `scripts/write_release_candidate_manifest.py`;
+- rerun `scripts/write_release_review_index.py`;
+- preserve the failing JSON/report for review if the mismatch is unexpected.
 
 ## Safe Failure Reports
 
