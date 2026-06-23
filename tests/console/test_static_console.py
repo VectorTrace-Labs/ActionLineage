@@ -74,6 +74,42 @@ def test_console_cli_exports_static_html(tmp_path: Path) -> None:
     assert output_path.exists()
 
 
+def test_console_cli_exports_empty_selector_html_without_absence_claims(
+    tmp_path: Path,
+) -> None:
+    demo = run_demo(tmp_path / "demo")
+    output_path = tmp_path / "empty-console.html"
+
+    result = runner.invoke(
+        app,
+        [
+            "projection",
+            "export-console",
+            str(demo.database_path),
+            str(output_path),
+            "--trace-id",
+            "trace_not_present",
+        ],
+    )
+    payload = json.loads(result.stdout)
+    html = output_path.read_text(encoding="utf-8")
+
+    assert result.exit_code == 0
+    assert payload["ok"] is True
+    assert payload["event_count"] == 0
+    assert output_path.exists()
+    assert "Events<strong>0</strong>" in html
+    assert "No events matched this selector" in html
+    assert "No verification states in this timeline" in html
+    assert "No events in this timeline" in html
+    assert "No evidence links in this timeline" in html
+    assert "No event details matched this selector." in html
+    assert html.count("<strong>0</strong>") == 5
+    assert "Missing observation means no observation was recorded" in html
+    assert "proof " + "of absence" not in html.lower()
+    assert "Content-Security-Policy" in html
+
+
 def test_write_desktop_bundle_creates_manifest_and_console(tmp_path: Path) -> None:
     demo = run_demo(tmp_path / "demo")
     output_dir = tmp_path / "desktop"

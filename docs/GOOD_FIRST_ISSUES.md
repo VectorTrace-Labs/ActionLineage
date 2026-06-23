@@ -158,31 +158,31 @@ Out of scope:
 - Adding a new package manager support claim.
 - Adding screenshots or generated artifacts.
 
-## Candidate 5: Add An Empty Static-Console CLI Export Fixture
+## Candidate 5: Add A Run-ID Static-Console Export Fixture
 
 Suggested labels: `good first issue`, `tests`, `console`.
 
 Why it helps:
 
-The static console is an onboarding and review artifact. The renderer now has
-direct empty-timeline coverage; a CLI-path fixture would keep the projection
-export command equally clear for first-time evaluators.
+The static console is an onboarding and review artifact. Trace-ID exports are
+well covered; a run-ID fixture would keep the alternate public selector path
+equally easy to review.
 
 Suggested scope:
 
 - Add a focused case to `tests/console/test_static_console.py`.
 - Run the deterministic demo and call the `projection export-console` CLI with
-  a trace ID that is not present in the projection.
-- Assert the generated HTML includes the same empty-state wording as the direct
-  renderer test.
+  `--run-id`.
+- Assert the generated HTML includes the expected demo events and verification
+  matrix content.
 
 Acceptance criteria:
 
 - The CLI exits successfully and writes the requested static HTML file.
-- The generated HTML clearly shows an empty timeline, graph, and evidence-link
-  state.
-- Status counts remain zero.
-- Wording does not treat an empty timeline as evidence that no action occurred.
+- The result `event_count` matches the deterministic demo timeline.
+- The generated HTML includes verified, unverified, and conflicting statuses.
+- Wording still does not treat missing observations as evidence that no action
+  occurred.
 - The output still includes the restrictive Content Security Policy.
 
 Suggested verification:

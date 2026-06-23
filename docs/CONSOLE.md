@@ -104,6 +104,8 @@ reviewed input for future native shells and remains a rendered view.
   with a visible truncation marker and digest.
 - Generated HTML includes a restrictive Content Security Policy and does not
   require scripts or remote resources.
+- The `projection export-console` CLI uses the same rendered empty states as
+  the Python API.
 - Rule debugging is available through the detection API and CLI; collaborative
   workflows are deferred to a later optional console package.
 
