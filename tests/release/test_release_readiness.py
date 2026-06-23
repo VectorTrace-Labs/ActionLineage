@@ -518,6 +518,7 @@ def test_ci_runs_local_release_proof_gates() -> None:
 
     assert "python-version: ['3.12', '3.13']" in workflow
     assert "python-version: ${{ matrix.python-version }}" in workflow
+    assert "fetch-depth: 0" in workflow
     assert "uv sync --locked --all-extras" in workflow
     assert "name: Test with branch coverage" in workflow
     assert "--cov=actionlineage" in workflow
