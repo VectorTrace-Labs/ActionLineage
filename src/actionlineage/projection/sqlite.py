@@ -2,8 +2,10 @@
 
 from __future__ import annotations
 
+import hashlib
 import json
 import os
+import shutil
 import sqlite3
 from collections.abc import Iterable, Iterator
 from contextlib import contextmanager, suppress
@@ -12,8 +14,10 @@ from dataclasses import dataclass
 from enum import StrEnum
 from pathlib import Path
 from typing import Any, cast
+from uuid import uuid4
 
 from actionlineage.domain import (
+    CANONICALIZATION_VERSION,
     EventEnvelope,
     deterministic_json_bytes,
     event_to_dict,
@@ -31,10 +35,12 @@ from actionlineage.journal import (
 PROJECTION_SCHEMA_VERSION = 2
 INCIDENT_EXPORT_VERSION = "actionlineage.dev/incident-export-v0"
 CASE_BUNDLE_VERSION = "actionlineage.dev/case-bundle-v0"
+CASE_BUNDLE_MANIFEST_VERSION = "actionlineage.dev/case-bundle-manifest-v0"
 GROUNDED_SUMMARY_VERSION = "actionlineage.dev/grounded-summary-v0"
 INVESTIGATION_GRAPH_VERSION = "actionlineage.dev/investigation-graph-v0"
 TIMELINE_ORDER_DESCRIPTION = "occurred_at, causality.sequence, journal_record_number, event_id"
 CASE_BUNDLE_FILENAMES = ("case.json", "events.ndjson", "report.md")
+CASE_BUNDLE_MANIFEST_FILENAME = "manifest.json"
 PROJECTED_EVENT_COLUMNS = (
     "event_id",
     "spec_version",
@@ -327,6 +333,7 @@ class CaseBundleExport:
     json_path: Path
     ndjson_path: Path
     markdown_path: Path
+    manifest_path: Path
     incident: IncidentExport
     bundle_version: str = CASE_BUNDLE_VERSION
 
@@ -340,6 +347,7 @@ class CaseBundleExport:
             "json_path": str(self.json_path),
             "ndjson_path": str(self.ndjson_path),
             "markdown_path": str(self.markdown_path),
+            "manifest_path": str(self.manifest_path),
             "incident": self.incident.as_dict(),
         }
 
@@ -991,29 +999,49 @@ def export_case_bundle(
         trace_id=trace_id,
         run_id=run_id,
     )
-    output_dir = Path(output_dir)
-    output_dir.mkdir(parents=True, exist_ok=True)
+    output_dir, staging_dir = _create_case_bundle_staging_dir(Path(output_dir))
     json_path, ndjson_path, markdown_path = _case_bundle_paths(output_dir)
+    manifest_path = output_dir / CASE_BUNDLE_MANIFEST_FILENAME
 
     incident_data = incident.as_dict()
     event_objects = cast(list[object], incident_data["events"])
-    _write_new_case_bundle_file(
-        json_path,
-        deterministic_json_bytes(cast(dict[str, Any], incident_data)) + b"\n",
-    )
-    _write_new_case_bundle_file(
-        ndjson_path,
-        b"".join(
+    artifact_payloads = {
+        "case.json": deterministic_json_bytes(cast(dict[str, Any], incident_data)) + b"\n",
+        "events.ndjson": b"".join(
             deterministic_json_bytes(cast(dict[str, Any], event)) + b"\n" for event in event_objects
         ),
+        "report.md": _case_markdown(incident_data).encode("utf-8"),
+    }
+    manifest = _case_bundle_manifest(
+        incident_data,
+        artifact_payloads=artifact_payloads,
+        database_path=database_path,
+        journal_path=journal_path,
+        trace_id=trace_id,
+        run_id=run_id,
     )
-    _write_new_case_bundle_file(markdown_path, _case_markdown(incident_data).encode("utf-8"))
+    all_payloads = {
+        **artifact_payloads,
+        CASE_BUNDLE_MANIFEST_FILENAME: deterministic_json_bytes(manifest) + b"\n",
+    }
+    try:
+        for filename, payload in all_payloads.items():
+            _write_private_case_bundle_file(staging_dir / filename, payload)
+        try:
+            _fsync_directory(staging_dir)
+        except OSError as exc:
+            raise ProjectionQueryError("failed to sync case bundle staging directory") from exc
+        _publish_case_bundle_directory(staging_dir, output_dir)
+    except Exception:
+        _cleanup_case_bundle_staging(staging_dir)
+        raise
 
     return CaseBundleExport(
         output_dir=output_dir,
         json_path=json_path,
         ndjson_path=ndjson_path,
         markdown_path=markdown_path,
+        manifest_path=manifest_path,
         incident=incident,
     )
 
@@ -1643,6 +1671,66 @@ def _require_one_selector(
     return "run_id", run_id
 
 
+def _case_bundle_manifest(
+    incident_data: dict[str, object],
+    *,
+    artifact_payloads: dict[str, bytes],
+    database_path: Path,
+    journal_path: Path,
+    trace_id: str | None,
+    run_id: str | None,
+) -> dict[str, Any]:
+    verification = incident_data.get("verification")
+    if not isinstance(verification, dict):
+        raise ProjectionQueryError("case bundle export requires verified projection binding")
+    journal = verification.get("journal")
+    if not isinstance(journal, dict):
+        raise ProjectionQueryError("case bundle export requires verified journal binding")
+
+    return {
+        "manifest_version": CASE_BUNDLE_MANIFEST_VERSION,
+        "bundle_version": CASE_BUNDLE_VERSION,
+        "incident_export_version": incident_data.get("export_version"),
+        "canonicalization": CANONICALIZATION_VERSION,
+        "selector": deepcopy(incident_data.get("selector")),
+        "query": {
+            "trace_id": trace_id,
+            "run_id": run_id,
+        },
+        "journal": {
+            "path": str(journal_path),
+            "source_identity": verification.get("source_journal_identity"),
+            "record_count": journal.get("record_count"),
+            "terminal_hash": journal.get("terminal_hash"),
+            "journal_sha256": journal.get("journal_sha256"),
+            "verification": deepcopy(journal.get("verification")),
+        },
+        "projection": {
+            "database_path": str(database_path),
+            "schema_version": verification.get("schema_version"),
+            "state": verification.get("state"),
+            "projection_identity": verification.get("projection_identity"),
+            "records_indexed": verification.get("records_indexed"),
+            "source_journal_identity": verification.get("source_journal_identity"),
+            "source_journal_sha256": verification.get("source_journal_sha256"),
+        },
+        "files": [
+            _case_bundle_file_manifest(filename, artifact_payloads[filename])
+            for filename in CASE_BUNDLE_FILENAMES
+        ],
+        "external_signature": None,
+        "external_checkpoint": None,
+    }
+
+
+def _case_bundle_file_manifest(filename: str, data: bytes) -> dict[str, object]:
+    return {
+        "path": filename,
+        "size_bytes": len(data),
+        "sha256": f"sha256:{hashlib.sha256(data).hexdigest()}",
+    }
+
+
 def _case_bundle_paths(output_dir: Path) -> tuple[Path, Path, Path]:
     paths = tuple(output_dir / filename for filename in CASE_BUNDLE_FILENAMES)
     if any(path.parent != output_dir for path in paths):
@@ -1650,14 +1738,105 @@ def _case_bundle_paths(output_dir: Path) -> tuple[Path, Path, Path]:
     return cast(tuple[Path, Path, Path], paths)
 
 
-def _write_new_case_bundle_file(path: Path, data: bytes) -> None:
+def _create_case_bundle_staging_dir(output_dir: Path) -> tuple[Path, Path]:
+    final_dir = Path(output_dir).resolve(strict=False)
+    if final_dir == final_dir.parent:
+        raise ProjectionQueryError("case bundle output directory must be below a parent directory")
+    if final_dir.exists() or final_dir.is_symlink():
+        raise ProjectionQueryError(f"case bundle output already exists: {final_dir.name}")
+
+    parent = final_dir.parent
     try:
-        with path.open("xb") as handle:
-            handle.write(data)
+        parent.mkdir(mode=0o700, parents=True, exist_ok=True)
+    except OSError as exc:
+        raise ProjectionQueryError("failed to prepare case bundle parent directory") from exc
+
+    for _ in range(10):
+        staging_dir = parent / f".{final_dir.name}.staging-{uuid4().hex}"
+        try:
+            os.mkdir(staging_dir, 0o700)
+            _ensure_private_case_bundle_directory(staging_dir)
+            return final_dir, staging_dir
+        except FileExistsError:
+            continue
+        except OSError as exc:
+            raise ProjectionQueryError("failed to create case bundle staging directory") from exc
+    raise ProjectionQueryError("failed to allocate unique case bundle staging directory")
+
+
+def _ensure_private_case_bundle_directory(path: Path) -> None:
+    if os.name != "posix":
+        return
+    mode = path.stat().st_mode & 0o777
+    if mode & 0o077:
+        os.chmod(path, 0o700)
+    mode = path.stat().st_mode & 0o777
+    if mode & 0o077:
+        raise ProjectionQueryError(
+            f"case bundle directory is not private: {path}; expected mode 0700 or stricter"
+        )
+
+
+def _write_private_case_bundle_file(path: Path, data: bytes) -> None:
+    flags = (
+        os.O_WRONLY
+        | os.O_CREAT
+        | os.O_EXCL
+        | getattr(os, "O_CLOEXEC", 0)
+        | getattr(os, "O_NOFOLLOW", 0)
+    )
+    try:
+        fd = os.open(path, flags, 0o600)
     except FileExistsError as exc:
         raise ProjectionQueryError(f"case bundle output already exists: {path.name}") from exc
     except OSError as exc:
         raise ProjectionQueryError(f"failed to write case bundle output: {path.name}") from exc
+
+    try:
+        if os.name == "posix":
+            os.fchmod(fd, 0o600)
+        with os.fdopen(fd, "wb") as handle:
+            fd = -1
+            handle.write(data)
+            handle.flush()
+            os.fsync(handle.fileno())
+    except OSError as exc:
+        raise ProjectionQueryError(f"failed to write case bundle output: {path.name}") from exc
+    finally:
+        if fd >= 0:
+            os.close(fd)
+
+
+def _publish_case_bundle_directory(staging_dir: Path, output_dir: Path) -> None:
+    if output_dir.exists() or output_dir.is_symlink():
+        raise ProjectionQueryError(f"case bundle output already exists: {output_dir.name}")
+    try:
+        os.replace(staging_dir, output_dir)
+    except FileExistsError as exc:
+        raise ProjectionQueryError(f"case bundle output already exists: {output_dir.name}") from exc
+    except OSError as exc:
+        raise ProjectionQueryError("failed to publish completed case bundle") from exc
+    try:
+        _fsync_directory(output_dir.parent)
+    except OSError as exc:
+        raise ProjectionQueryError("failed to sync case bundle parent directory") from exc
+
+
+def _fsync_directory(path: Path) -> None:
+    if os.name != "posix":
+        return
+    fd = os.open(
+        path,
+        os.O_RDONLY | getattr(os, "O_DIRECTORY", 0) | getattr(os, "O_CLOEXEC", 0),
+    )
+    try:
+        os.fsync(fd)
+    finally:
+        os.close(fd)
+
+
+def _cleanup_case_bundle_staging(staging_dir: Path) -> None:
+    shutil.rmtree(staging_dir, ignore_errors=True)
 
 
 def _evidence_projection_values(

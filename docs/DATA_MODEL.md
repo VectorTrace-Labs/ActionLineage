@@ -246,3 +246,10 @@ Event indexing is idempotent for an already indexed event with the same event ID
 Timeline queries support exactly one selector: `trace_id` or `run_id`. Results are ordered by `occurred_at`, then `causality.sequence`, then journal record number, then `event_id`.
 
 Incident export returns JSON containing the selector, event count, documented timeline order, and the full projected event objects.
+
+Case bundle export publishes a derived private directory containing
+`case.json`, `events.ndjson`, `report.md`, and `manifest.json`. The manifest
+binds the artifact sizes and SHA-256 digests to the same verified
+journal/projection summary used for the incident export. The bundle is
+reviewable local evidence, not a replacement for the append-only journal or a
+future external signature/checkpoint.

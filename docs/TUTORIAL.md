@@ -52,6 +52,11 @@ uv run actionlineage projection export-case \
   --trace-id trace_demo_evidence_plane
 ```
 
+The case directory contains `case.json`, `events.ndjson`, `report.md`, and
+`manifest.json`. The manifest records local artifact digests and the verified
+journal/projection binding used for the export; the append-only journal remains
+the canonical evidence source.
+
 ## 6. Render the Console
 
 ```bash

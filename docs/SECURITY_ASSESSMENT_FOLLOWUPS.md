@@ -43,6 +43,12 @@ and does not expand ActionLineage into a generic tracing platform.
   invalid UTF-8, trailing JSON, multiple JSON values, and non-finite numeric
   tokens. Journal verification now rejects byte-different semantic rewrites
   before accepting a record into a verified snapshot.
+- **Case bundle publication**: local regression tests cover manifest file
+  digests, verified journal/projection binding, POSIX `0700` directory and
+  `0600` file modes under a permissive umask, cleanup after injected write,
+  staging-directory sync, and publish failures, and preservation of an existing
+  valid bundle. Case export now stages privately and publishes with an atomic
+  directory rename instead of writing loose files directly into the final path.
 
 ## Implemented before this slice
 
@@ -102,6 +108,10 @@ and does not expand ActionLineage into a generic tracing platform.
   but an explicit kernel boundary ADR and import-boundary tests should cover
   anchoring, observer policy, projection contracts, and query/export trust
   boundaries.
+- **Case bundle signatures and long-running recovery**: follow-up. Case bundle
+  manifests reserve future external signature/checkpoint fields but do not sign
+  artifacts or prove WORM/object-lock behavior. Longer-running crash and
+  filesystem fault injection should be added before stronger durability claims.
 - **Generated release evidence**: follow-up. Manual scorecards should be backed
   by a commit-bound evidence manifest before stronger release claims.
 - **External validation**: follow-up. Independent review, partner integrations,

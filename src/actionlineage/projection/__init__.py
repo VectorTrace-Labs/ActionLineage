@@ -10,6 +10,7 @@ from actionlineage.projection.postgres import (
     rebuild_postgres_projection,
 )
 from actionlineage.projection.sqlite import (
+    CASE_BUNDLE_MANIFEST_VERSION,
     CASE_BUNDLE_VERSION,
     GROUNDED_SUMMARY_VERSION,
     INCIDENT_EXPORT_VERSION,
@@ -50,6 +51,7 @@ from actionlineage.projection.sqlite import (
 )
 
 __all__ = [
+    "CASE_BUNDLE_MANIFEST_VERSION",
     "CASE_BUNDLE_VERSION",
     "GROUNDED_SUMMARY_VERSION",
     "INCIDENT_EXPORT_VERSION",

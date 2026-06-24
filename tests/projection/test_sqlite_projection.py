@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import os
 import sqlite3
 from contextlib import closing
 from pathlib import Path
@@ -12,6 +13,7 @@ from typer.testing import CliRunner
 import actionlineage.projection.sqlite as sqlite_projection
 from actionlineage.cli import app
 from actionlineage.domain import (
+    CANONICALIZATION_VERSION,
     CorroborationType,
     EventEnvelope,
     EventType,
@@ -21,6 +23,7 @@ from actionlineage.domain import (
 )
 from actionlineage.journal import LocalJournal
 from actionlineage.projection import (
+    CASE_BUNDLE_MANIFEST_VERSION,
     ProjectionQueryError,
     ProjectionStateCode,
     ProjectionStateError,
@@ -109,6 +112,10 @@ def journal_lines(path: Path) -> list[bytes]:
 
 def replace_journal_lines(path: Path, lines: list[bytes]) -> None:
     path.write_bytes(b"\n".join(lines) + b"\n")
+
+
+def sha256_digest(data: bytes) -> str:
+    return f"sha256:{hashlib.sha256(data).hexdigest()}"
 
 
 def database_fingerprint(path: Path) -> dict[str, object]:
@@ -1065,12 +1072,44 @@ def test_case_bundle_export_writes_redacted_reports_without_absence_overclaim(
     markdown = result.markdown_path.read_text(encoding="utf-8")
     case_data = json.loads(result.json_path.read_text(encoding="utf-8"))
     ndjson_lines = result.ndjson_path.read_text(encoding="utf-8").splitlines()
+    manifest = json.loads(result.manifest_path.read_text(encoding="utf-8"))
+    files = {entry["path"]: entry for entry in manifest["files"]}
 
     assert result.as_dict()["ok"] is True
+    assert result.as_dict()["manifest_path"] == str(result.manifest_path)
     assert case_data["event_count"] == 5
     assert len(ndjson_lines) == 5
     assert "No observation recorded is not proof" in markdown
     assert "did not happen" not in markdown
+    assert manifest["manifest_version"] == CASE_BUNDLE_MANIFEST_VERSION
+    assert manifest["bundle_version"] == "actionlineage.dev/case-bundle-v0"
+    assert manifest["incident_export_version"] == "actionlineage.dev/incident-export-v0"
+    assert manifest["canonicalization"] == CANONICALIZATION_VERSION
+    assert manifest["selector"] == {"type": "trace_id", "value": "trace_01"}
+    assert manifest["query"] == {"trace_id": "trace_01", "run_id": None}
+    assert (
+        manifest["journal"]["source_identity"]
+        == case_data["verification"]["source_journal_identity"]
+    )
+    assert manifest["journal"]["record_count"] == 5
+    assert manifest["journal"]["terminal_hash"] == case_data["verification"]["terminal_hash"]
+    assert (
+        manifest["journal"]["journal_sha256"]
+        == case_data["verification"]["journal"]["journal_sha256"]
+    )
+    assert (
+        manifest["projection"]["projection_identity"]
+        == case_data["verification"]["projection_identity"]
+    )
+    assert manifest["projection"]["schema_version"] == 2
+    assert manifest["external_signature"] is None
+    assert manifest["external_checkpoint"] is None
+
+    for exported_path in (result.json_path, result.ndjson_path, result.markdown_path):
+        data = exported_path.read_bytes()
+        entry = files[exported_path.name]
+        assert entry["size_bytes"] == len(data)
+        assert entry["sha256"] == sha256_digest(data)
 
 
 def test_case_bundle_export_refuses_existing_artifacts(tmp_path: Path) -> None:
@@ -1079,11 +1118,11 @@ def test_case_bundle_export_refuses_existing_artifacts(tmp_path: Path) -> None:
     bundle_dir = tmp_path / "case"
     write_journal(journal_path, complete_timeline_events())
     rebuild_projection(journal_path, database_path)
-    bundle_dir.mkdir()
     existing = bundle_dir / "case.json"
+    bundle_dir.mkdir()
     existing.write_text("existing\n", encoding="utf-8")
 
-    with pytest.raises(ProjectionQueryError, match="already exists"):
+    with pytest.raises(ProjectionQueryError, match="case bundle output already exists"):
         export_case_bundle(
             database_path,
             bundle_dir,
@@ -1092,6 +1131,140 @@ def test_case_bundle_export_refuses_existing_artifacts(tmp_path: Path) -> None:
         )
 
     assert existing.read_text(encoding="utf-8") == "existing\n"
+
+
+def test_case_bundle_export_uses_private_permissions_under_permissive_umask(
+    tmp_path: Path,
+) -> None:
+    if os.name != "posix":
+        pytest.skip("POSIX mode-bit assertions do not apply on this platform")
+    journal_path = tmp_path / "events.jsonl"
+    database_path = tmp_path / "projection.sqlite"
+    bundle_dir = tmp_path / "case"
+    write_journal(journal_path, complete_timeline_events())
+    rebuild_projection(journal_path, database_path)
+    original_umask = os.umask(0)
+    try:
+        result = export_case_bundle(
+            database_path,
+            bundle_dir,
+            journal_path=journal_path,
+            trace_id="trace_01",
+        )
+    finally:
+        os.umask(original_umask)
+
+    assert result.output_dir.stat().st_mode & 0o777 == 0o700
+    for path in (result.json_path, result.ndjson_path, result.markdown_path, result.manifest_path):
+        assert path.stat().st_mode & 0o777 == 0o600
+
+
+@pytest.mark.parametrize("failure_point", ("write", "staging_sync", "publish"))
+def test_case_bundle_export_cleans_staging_after_publication_failure(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+    failure_point: str,
+) -> None:
+    journal_path = tmp_path / "events.jsonl"
+    database_path = tmp_path / "projection.sqlite"
+    bundle_dir = tmp_path / "case"
+    write_journal(journal_path, complete_timeline_events())
+    rebuild_projection(journal_path, database_path)
+
+    if failure_point == "write":
+        original_write = sqlite_projection._write_private_case_bundle_file
+
+        def fail_write(path: Path, data: bytes) -> None:
+            if path.name == "events.ndjson":
+                raise ProjectionQueryError("injected write failure")
+            original_write(path, data)
+
+        monkeypatch.setattr(sqlite_projection, "_write_private_case_bundle_file", fail_write)
+    elif failure_point == "staging_sync":
+
+        def fail_sync(path: Path) -> None:
+            if path.name.startswith(".case.staging-"):
+                raise OSError("injected staging sync failure")
+
+        monkeypatch.setattr(sqlite_projection, "_fsync_directory", fail_sync)
+    else:
+
+        def fail_publish(_staging_dir: Path, _output_dir: Path) -> None:
+            raise ProjectionQueryError("injected publish failure")
+
+        monkeypatch.setattr(sqlite_projection, "_publish_case_bundle_directory", fail_publish)
+
+    with pytest.raises((OSError, ProjectionQueryError), match=r"injected|failed to sync"):
+        export_case_bundle(
+            database_path,
+            bundle_dir,
+            journal_path=journal_path,
+            trace_id="trace_01",
+        )
+
+    assert not bundle_dir.exists()
+    assert list(tmp_path.glob(".case.staging-*")) == []
+
+
+def test_case_bundle_export_refuses_destination_created_before_publish(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    journal_path = tmp_path / "events.jsonl"
+    database_path = tmp_path / "projection.sqlite"
+    bundle_dir = tmp_path / "case"
+    sentinel = bundle_dir / "existing.txt"
+    write_journal(journal_path, complete_timeline_events())
+    rebuild_projection(journal_path, database_path)
+    original_sync = sqlite_projection._fsync_directory
+
+    def create_destination_after_staging_sync(path: Path) -> None:
+        original_sync(path)
+        if path.name.startswith(".case.staging-"):
+            bundle_dir.mkdir()
+            sentinel.write_text("existing\n", encoding="utf-8")
+
+    monkeypatch.setattr(
+        sqlite_projection,
+        "_fsync_directory",
+        create_destination_after_staging_sync,
+    )
+
+    with pytest.raises(ProjectionQueryError, match="case bundle output already exists"):
+        export_case_bundle(
+            database_path,
+            bundle_dir,
+            journal_path=journal_path,
+            trace_id="trace_01",
+        )
+
+    assert sentinel.read_text(encoding="utf-8") == "existing\n"
+    assert list(tmp_path.glob(".case.staging-*")) == []
+
+
+def test_case_bundle_export_does_not_delete_existing_valid_bundle(tmp_path: Path) -> None:
+    journal_path = tmp_path / "events.jsonl"
+    database_path = tmp_path / "projection.sqlite"
+    bundle_dir = tmp_path / "case"
+    write_journal(journal_path, complete_timeline_events())
+    rebuild_projection(journal_path, database_path)
+    first = export_case_bundle(
+        database_path,
+        bundle_dir,
+        journal_path=journal_path,
+        trace_id="trace_01",
+    )
+    original_manifest = first.manifest_path.read_text(encoding="utf-8")
+
+    with pytest.raises(ProjectionQueryError, match="case bundle output already exists"):
+        export_case_bundle(
+            database_path,
+            bundle_dir,
+            journal_path=journal_path,
+            trace_id="trace_01",
+        )
+
+    assert first.manifest_path.read_text(encoding="utf-8") == original_manifest
 
 
 def test_projection_cli_rebuild_timeline_and_incident_export(tmp_path: Path) -> None:

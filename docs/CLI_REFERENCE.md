@@ -67,8 +67,9 @@ uv run actionlineage --help
 - `actionlineage projection export-graph projection.sqlite --journal-path evidence.jsonl --trace-id trace_123`:
   write dependency-free investigation graph JSON to stdout.
 - `actionlineage projection export-case projection.sqlite ./case --journal-path evidence.jsonl --trace-id trace_123`:
-  write JSON, NDJSON, and Markdown case artifacts. Existing bundle files are
-  not overwritten.
+  atomically publish a private case directory containing JSON, NDJSON,
+  Markdown, and `manifest.json` artifacts. The output directory must not already
+  exist.
 - `actionlineage projection export-console projection.sqlite console.html --journal-path evidence.jsonl --trace-id trace_123`:
   render the static investigation console.
 - `actionlineage projection export-console projection.sqlite console.html --journal-path evidence.jsonl --run-id run_123`:
