@@ -47,6 +47,7 @@ and are not migrated in place.
 
 ## Verification
 
-Tests cover token authentication, JWT/OIDC role and capability claim mapping,
-invalid-signature handling, capability checks, local health/degraded state, and
-the optional app factory.
+Tests cover token authentication, immutable static token maps, JWT/OIDC role
+and capability claim mapping, capability-only credentials that cannot satisfy
+role checks, invalid-signature handling, capability checks, local
+health/degraded state, tenant role decisions, and the optional app factory.

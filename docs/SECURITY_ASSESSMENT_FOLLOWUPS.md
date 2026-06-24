@@ -49,6 +49,10 @@ and does not expand ActionLineage into a generic tracing platform.
   staging-directory sync, and publish failures, and preservation of an existing
   valid bundle. Case export now stages privately and publishes with an atomic
   directory rename instead of writing loose files directly into the final path.
+- **Service role/capability boundary**: local regression tests cover immutable
+  static token mappings, JWT capability-only credentials, and tenant decisions
+  that reject capability-only principals. Capability grants authorize explicit
+  capability checks but no longer satisfy global or tenant role checks.
 
 ## Implemented before this slice
 

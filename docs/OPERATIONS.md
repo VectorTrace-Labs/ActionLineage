@@ -79,11 +79,12 @@ Service endpoints:
 - `POST /detections/evaluate`
 - `POST /export-case`
 
-`/ingest` requires `write`; capability-only principals must grant both
-`events:write` and `projections:rebuild` in the current alpha service model.
-Timeline, events, contract validation, and detection evaluation require `read`;
-case export requires `export`. Journal-dependent service endpoints fail closed
-with HTTP 503 when the internal journal does not verify.
+`/ingest` requires the `write` capability; capability-only principals must
+grant both `events:write` and `projections:rebuild` in the current alpha service
+model. Timeline, events, contract validation, and detection evaluation require
+`read` capabilities; case export requires `cases:export`. Journal-dependent
+service endpoints fail closed with HTTP 503 when the internal journal does not
+verify.
 
 Service-created events include server-controlled `payload.ingested_by`
 provenance. It records the authenticated service principal, role set,
@@ -123,6 +124,9 @@ the runtime uses `/data/exports`. The `/export-case` endpoint accepts a relative
 for optional service deployments. A principal must have both the global service
 role and a tenant binding that grants the requested role. Missing tenants,
 missing bindings, and insufficient tenant roles are explicit denial decisions.
+Explicit capability grants do not satisfy global or tenant role checks; use
+capability checks for endpoint permissions and tenant role checks for
+tenant-scoped authorization decisions.
 
 These helpers do not create a hosted SaaS control plane, provision tenants, or
 move journals into a shared database. Deployment code remains responsible for

@@ -5,11 +5,10 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 from actionlineage.service.auth import (
-    ROLE_CAPABILITIES,
     ServiceAuthError,
-    ServiceCapability,
     ServicePrincipal,
     ServiceRole,
+    _roles_grant,
 )
 
 
@@ -39,13 +38,13 @@ class TenantRoleBinding:
     principal_id: str
     roles: frozenset[ServiceRole]
 
+    def __post_init__(self) -> None:
+        object.__setattr__(self, "roles", frozenset(self.roles))
+
     def has_role(self, required: ServiceRole) -> bool:
         """Return true when the binding grants at least the requested role."""
 
-        capabilities: set[ServiceCapability] = set()
-        for role in self.roles:
-            capabilities.update(ROLE_CAPABILITIES[role])
-        return ROLE_CAPABILITIES[required].issubset(capabilities)
+        return _roles_grant(self.roles, required)
 
     def as_dict(self) -> dict[str, object]:
         """Return a JSON-compatible binding without credentials."""

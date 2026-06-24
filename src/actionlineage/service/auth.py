@@ -3,9 +3,10 @@
 from __future__ import annotations
 
 import importlib
-from collections.abc import Callable
+from collections.abc import Callable, Iterable, Mapping
 from dataclasses import dataclass
 from enum import StrEnum
+from types import MappingProxyType
 from typing import Any, Protocol, cast
 
 
@@ -32,24 +33,26 @@ class ServiceCapability(StrEnum):
     TENANTS_MANAGE = "tenants:manage"
 
 
-ROLE_CAPABILITIES: dict[ServiceRole, frozenset[ServiceCapability]] = {
-    ServiceRole.READ: frozenset(
-        {
-            ServiceCapability.EVENTS_READ,
-            ServiceCapability.JOURNAL_VERIFY,
-            ServiceCapability.CASES_READ,
-        }
-    ),
-    ServiceRole.WRITE: frozenset(
-        {
-            ServiceCapability.EVENTS_WRITE,
-            ServiceCapability.JOURNAL_VERIFY,
-            ServiceCapability.PROJECTIONS_REBUILD,
-        }
-    ),
-    ServiceRole.EXPORT: frozenset({ServiceCapability.CASES_EXPORT}),
-    ServiceRole.ADMIN: frozenset(ServiceCapability),
-}
+ROLE_CAPABILITIES: Mapping[ServiceRole, frozenset[ServiceCapability]] = MappingProxyType(
+    {
+        ServiceRole.READ: frozenset(
+            {
+                ServiceCapability.EVENTS_READ,
+                ServiceCapability.JOURNAL_VERIFY,
+                ServiceCapability.CASES_READ,
+            }
+        ),
+        ServiceRole.WRITE: frozenset(
+            {
+                ServiceCapability.EVENTS_WRITE,
+                ServiceCapability.JOURNAL_VERIFY,
+                ServiceCapability.PROJECTIONS_REBUILD,
+            }
+        ),
+        ServiceRole.EXPORT: frozenset({ServiceCapability.CASES_EXPORT}),
+        ServiceRole.ADMIN: frozenset(ServiceCapability),
+    }
+)
 
 
 @dataclass(frozen=True, slots=True)
@@ -60,8 +63,14 @@ class ServicePrincipal:
     roles: frozenset[ServiceRole]
     capabilities: frozenset[ServiceCapability] = frozenset()
 
+    def __post_init__(self) -> None:
+        object.__setattr__(self, "roles", frozenset(self.roles))
+        object.__setattr__(self, "capabilities", frozenset(self.capabilities))
+
     def has_role(self, required: ServiceRole) -> bool:
-        return ROLE_CAPABILITIES[required].issubset(self.effective_capabilities)
+        """Return true when assigned role bundles grant the required role."""
+
+        return _roles_grant(self.roles, required)
 
     @property
     def effective_capabilities(self) -> frozenset[ServiceCapability]:
@@ -90,7 +99,10 @@ class JwtLibraryUnavailable(ServiceAuthError):
 class StaticTokenAuthenticator:
     """Deterministic token authenticator for local service deployments."""
 
-    tokens: dict[str, ServicePrincipal]
+    tokens: Mapping[str, ServicePrincipal]
+
+    def __post_init__(self) -> None:
+        object.__setattr__(self, "tokens", MappingProxyType(dict(self.tokens)))
 
     def authenticate(self, token: str | None) -> ServicePrincipal:
         if token is None or token not in self.tokens:
@@ -244,15 +256,19 @@ def _principal_from_claims(
     principal_id = claims.get(principal_claim)
     if not isinstance(principal_id, str) or not principal_id:
         raise ServiceAuthError("invalid service JWT principal")
+    capabilities = frozenset(_capabilities_from_claim(claims.get(capabilities_claim)))
+    roles = frozenset(_roles_from_claim(claims.get(roles_claim), required=not capabilities))
     return ServicePrincipal(
         principal_id=principal_id,
-        roles=frozenset(_roles_from_claim(claims.get(roles_claim))),
-        capabilities=frozenset(_capabilities_from_claim(claims.get(capabilities_claim))),
+        roles=roles,
+        capabilities=capabilities,
     )
 
 
-def _roles_from_claim(value: Any) -> tuple[ServiceRole, ...]:
-    if isinstance(value, str):
+def _roles_from_claim(value: Any, *, required: bool) -> tuple[ServiceRole, ...]:
+    if value is None:
+        raw_roles: tuple[str, ...] = ()
+    elif isinstance(value, str):
         raw_roles = tuple(part for part in value.split() if part)
     elif isinstance(value, list):
         if not all(isinstance(role, str) for role in value):
@@ -266,7 +282,7 @@ def _roles_from_claim(value: Any) -> tuple[ServiceRole, ...]:
             roles.append(ServiceRole(raw_role))
         except ValueError as exc:
             raise ServiceAuthError("invalid service JWT roles") from exc
-    if not roles:
+    if required and not roles:
         raise ServiceAuthError("invalid service JWT roles")
     return tuple(roles)
 
@@ -289,3 +305,10 @@ def _capabilities_from_claim(value: Any) -> tuple[ServiceCapability, ...]:
         except ValueError as exc:
             raise ServiceAuthError("invalid service JWT capabilities") from exc
     return tuple(capabilities)
+
+
+def _roles_grant(roles: Iterable[ServiceRole], required: ServiceRole) -> bool:
+    capabilities: set[ServiceCapability] = set()
+    for role in roles:
+        capabilities.update(ROLE_CAPABILITIES[role])
+    return ROLE_CAPABILITIES[required].issubset(capabilities)

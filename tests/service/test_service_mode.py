@@ -55,6 +55,26 @@ def test_static_token_authenticator_and_rbac() -> None:
         require_role(principal, ServiceRole.ADMIN)
 
 
+def test_static_token_authenticator_copies_token_mapping() -> None:
+    principal = ServicePrincipal(
+        principal_id="analyst",
+        roles=frozenset({ServiceRole.READ}),
+    )
+    tokens = {"token": principal}
+    authenticator = StaticTokenAuthenticator(tokens=tokens)
+
+    tokens["admin"] = ServicePrincipal(
+        principal_id="admin",
+        roles=frozenset({ServiceRole.ADMIN}),
+    )
+
+    assert authenticator.authenticate("token") == principal
+    with pytest.raises(ServiceAuthError):
+        authenticator.authenticate("admin")
+    with pytest.raises(TypeError):
+        authenticator.tokens["other"] = principal  # type: ignore[index]
+
+
 def test_role_bundles_do_not_use_ordinal_privilege_inheritance() -> None:
     reader = ServicePrincipal(principal_id="reader", roles=frozenset({ServiceRole.READ}))
     writer = ServicePrincipal(principal_id="writer", roles=frozenset({ServiceRole.WRITE}))
@@ -90,10 +110,40 @@ def test_role_bundles_do_not_use_ordinal_privilege_inheritance() -> None:
         require_capability(tenant_manager, ServiceCapability.ADMIN_CONFIGURE)
 
 
+def test_explicit_capabilities_do_not_satisfy_role_checks() -> None:
+    read_capability_only = ServicePrincipal(
+        principal_id="capability-reader",
+        roles=frozenset(),
+        capabilities=frozenset(
+            {
+                ServiceCapability.EVENTS_READ,
+                ServiceCapability.JOURNAL_VERIFY,
+                ServiceCapability.CASES_READ,
+            }
+        ),
+    )
+
+    assert read_capability_only.has_capability(ServiceCapability.EVENTS_READ)
+    assert not read_capability_only.has_role(ServiceRole.READ)
+    with pytest.raises(ServiceAuthError, match="service role required: read"):
+        require_role(read_capability_only, ServiceRole.READ)
+
+
 def test_tenant_registry_enforces_tenant_scoped_roles() -> None:
     principal = ServicePrincipal(
         principal_id="analyst",
         roles=frozenset({ServiceRole.READ, ServiceRole.WRITE}),
+    )
+    capability_only_principal = ServicePrincipal(
+        principal_id="capability-analyst",
+        roles=frozenset(),
+        capabilities=frozenset(
+            {
+                ServiceCapability.EVENTS_READ,
+                ServiceCapability.JOURNAL_VERIFY,
+                ServiceCapability.CASES_READ,
+            }
+        ),
     )
     registry = TenantRegistry(
         tenants=(
@@ -104,6 +154,11 @@ def test_tenant_registry_enforces_tenant_scoped_roles() -> None:
             TenantRoleBinding(
                 tenant_id="tenant-a",
                 principal_id="analyst",
+                roles=frozenset({ServiceRole.READ}),
+            ),
+            TenantRoleBinding(
+                tenant_id="tenant-a",
+                principal_id="capability-analyst",
                 roles=frozenset({ServiceRole.READ}),
             ),
         ),
@@ -124,12 +179,19 @@ def test_tenant_registry_enforces_tenant_scoped_roles() -> None:
         tenant_id="tenant-b",
         required_role=ServiceRole.READ,
     )
+    capability_only_decision = registry.decide(
+        capability_only_principal,
+        tenant_id="tenant-a",
+        required_role=ServiceRole.READ,
+    )
 
     assert read_decision.allowed is True
     assert write_decision.allowed is False
     assert write_decision.reason == "tenant_binding_missing"
     assert other_tenant_decision.allowed is False
     assert other_tenant_decision.reason == "tenant_binding_missing"
+    assert capability_only_decision.allowed is False
+    assert capability_only_decision.reason == "principal_role_missing"
     assert registry.as_dict()["bindings"][0]["roles"] == ["read"]
 
 
@@ -193,6 +255,32 @@ def test_jwt_authenticator_maps_claims_to_principal() -> None:
     assert principal.has_role(ServiceRole.EXPORT)
 
 
+def test_jwt_capability_only_principal_cannot_satisfy_role_checks() -> None:
+    import jwt
+
+    token = jwt.encode(
+        {
+            "sub": "jwt-capability-writer",
+            "capabilities": ["events:write", "projections:rebuild"],
+        },
+        JWT_HS256_KEY,
+        algorithm="HS256",
+    )
+    authenticator = JwtAuthenticator(
+        verification_key=JWT_HS256_KEY,
+        algorithms=("HS256",),
+    )
+
+    principal = authenticator.authenticate(token)
+
+    assert principal.roles == frozenset()
+    assert principal.has_capability(ServiceCapability.EVENTS_WRITE)
+    assert principal.has_capability(ServiceCapability.PROJECTIONS_REBUILD)
+    assert not principal.has_role(ServiceRole.WRITE)
+    with pytest.raises(ServiceAuthError, match="service role required: write"):
+        require_role(principal, ServiceRole.WRITE)
+
+
 def test_jwt_authenticator_rejects_malformed_roles_and_capabilities() -> None:
     import jwt
 
@@ -219,6 +307,15 @@ def test_jwt_authenticator_rejects_malformed_roles_and_capabilities() -> None:
         authenticator.authenticate(bad_role_token)
     with pytest.raises(ServiceAuthError, match="invalid service JWT"):
         authenticator.authenticate(bad_capability_token)
+
+    missing_authz_token = jwt.encode(
+        {"sub": "jwt-empty"},
+        JWT_HS256_KEY,
+        algorithm="HS256",
+    )
+
+    with pytest.raises(ServiceAuthError, match="invalid service JWT"):
+        authenticator.authenticate(missing_authz_token)
 
 
 def test_jwt_authenticator_rejects_invalid_signature_without_leaking_claims() -> None:
