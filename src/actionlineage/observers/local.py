@@ -5,6 +5,7 @@ from __future__ import annotations
 import re
 import sqlite3
 from contextlib import closing
+from copy import deepcopy
 from dataclasses import dataclass, field
 from enum import StrEnum
 from pathlib import Path
@@ -62,7 +63,7 @@ class ObservationOutcome:
                 "resource_type": self.resource_type.value,
                 "identifier": self.resource_identifier,
             },
-            "observed_state": self.observed_state,
+            "observed_state": deepcopy(self.observed_state),
             "verification_status": self.verification_status.value,
             "limitations": list(self.limitations),
             "trust": self.trust.value,

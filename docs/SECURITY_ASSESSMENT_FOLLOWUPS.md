@@ -25,6 +25,11 @@ and does not expand ActionLineage into a generic tracing platform.
 - **Read-only projection verification and health**: local regression tests cover
   missing and incomplete projection databases and assert verification does not
   create files, tables, metadata, or migrations on read paths.
+- **Public result defensive copies**: local regression tests cover mutable
+  nested observer state, external sensor records, extension-pack metadata, pack
+  compatibility metadata, and service-health details. These public result
+  boundaries now return defensive copies so caller mutation of one result object
+  cannot change subsequent renders from the same trusted object.
 
 ## Implemented before this slice
 

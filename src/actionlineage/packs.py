@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+from copy import deepcopy
 from dataclasses import dataclass
 from pathlib import Path, PurePosixPath
 
@@ -44,7 +45,7 @@ class PackArtifact:
             "sha256": self.sha256,
             "media_type": self.media_type,
             "entrypoint": self.entrypoint,
-            "metadata": self.metadata or {},
+            "metadata": deepcopy(self.metadata) if self.metadata is not None else {},
         }
 
 
@@ -75,7 +76,7 @@ class ExtensionPackManifest:
             "description": self.description,
             "homepage": self.homepage,
             "tags": list(self.tags),
-            "compatibility": self.compatibility or {},
+            "compatibility": deepcopy(self.compatibility) if self.compatibility is not None else {},
             "artifacts": [artifact.as_dict() for artifact in self.artifacts],
         }
 

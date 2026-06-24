@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from copy import deepcopy
 from dataclasses import dataclass
 from enum import StrEnum
 from pathlib import Path
@@ -30,7 +31,11 @@ class HealthIssue:
     details: dict[str, object] | None = None
 
     def as_dict(self) -> dict[str, object]:
-        return {"code": self.code, "message": self.message, "details": self.details or {}}
+        return {
+            "code": self.code,
+            "message": self.message,
+            "details": deepcopy(self.details) if self.details is not None else {},
+        }
 
 
 @dataclass(frozen=True, slots=True)

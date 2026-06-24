@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from copy import deepcopy
 from dataclasses import dataclass, field
 from enum import StrEnum
 from typing import cast
@@ -64,7 +65,7 @@ class ExternalSensorObservationRecord:
             "resource_type": self.resource_type.value,
             "resource_identifier": self.resource_identifier,
             "outcome": self.outcome.value,
-            "observed_state": self.observed_state,
+            "observed_state": deepcopy(self.observed_state),
             "limitations": list(self.limitations),
         }
 

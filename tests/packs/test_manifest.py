@@ -76,6 +76,43 @@ def test_pack_manifest_validates_local_artifacts_with_checksums(tmp_path: Path) 
     assert pack_artifact_index(manifest)["detection_rule"][0]["name"] == "empty-sequence-pack"
 
 
+def test_pack_as_dict_returns_defensive_metadata_copies() -> None:
+    artifact = PackArtifact(
+        kind="detection_rule",
+        name="rule",
+        path="rules/rule.json",
+        metadata={"nested": {"status": "original"}},
+    )
+    manifest = ExtensionPackManifest(
+        name="demo-pack",
+        version="1.0.0",
+        publisher="VectorTrace Labs",
+        license="Apache-2.0",
+        artifacts=(artifact,),
+        compatibility={"nested": {"runtime": "original"}},
+    )
+    artifact_data = artifact.as_dict()
+    manifest_data = manifest.as_dict()
+
+    artifact_metadata = artifact_data["metadata"]
+    manifest_compatibility = manifest_data["compatibility"]
+    assert isinstance(artifact_metadata, dict)
+    assert isinstance(manifest_compatibility, dict)
+    artifact_nested = artifact_metadata["nested"]
+    manifest_nested = manifest_compatibility["nested"]
+    assert isinstance(artifact_nested, dict)
+    assert isinstance(manifest_nested, dict)
+    artifact_nested["status"] = "tampered"
+    manifest_nested["runtime"] = "tampered"
+
+    repeated_artifact_metadata = artifact.as_dict()["metadata"]
+    repeated_manifest_compatibility = manifest.as_dict()["compatibility"]
+    assert isinstance(repeated_artifact_metadata, dict)
+    assert isinstance(repeated_manifest_compatibility, dict)
+    assert repeated_artifact_metadata["nested"]["status"] == "original"
+    assert repeated_manifest_compatibility["nested"]["runtime"] == "original"
+
+
 def test_pack_manifest_rejects_path_escape_and_bad_checksum(tmp_path: Path) -> None:
     rule_path = tmp_path / "rules" / "sequence.json"
     rule_path.parent.mkdir()

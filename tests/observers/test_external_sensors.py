@@ -68,6 +68,28 @@ def test_external_sensor_unavailable_remains_unverified() -> None:
     assert "collector process unavailable" in outcome.limitations
 
 
+def test_external_sensor_record_as_dict_returns_defensive_observed_state_copy() -> None:
+    record = ExternalSensorObservationRecord(
+        resource_type=ResourceType.FILE,
+        resource_identifier="/tmp/demo.txt",
+        outcome=ObserverOutcome.OBSERVED,
+        observed_state={"nested": {"status": "original"}},
+    )
+    data = record.as_dict()
+    observed_state = data["observed_state"]
+    assert isinstance(observed_state, dict)
+    nested = observed_state["nested"]
+    assert isinstance(nested, dict)
+
+    nested["status"] = "tampered"
+
+    repeated_state = record.as_dict()["observed_state"]
+    assert isinstance(repeated_state, dict)
+    repeated_nested = repeated_state["nested"]
+    assert isinstance(repeated_nested, dict)
+    assert repeated_nested["status"] == "original"
+
+
 def test_external_sensor_records_parse_from_json_compatible_dicts() -> None:
     declaration = external_sensor_declaration_from_dict(
         {

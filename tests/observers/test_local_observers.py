@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import sqlite3
 from contextlib import closing
+from pathlib import Path
 
 from actionlineage.domain import (
     CorroborationType,
@@ -41,6 +42,19 @@ def test_filesystem_observer_reports_observed_and_verified(tmp_path) -> None:
     assert decision.event_type == EventType.SIDE_EFFECT_VERIFIED
     assert decision.evidence_link.verification_status == VerificationStatus.VERIFIED
     assert decision.evidence_link.corroboration_type == CorroborationType.INDEPENDENT_OBSERVER
+
+
+def test_observation_payload_returns_defensive_observed_state_copy() -> None:
+    observation = FilesystemObserver().observe_file_state(Path("/definitely/not/present"))
+    payload = observation.as_payload()
+    observed_state = payload["observed_state"]
+    assert isinstance(observed_state, dict)
+
+    observed_state["path"] = "tampered"
+
+    repeated_state = observation.as_payload()["observed_state"]
+    assert isinstance(repeated_state, dict)
+    assert repeated_state["path"] != "tampered"
 
 
 def test_filesystem_absence_is_unverified_not_proof_of_absence(tmp_path) -> None:

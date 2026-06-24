@@ -12,6 +12,7 @@ from actionlineage.contracts import ContractEventRequirement, LineageContract, c
 from actionlineage.demo import run_demo
 from actionlineage.journal import LocalJournal
 from actionlineage.service import (
+    HealthIssue,
     JwtAuthenticator,
     OidcJwtAuthenticator,
     ServiceAuthError,
@@ -277,6 +278,27 @@ def test_local_health_reports_ok_and_projection_missing(tmp_path: Path) -> None:
     assert ok.ok
     assert not degraded.ok
     assert degraded.issues[0].code == "projection_missing"
+
+
+def test_health_issue_as_dict_returns_defensive_details_copy() -> None:
+    issue = HealthIssue(
+        code="demo",
+        message="demo issue",
+        details={"nested": {"status": "original"}},
+    )
+    data = issue.as_dict()
+    details = data["details"]
+    assert isinstance(details, dict)
+    nested = details["nested"]
+    assert isinstance(nested, dict)
+
+    nested["status"] = "tampered"
+
+    repeated_details = issue.as_dict()["details"]
+    assert isinstance(repeated_details, dict)
+    repeated_nested = repeated_details["nested"]
+    assert isinstance(repeated_nested, dict)
+    assert repeated_nested["status"] == "original"
 
 
 def test_service_health_split_and_corrupt_journal_readiness(tmp_path: Path) -> None:
