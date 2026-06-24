@@ -53,6 +53,10 @@ Use two layers:
 - **Query projection**: a rebuildable SQLite index for timelines and filters.
 
 This keeps the demo local and makes integrity verification independent of the query database. The projection must be disposable and rebuildable from the journal.
+ADR-0011 applies the same boundary to future append indexes: they may be
+rebuildable caches for idempotency or replay speed. Append indexes are not
+canonical evidence or trusted evidence, and must be bound back to verified
+journal state before trusted use.
 
 ### 3. Observer and verifier adapters
 

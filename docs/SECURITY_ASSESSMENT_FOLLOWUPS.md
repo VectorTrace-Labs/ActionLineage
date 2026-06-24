@@ -70,6 +70,10 @@ and does not expand ActionLineage into a generic tracing platform.
   rebuild. A restarted service reports `projection_stale`, rejects stale
   timeline reads, and repairs the projection on idempotent retry without adding
   a duplicate journal record.
+- **Append checkpoint/index scope**: ADR-0011 keeps append indexes as future
+  rebuildable caches rather than trusted evidence, and requires authenticated
+  checkpoints to use anchor-style sidecars unless a future ADR changes the
+  boundary.
 - **Capture digest scope**: local regression and property tests cover scoped
   capture digests for truncated text and byte values. Capture metadata now
   records `actionlineage.capture.v1/redaction-boundary` so bounded-content
@@ -89,9 +93,9 @@ and does not expand ActionLineage into a generic tracing platform.
 
 - **Journal scalability and append integrity**: partially confirmed. Appends
   verify the existing journal before write, preserving local integrity but
-  requiring performance benchmarks before segmented checkpoints or append-index
-  changes. Crash-consistency fault injection should be expanded before changing
-  durability behavior.
+  requiring performance benchmarks before segmented checkpoint or append-index
+  implementation. ADR-0011 requires future append indexes to remain rebuildable
+  caches bound to verified journal state rather than trusted evidence.
 - **Observer independence**: partially confirmed. Observer records carry trust
   labels and limitations, but independence is not yet the result of a structured
   attestation policy. This requires an ADR and versioned model work.
@@ -131,10 +135,11 @@ and does not expand ActionLineage into a generic tracing platform.
   duplicate, conflict, partial-batch, projection-stale, and duplicate retry
   recovery tests, plus later-append storage failure handling after a committed
   prefix, retry completion for the remaining suffix, and subprocess crash
-  recovery after append-before-projection. Remaining work includes authenticated
-  append indexes or checkpoints for stronger replay recovery and a deliberate
-  decision if future APIs need all-or-nothing transactional batch semantics
-  instead of explicit partial success.
+  recovery after append-before-projection. ADR-0011 preserves explicit partial
+  success and defers any append index until benchmark evidence justifies a
+  rebuildable cache. Remaining work includes a deliberate decision if future
+  APIs need all-or-nothing transactional batch semantics instead of explicit
+  partial success.
 - **Tenant isolation**: partially confirmed. Tenant-aware authorization
   primitives exist, but end-to-end tenant isolation across storage, projections,
   exports, logs, caches, and anchors is not demonstrated.
@@ -159,7 +164,7 @@ and does not expand ActionLineage into a generic tracing platform.
    before proposing segmented journals or checkpoint indexes.
 3. Draft ADRs for observer attestation policy, canonicalization v1, causal edge
    evolution, and external checkpoint trust roots.
-4. Decide authenticated append checkpoint/index scope before adding durability
-   behavior beyond local hash-chain recovery.
+4. Benchmark append verification and idempotency scans before implementing any
+   ADR-0011 append-index cache.
 5. Audit attachment-count limits and redaction digest behavior across journal,
    projection, export, logs, exceptions, and test snapshots.

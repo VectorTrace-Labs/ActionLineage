@@ -201,6 +201,20 @@ enforcement; those controls belong to the deployment environment.
 local implementation uses one segment per journal; future archive tooling can
 create multiple segment manifests without changing event bytes.
 
+## Append indexes and checkpoints
+
+ADR-0011 keeps append indexes out of the trusted public-alpha service path. A
+future append index may speed up idempotency lookup or replay planning, but it
+must be treated as a rebuildable cache bound back to a verified journal source
+identity, byte digest, record count, and terminal hash. A stale or mismatched
+index must be ignored or rebuilt rather than trusted.
+
+Authenticated append checkpoints should use the existing anchor, optional HMAC,
+anchor-log, Git statement, archive manifest, or external-attestation sidecar
+model unless a future ADR changes that boundary. Local checkpoints do not make
+the journal resistant to an attacker who can rewrite every local artifact and
+trusted value.
+
 ## Recovery
 
 Use verified-prefix export when a journal fails verification:

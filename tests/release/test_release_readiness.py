@@ -120,6 +120,25 @@ def test_release_docs_are_present() -> None:
     assert missing == []
 
 
+def test_append_checkpoint_scope_decision_is_tracked() -> None:
+    adr = (PROJECT_ROOT / "docs/ADR/0011-append-checkpoint-and-index-scope.md").read_text(
+        encoding="utf-8"
+    )
+    architecture = (PROJECT_ROOT / "ARCHITECTURE.md").read_text(encoding="utf-8")
+    journal_integrity = (PROJECT_ROOT / "docs/JOURNAL_INTEGRITY.md").read_text(encoding="utf-8")
+    scorecard = (PROJECT_ROOT / "docs/QUALITY_SCORECARD.md").read_text(encoding="utf-8")
+    followups = (PROJECT_ROOT / "docs/SECURITY_ASSESSMENT_FOLLOWUPS.md").read_text(encoding="utf-8")
+
+    assert "- Status: Accepted" in adr
+    assert "Do not add a trusted append index" in adr
+    assert "rebuildable cache" in adr
+    assert "canonical evidence or trusted evidence" in architecture
+    assert "A stale or mismatched" in journal_integrity
+    assert "index must be ignored or rebuilt" in journal_integrity
+    assert "future append indexes are rebuildable caches" in scorecard
+    assert "Append checkpoint/index scope" in followups
+
+
 def test_local_release_planning_docs_are_ignored_and_not_linked_publicly() -> None:
     gitignore = (PROJECT_ROOT / ".gitignore").read_text(encoding="utf-8")
     ignore_patterns = tuple(
