@@ -65,7 +65,7 @@ Default local bounds:
 | JSON object members | 4096 members per object | `validate_json_value`, `normalize_json`, `RedactionPolicy.max_object_members` |
 | JSON array items | 4096 items per array | `validate_json_value`, `normalize_json`, `RedactionPolicy.max_array_length` |
 | Detection regex | bounded by rule parser and tests | `SequenceRule` validation |
-| Journal append | one canonical event per line | `LocalJournal.append` |
+| Journal append | one byte-canonical event plus `\n` per line | `LocalJournal.append`, `verify_journal` |
 | Projection rebuild | verified journals only | `rebuild_projection` |
 | Replay mutation | deterministic fixed seed | `Lineage Lab` replay API |
 | Static console context file | 64 KiB | `load_console_context` |

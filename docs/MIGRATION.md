@@ -24,6 +24,13 @@ Migration steps:
 databases are disposable and may be rebuilt. If a future envelope migration is
 required, it must include an ADR, fixtures, and a reader compatibility test.
 
+Journal verification now enforces the existing newline-delimited canonical
+record contract byte-for-byte. Accepted alpha golden journals remain readable,
+but hand-edited, pretty-printed, CRLF-converted, duplicate-key, or otherwise
+non-canonical event lines are not trusted as verified journal records. Recreate
+or rebuild such files from canonical writer output rather than treating semantic
+JSON equivalence as sufficient evidence.
+
 ## Service Provenance And Health
 
 Events ingested through service mode in `0.1.0a6` may include

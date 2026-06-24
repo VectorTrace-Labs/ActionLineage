@@ -12,6 +12,14 @@ Verification recomputes each event hash over canonical event bytes with
 `event_hash` set to `null`, then checks that each record links to the prior
 record hash.
 
+Journal verification is byte-canonical. Every stored record must be exactly the
+deterministic serialized event bytes followed by one `\n`. Formatting-only
+rewrites such as reordered keys, added whitespace, `\r\n` line endings, trailing
+bytes, or multiple JSON values on one line fail verification as
+`noncanonical_record` or `parse_error`. Duplicate JSON object keys, invalid
+UTF-8, and non-finite numeric tokens are rejected during parsing before a record
+can become verified evidence.
+
 This is tamper-evident relative to the journal bytes and any trusted anchor. It
 is not tamper-proof, forensically complete, or resistant to an attacker who can
 rewrite both the journal and all trusted anchors.

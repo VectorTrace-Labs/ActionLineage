@@ -35,7 +35,7 @@ def event_to_dict(event: EventEnvelope) -> JsonObject:
 def event_from_json(data: str | bytes) -> EventEnvelope:
     """Validate a serialized event against the typed event model."""
 
-    return EventEnvelope.model_validate_json(data)
+    return EventEnvelope.model_validate(_strict_json_loads(data))
 
 
 def parse_event(data: str | bytes) -> EventEnvelope:
@@ -93,6 +93,29 @@ def deterministic_json_bytes(value: JsonObject) -> bytes:
         sort_keys=True,
         allow_nan=False,
     ).encode("utf-8")
+
+
+def _strict_json_loads(data: str | bytes) -> Any:
+    return json.loads(
+        data,
+        object_pairs_hook=_reject_duplicate_object_keys,
+        parse_constant=_reject_nonfinite_json_token,
+    )
+
+
+def _reject_duplicate_object_keys(pairs: list[tuple[str, Any]]) -> dict[str, Any]:
+    seen: set[str] = set()
+    decoded: dict[str, Any] = {}
+    for key, value in pairs:
+        if key in seen:
+            raise ValueError("serialized event JSON contains duplicate object keys")
+        seen.add(key)
+        decoded[key] = value
+    return decoded
+
+
+def _reject_nonfinite_json_token(token: str) -> None:
+    raise ValueError("serialized event JSON contains a non-finite number")
 
 
 def normalize_json(

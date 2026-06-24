@@ -217,7 +217,11 @@ envelope compatibility.
 
 ## Local journal integrity
 
-The local journal stores newline-delimited canonical event JSON. Each appended
+The local journal stores newline-delimited canonical event JSON. Verification
+requires each record to exactly match the deterministic serialized event bytes
+plus one `\n`; duplicate keys, non-finite numeric tokens, CRLF conversion,
+added whitespace, reordered keys, trailing bytes, and multiple JSON values on a
+line fail before that record is accepted into a verified snapshot. Each appended
 event records the previous persisted event hash in
 `integrity.previous_event_hash` and its own SHA-256 digest in
 `integrity.event_hash`. A record is considered complete only after its newline

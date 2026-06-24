@@ -20,8 +20,9 @@ supported, local-proof, preview, planned, and external-validation labels.
 
 - The local journal is canonical local evidence under documented host and file
   system trust assumptions.
-- Hash-chain verification detects supported journal mutations when the verifier
-  has the relevant records and anchors.
+- Hash-chain verification rejects supported journal mutations and
+  byte-noncanonical record rewrites when the verifier has the relevant records
+  and anchors.
 - Projections, consoles, and exported bundles are derived artifacts and should
   be rebuilt from supported journals when in doubt.
 - Hardware-backed signing, remote attestation, and managed evidence storage are

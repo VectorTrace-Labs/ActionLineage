@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 import json
 import os
 from concurrent.futures import ThreadPoolExecutor
@@ -55,6 +56,10 @@ def journal_lines(path: Path) -> list[bytes]:
     return path.read_bytes().splitlines()
 
 
+def journal_raw_lines(path: Path) -> list[bytes]:
+    return path.read_bytes().splitlines(keepends=True)
+
+
 def replace_journal_lines(path: Path, lines: list[bytes]) -> None:
     path.write_bytes(b"\n".join(lines) + b"\n")
 
@@ -93,6 +98,15 @@ def test_valid_journal_verifies_successfully(tmp_path: Path) -> None:
     assert events[0].integrity.event_hash is not None
     assert events[1].integrity.previous_event_hash == events[0].integrity.event_hash
     assert events[2].integrity.previous_event_hash == events[1].integrity.event_hash
+
+
+def test_valid_journal_records_are_exact_canonical_lines(tmp_path: Path) -> None:
+    path = tmp_path / "events.jsonl"
+    journal = write_valid_journal(path)
+    snapshot = journal.verified_snapshot()
+
+    assert snapshot.journal_sha256 == f"sha256:{hashlib.sha256(path.read_bytes()).hexdigest()}"
+    assert journal_raw_lines(path) == [serialize_event(event) + b"\n" for event in snapshot.events]
 
 
 def test_append_creates_private_storage_under_default_umask(tmp_path: Path) -> None:
@@ -182,6 +196,103 @@ def test_mutating_one_byte_fails_at_the_affected_record(tmp_path: Path) -> None:
     replace_journal_lines(path, lines)
 
     assert_failed_at("event_hash_mismatch", path, record_number=2)
+
+
+@pytest.mark.parametrize(
+    ("original", "replacement"),
+    (
+        (b'"event_id":"evt_0"', b'"event_id":"evt_0","event_id":"evt_0"'),
+        (b'"sequence":0', b'"sequence":0,"sequence":0'),
+        (b'"trust":"trusted"', b'"trust":"trusted","trust":"trusted"'),
+        (b'"trace_id":"trace_01"', b'"trace_id":"trace_01","trace_id":"trace_01"'),
+        (b'"canonicalization":', b'"canonicalization":"duplicate","canonicalization":'),
+        (b'"label":"root-0"', b'"label":"root-0","label":"root-0"'),
+        (
+            b'"principal_id":"agent_demo"',
+            b'"principal_id":"agent_demo","principal_id":"agent_demo"',
+        ),
+        (b'"component":"unit-test"', b'"component":"unit-test","component":"unit-test"'),
+    ),
+)
+def test_duplicate_json_keys_fail_journal_parsing(
+    tmp_path: Path,
+    original: bytes,
+    replacement: bytes,
+) -> None:
+    path = tmp_path / "events.jsonl"
+    write_valid_journal(path)
+    lines = journal_lines(path)
+    assert original in lines[0]
+    lines[0] = lines[0].replace(original, replacement, 1)
+    replace_journal_lines(path, lines)
+
+    assert_failed_at("parse_error", path, record_number=1)
+
+
+@pytest.mark.parametrize(
+    "mutate",
+    (
+        lambda line: _move_spec_version_to_front(line),
+        lambda line: line.replace(b'":{"', b'": {"', 1),
+    ),
+)
+def test_noncanonical_json_format_fails_even_when_semantics_match(
+    tmp_path: Path,
+    mutate,
+) -> None:
+    path = tmp_path / "events.jsonl"
+    write_valid_journal(path)
+    lines = journal_raw_lines(path)
+    lines[0] = mutate(lines[0].removesuffix(b"\n")) + b"\n"
+    path.write_bytes(b"".join(lines))
+
+    result = verify_journal(path)
+
+    assert not result.ok
+    assert result.records_verified == 0
+    assert result.issues[0].record_number == 1
+    assert result.issues[0].code == "noncanonical_record"
+    assert result.issues[0].message == (
+        "journal record bytes do not exactly match canonical serialization"
+    )
+
+
+def _move_spec_version_to_front(line: bytes) -> bytes:
+    data = json.loads(line)
+    return json.dumps(
+        {"spec_version": data.pop("spec_version"), **data},
+        ensure_ascii=False,
+        separators=(",", ":"),
+        sort_keys=False,
+        allow_nan=False,
+    ).encode("utf-8")
+
+
+def test_crlf_line_ending_fails_canonical_byte_verification(tmp_path: Path) -> None:
+    path = tmp_path / "events.jsonl"
+    write_valid_journal(path)
+    path.write_bytes(path.read_bytes().replace(b"\n", b"\r\n", 1))
+
+    assert_failed_at("noncanonical_record", path, record_number=1)
+
+
+@pytest.mark.parametrize(
+    "payload",
+    (
+        b"\xff\n",
+        b'{"spec_version":"actionlineage.dev/v1alpha1"}{}\n',
+        b'{"spec_version":"actionlineage.dev/v1alpha1"} {"event_id":"evt_extra"}\n',
+        b'{"spec_version":"actionlineage.dev/v1alpha1","payload":{"value":NaN}}\n',
+    ),
+)
+def test_invalid_json_bytes_or_tokens_fail_journal_parsing(
+    tmp_path: Path,
+    payload: bytes,
+) -> None:
+    path = tmp_path / "events.jsonl"
+    write_private_bytes(path, payload)
+
+    assert_failed_at("parse_error", path, record_number=1)
 
 
 def test_deleting_middle_event_fails_verification(tmp_path: Path) -> None:

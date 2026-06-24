@@ -15,7 +15,12 @@ from importlib.metadata import PackageNotFoundError, version
 from pathlib import Path
 from typing import Protocol
 
-from actionlineage.domain import EventEnvelope, deterministic_json_bytes, parse_event
+from actionlineage.domain import (
+    EventEnvelope,
+    deterministic_json_bytes,
+    parse_event,
+    serialize_event,
+)
 from actionlineage.domain.events import JsonObject
 from actionlineage.domain.redaction import RedactionBoundary
 from actionlineage.errors import ActionLineageError
@@ -380,6 +385,23 @@ def verified_journal_snapshot(
                                 record_number=record_number,
                                 code="parse_error",
                                 message="journal record is not a valid event",
+                            )
+                        )
+                        break
+
+                    expected_line = serialize_event(event) + b"\n"
+                    if raw_line != expected_line:
+                        issues.append(
+                            VerificationIssue(
+                                record_number=record_number,
+                                event_id=event.event_id,
+                                code="noncanonical_record",
+                                message=(
+                                    "journal record bytes do not exactly match canonical "
+                                    "serialization"
+                                ),
+                                expected="canonical_event_line",
+                                actual="journal_record_line",
                             )
                         )
                         break

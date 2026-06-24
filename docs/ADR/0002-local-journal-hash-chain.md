@@ -72,6 +72,12 @@ without its newline terminator as `truncated_record`, which makes interrupted
 or partial final appends fail visibly instead of being accepted as complete
 records.
 
+Verification is byte-canonical for journal records: each stored line must equal
+the deterministic serialized event bytes followed by exactly one `\n`. Records
+with reordered keys, added whitespace, `\r\n`, trailing bytes, multiple JSON
+values, duplicate object keys, invalid UTF-8, or non-finite numeric tokens fail
+verification before they are accepted into a verified snapshot.
+
 Verification reports a machine-readable result containing `ok`,
 `records_verified`, `last_event_hash`, and structured issues. Verification can
 optionally compare a trusted expected record count and trusted last hash.
@@ -85,6 +91,10 @@ optionally compare a trusted expected record count and trusted last hash.
   record count or last hash.
 - Interrupted final appends without a newline terminator fail verification at
   the incomplete record.
+- Semantically equivalent but byte-different journal rewrites fail verification
+  as non-canonical records.
+- Duplicate JSON object keys fail parsing rather than relying on parser-specific
+  last-key-wins behavior.
 - The local hash chain must not be described as tamper-proof.
 - Future signature or external anchoring work can reuse `last_event_hash` as an
   anchor value without changing the local journal record format.
@@ -98,3 +108,6 @@ optionally compare a trusted expected record count and trusted last hash.
   sequence order or visible failure.
 - `AT-JRN-006` covers interrupted append handling by rejecting a final record
   without its newline terminator.
+- Local journal tests cover canonical byte equality, duplicate keys in envelope
+  and nested value objects, reordered keys, whitespace, CRLF, invalid UTF-8,
+  trailing JSON, multiple JSON values, and non-finite JSON tokens.

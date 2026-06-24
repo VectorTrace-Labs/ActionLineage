@@ -37,6 +37,12 @@ and does not expand ActionLineage into a generic tracing platform.
   The service now scans idempotency fingerprints, assigns journal sequences, and
   appends under the local journal lock, then reports stale projections without
   rolling back or hiding the canonical append.
+- **Strict journal record parsing**: local regression tests cover exact
+  canonical byte equality, duplicate JSON keys across envelope and nested
+  security value objects, reordered keys, added whitespace, CRLF line endings,
+  invalid UTF-8, trailing JSON, multiple JSON values, and non-finite numeric
+  tokens. Journal verification now rejects byte-different semantic rewrites
+  before accepting a record into a verified snapshot.
 
 ## Implemented before this slice
 
@@ -65,9 +71,12 @@ and does not expand ActionLineage into a generic tracing platform.
   journal contents, and force rebuild for legacy `local-file:` identities. This
   remains local tamper evidence, not a journal UUID, signature, WORM guarantee,
   or externally anchored checkpoint identity.
-- **Canonicalization v1**: partially confirmed. The current deterministic JSON
-  boundary is documented as interim. A cross-language canonicalization standard
-  or byte-level specification requires conformance vectors and migration notes.
+- **Canonicalization v1**: partially confirmed. Local journal records are now
+  byte-canonical under the current deterministic serializer, but that serializer
+  remains an interim `json-deterministic-v0` boundary. A cross-language
+  canonicalization standard such as RFC 8785/JCS still requires conformance
+  vectors for Unicode, numbers, timestamps, escaping, duplicate keys, and schema
+  versions before stronger portability claims.
 - **Causality model evolution**: confirmed as schema-evolution work. Current
   sequence handling still couples source sequence and journal order. Multi-parent
   causal edges require a versioned schema change or migration path.
