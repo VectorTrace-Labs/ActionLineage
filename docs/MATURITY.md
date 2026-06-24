@@ -75,7 +75,7 @@ evidence and limitations.
 - Optional FastAPI service mode, JWT/OIDC helpers, tenant checks, Docker,
   Kubernetes, and Helm deployment examples.
 - GHCR container-image publication from version-tagged release workflow runs.
-- Optional Postgres projection schema.
+- Optional Postgres projection schema and verifier.
 - Cloud, Kubernetes, and external sensor observers backed by local fixtures.
 - Desktop bundle export for future native shells.
 

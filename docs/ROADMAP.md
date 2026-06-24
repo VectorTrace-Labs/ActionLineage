@@ -14,7 +14,8 @@ already delivered.
   states.
 - Append-only local journal, hash-chain verification, anchors, archive
   manifests, Git anchor statements, and external attestation sidecars.
-- Rebuildable SQLite projection and optional Postgres projection schema.
+- Rebuildable SQLite projection and optional Postgres projection schema plus
+  verifier.
 - Source-neutral ingestion for local, file, HTTP, MCP-mapped, framework, and
   external JSON evidence.
 - Deterministic local demo with verified, unverified, conflicting, and

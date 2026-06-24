@@ -34,7 +34,8 @@ explicitly needed.
 - `explain_event`, `export_case_bundle`
 - `summarize_incident`, `GroundedInvestigationSummary`
 - `export_investigation_graph`, `InvestigationGraphExport`
-- `rebuild_postgres_projection`, `postgres_schema_statements`
+- `rebuild_postgres_projection`, `verify_postgres_projection_state`,
+  `postgres_schema_statements`
 
 ## Detection, Contracts, and Lab
 

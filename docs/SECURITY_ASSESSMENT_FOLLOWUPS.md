@@ -22,6 +22,14 @@ and does not expand ActionLineage into a generic tracing platform.
   `PRAGMA query_only`, one read transaction for verification and query, complete
   row verification from the same deterministic derivation used for insertion,
   and a terminal journal-state recheck before returning current results.
+- **PostgreSQL projection verification guardrail**: local regression tests cover
+  the optional Postgres projection verifier and every projected row column,
+  including selector fields, timestamps, sequence, parent IDs, verification
+  status, evidence-link IDs, event JSON, canonical event JSON digest, hashes,
+  record numbers, stale metadata, unsupported schema metadata, and corrupt
+  journals. Postgres remains preview/disposable query state, but future
+  non-SQLite read APIs now have an explicit `verify_postgres_projection_state()`
+  check to call before trusting rows.
 - **Read-only projection verification and health**: local regression tests cover
   missing and incomplete projection databases and assert verification does not
   create files, tables, metadata, or migrations on read paths.
@@ -223,10 +231,8 @@ and does not expand ActionLineage into a generic tracing platform.
 
 ## Next implementation order
 
-1. Add projection-state checks to any future non-SQLite read APIs before those
-   APIs are exposed.
-2. Use the captured 10k/100k/250k benchmark evidence before proposing segmented
+1. Use the captured 10k/100k/250k benchmark evidence before proposing segmented
    journals, checkpoint indexes, or ADR-0011 append-index cache work.
-3. Draft ADRs for observer attestation policy, canonicalization v1, causal edge
+2. Draft ADRs for observer attestation policy, canonicalization v1, causal edge
    evolution, and external checkpoint trust roots.
-4. Audit redaction digest behavior across any future structured log surfaces.
+3. Audit redaction digest behavior across any future structured log surfaces.

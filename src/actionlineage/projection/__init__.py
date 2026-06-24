@@ -4,10 +4,13 @@ from actionlineage.projection.postgres import (
     POSTGRES_DEFAULT_TABLE,
     POSTGRES_PROJECTION_SCHEMA_VERSION,
     PostgresExecutor,
+    PostgresProjectionReader,
     PostgresRebuildResult,
+    VerifiedPostgresProjectionSnapshot,
     postgres_insert_statement,
     postgres_schema_statements,
     rebuild_postgres_projection,
+    verify_postgres_projection_state,
 )
 from actionlineage.projection.sqlite import (
     CASE_BUNDLE_MANIFEST_VERSION,
@@ -68,6 +71,7 @@ __all__ = [
     "InvestigationGraphExport",
     "InvestigationGraphNode",
     "PostgresExecutor",
+    "PostgresProjectionReader",
     "PostgresRebuildResult",
     "ProjectionError",
     "ProjectionIndexError",
@@ -80,6 +84,7 @@ __all__ = [
     "RebuildResult",
     "TimelineEvent",
     "TimelineResult",
+    "VerifiedPostgresProjectionSnapshot",
     "VerifiedProjectionSnapshot",
     "explain_event",
     "export_case_bundle",
@@ -95,5 +100,6 @@ __all__ = [
     "rebuild_postgres_projection",
     "rebuild_projection",
     "summarize_incident",
+    "verify_postgres_projection_state",
     "verify_projection_state",
 ]

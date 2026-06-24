@@ -233,15 +233,23 @@ runtime integration:
 ```python
 from pathlib import Path
 
-from actionlineage.projection import rebuild_postgres_projection
+from actionlineage.projection import (
+    rebuild_postgres_projection,
+    verify_postgres_projection_state,
+)
 
 rebuild_postgres_projection(Path("/data/actionlineage.journal"), executor)
+verify_postgres_projection_state(Path("/data/actionlineage.journal"), reader)
 ```
 
-The executor is intentionally a tiny protocol so teams can use psycopg,
-SQLAlchemy, or an internal database wrapper behind optional dependencies. The
-PostgreSQL projection is still disposable query state; the append-only journal
-and trusted anchors remain canonical evidence.
+The executor and reader are intentionally tiny protocols so teams can use
+psycopg, SQLAlchemy, or an internal database wrapper behind optional
+dependencies. `verify_postgres_projection_state()` verifies schema metadata,
+journal identity, journal byte digest, record count, terminal hash, every
+denormalized projected row value, and the canonical event JSON digest before a
+runtime integration treats Postgres rows as trusted query state. The PostgreSQL
+projection is still disposable query state; the append-only journal and trusted
+anchors remain canonical evidence.
 
 ## Object Storage Archives
 
