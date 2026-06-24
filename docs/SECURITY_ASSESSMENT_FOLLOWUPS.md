@@ -114,6 +114,13 @@ and does not expand ActionLineage into a generic tracing platform.
   subprocess stdout/stderr captured by the public quickstart smoke script,
   including timeout output. Smoke artifacts now redact canaries before writing
   bounded command output into release evidence JSON.
+- **Core lower-level exception redaction**: local journal, projection, evidence
+  ingestion, and service-mode regressions cover bearer-token and API-key
+  canaries in journal storage-permission failures, service batch-import
+  directory failures, projection schema/metadata exception details, and health
+  issue messages/details. These core exception exits now redact and bound risky
+  text before returning `JournalAppendError`, `ProjectionStateError` details, or
+  service health JSON.
 
 ## Implemented before this slice
 
@@ -167,10 +174,12 @@ and does not expand ActionLineage into a generic tracing platform.
   Machine-readable exporter, case-bundle, incident-summary, and demo-map
   artifacts that carry bounded capture metadata preserve redaction-boundary
   digest scope. Public CLI and service-mode error detail serialization redacts
-  and bounds exception text before JSON/HTTP output, and release smoke artifacts
-  redact captured stdout/stderr before writing bounded command output. Broader
-  digest-correlation review across structured logs and lower-level exception
-  paths remains open.
+  and bounds exception text before JSON/HTTP output, release smoke artifacts
+  redact captured stdout/stderr before writing bounded command output, and core
+  journal/ingestion/projection/health exception exits redact lower-level
+  exception text.
+  Broader digest-correlation review across release/network diagnostic scripts
+  and future structured log surfaces remains open.
 - **Container and deployment defaults**: partially confirmed. Runtime hardening
   should remain preview/local-ops scoped until container and Kubernetes defaults
   have executable validation.
@@ -210,5 +219,5 @@ and does not expand ActionLineage into a generic tracing platform.
    evolution, and external checkpoint trust roots.
 4. Capture benchmark artifacts before implementing any ADR-0011 append-index
    cache.
-5. Audit redaction digest behavior across structured logs and lower-level
-   exception paths.
+5. Audit redaction digest behavior across release/network diagnostic scripts
+   and any future structured log surfaces.

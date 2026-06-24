@@ -461,6 +461,29 @@ def test_active_lock_contention_fails_visibly(tmp_path: Path) -> None:
         journal.append(make_event(0))
 
 
+def test_append_directory_permission_failure_redacts_exception_detail(
+    tmp_path: Path,
+    monkeypatch: MonkeyPatch,
+) -> None:
+    path = tmp_path / "events.jsonl"
+    raw_secret = "journalpermissionsecretvalue123456789"
+
+    def fail_directory_check(_path: Path) -> None:
+        raise local_journal_module.JournalStoragePermissionError(
+            f"storage path rejected for Bearer {raw_secret}"
+        )
+
+    monkeypatch.setattr(local_journal_module, "_ensure_private_directory", fail_directory_check)
+
+    with pytest.raises(JournalAppendError) as error:
+        LocalJournal(path).append(make_event(0))
+
+    message = str(error.value)
+    assert raw_secret not in message
+    assert "Bearer [REDACTED:bearer_token]" in message
+    assert not path.exists()
+
+
 def test_append_preflight_io_failure_is_bounded_and_releases_lock(
     tmp_path: Path,
     monkeypatch: MonkeyPatch,

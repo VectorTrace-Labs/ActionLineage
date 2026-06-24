@@ -23,7 +23,7 @@ from actionlineage.domain import (
 )
 from actionlineage.domain.events import JsonObject
 from actionlineage.domain.redaction import RedactionBoundary
-from actionlineage.errors import ActionLineageError
+from actionlineage.errors import ActionLineageError, safe_error_detail
 from actionlineage.journal.hashing import compute_event_hash, prepare_event_for_append
 from actionlineage.journal.verify import VerificationIssue, VerificationResult
 
@@ -212,7 +212,7 @@ def append_event(
     except OSError as exc:
         raise JournalAppendError("failed to prepare journal directory") from exc
     except JournalStoragePermissionError as exc:
-        raise JournalAppendError(str(exc)) from exc
+        raise JournalAppendError(safe_error_detail(exc)) from exc
 
     with _journal_lock(
         path.with_suffix(f"{path.suffix}.lock"),

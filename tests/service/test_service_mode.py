@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import os
 import subprocess
 import sys
@@ -13,6 +14,7 @@ from fastapi.testclient import TestClient
 
 import actionlineage.evidence.ingestion as ingestion_module
 import actionlineage.service.api as service_api_module
+import actionlineage.service.health as service_health_module
 from actionlineage.contracts import ContractEventRequirement, LineageContract, contract_to_dict
 from actionlineage.demo import run_demo
 from actionlineage.journal import LocalJournal
@@ -411,6 +413,31 @@ def test_local_health_reports_ok_and_projection_missing(tmp_path: Path) -> None:
     assert degraded.issues[0].code == "projection_missing"
 
 
+def test_local_health_redacts_projection_exception_detail(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    demo = run_demo(tmp_path / "demo")
+    raw_secret = "healthprojectionsecretvalue123456789"
+
+    def fail_projection(*_args: object, **_kwargs: object) -> None:
+        raise service_health_module.ProjectionStateError(
+            service_health_module.ProjectionStateCode.PROJECTION_REBUILD_REQUIRED,
+            f"projection metadata rejected Bearer {raw_secret}",
+            details={"error": f"api_key={raw_secret}"},
+        )
+
+    monkeypatch.setattr(service_health_module, "verify_projection_state", fail_projection)
+
+    degraded = check_local_health(journal_path=demo.journal_path, database_path=demo.database_path)
+    payload = json.dumps(degraded.as_dict(), sort_keys=True)
+
+    assert degraded.ok is False
+    assert raw_secret not in payload
+    assert "Bearer [REDACTED:bearer_token]" in payload
+    assert "api_key=[REDACTED:secret]" in payload
+
+
 def test_health_issue_as_dict_returns_defensive_details_copy() -> None:
     issue = HealthIssue(
         code="demo",
@@ -430,6 +457,21 @@ def test_health_issue_as_dict_returns_defensive_details_copy() -> None:
     repeated_nested = repeated_details["nested"]
     assert isinstance(repeated_nested, dict)
     assert repeated_nested["status"] == "original"
+
+
+def test_health_issue_as_dict_redacts_message_and_detail_canaries() -> None:
+    raw_secret = "healthissuedetailsecretvalue123456789"
+    issue = HealthIssue(
+        code="demo",
+        message=f"health degraded for Bearer {raw_secret}",
+        details={"error": f"access_token={raw_secret}"},
+    )
+
+    payload = json.dumps(issue.as_dict(), sort_keys=True)
+
+    assert raw_secret not in payload
+    assert "Bearer [REDACTED:bearer_token]" in payload
+    assert "access_token=[REDACTED:secret]" in payload
 
 
 def test_service_health_split_and_corrupt_journal_readiness(tmp_path: Path) -> None:

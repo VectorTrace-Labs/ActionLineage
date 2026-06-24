@@ -6,7 +6,10 @@ from copy import deepcopy
 from dataclasses import dataclass
 from enum import StrEnum
 from pathlib import Path
+from typing import cast
 
+from actionlineage.domain.redaction import RedactionPolicy
+from actionlineage.errors import redact_error_text, safe_error_detail
 from actionlineage.journal import JournalError, verify_journal
 from actionlineage.projection import (
     ProjectionStateCode,
@@ -33,8 +36,8 @@ class HealthIssue:
     def as_dict(self) -> dict[str, object]:
         return {
             "code": self.code,
-            "message": self.message,
-            "details": deepcopy(self.details) if self.details is not None else {},
+            "message": redact_error_text(self.message),
+            "details": _safe_issue_details(self.details),
         }
 
 
@@ -87,11 +90,23 @@ def check_local_health(*, journal_path: Path, database_path: Path | None = None)
             issues.append(
                 HealthIssue(
                     code=exc.code.value,
-                    message=str(exc),
-                    details=exc.details,
+                    message=safe_error_detail(exc),
+                    details=_safe_issue_details(exc.details),
                 )
             )
     return HealthReport(
         state=HealthState.DEGRADED if issues else HealthState.OK,
         issues=tuple(issues),
     )
+
+
+def _safe_issue_details(details: dict[str, object] | None) -> dict[str, object]:
+    if details is None:
+        return {}
+    try:
+        redacted = RedactionPolicy(max_string_length=512).apply(deepcopy(details))
+    except Exception:
+        return {"error": "health issue detail could not be redacted safely"}
+    if isinstance(redacted, dict):
+        return cast(dict[str, object], redacted)
+    return {"detail": redacted}

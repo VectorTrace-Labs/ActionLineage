@@ -242,6 +242,33 @@ def test_projection_verification_does_not_mutate_incomplete_schema(tmp_path: Pat
     assert after == before
 
 
+def test_projection_verification_redacts_schema_exception_detail(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    journal_path = tmp_path / "events.jsonl"
+    database_path = tmp_path / "projection.sqlite"
+    write_journal(journal_path, complete_timeline_events())
+    with closing(sqlite3.connect(database_path)):
+        pass
+    raw_secret = "projectionsecretvalue123456789"
+
+    def fail_schema_validation(_connection: sqlite3.Connection) -> None:
+        raise sqlite_projection.ProjectionSchemaError(
+            f"unsupported projection schema for Bearer {raw_secret}"
+        )
+
+    monkeypatch.setattr(sqlite_projection, "validate_schema", fail_schema_validation)
+
+    with pytest.raises(ProjectionStateError) as exc_info:
+        verify_projection_state(database_path, journal_path=journal_path)
+
+    details = json.dumps(exc_info.value.details, sort_keys=True)
+    assert exc_info.value.code == ProjectionStateCode.PROJECTION_REBUILD_REQUIRED
+    assert raw_secret not in details
+    assert "Bearer [REDACTED:bearer_token]" in details
+
+
 def test_timeline_query_fails_closed_when_journal_advances_after_rebuild(
     tmp_path: Path,
 ) -> None:

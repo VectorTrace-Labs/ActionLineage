@@ -24,6 +24,7 @@ from actionlineage.domain import (
     serialize_event,
 )
 from actionlineage.domain.events import event_type_value
+from actionlineage.errors import safe_error_detail
 from actionlineage.journal import (
     JOURNAL_SOURCE_IDENTITY_VERSION,
     VerificationResult,
@@ -1159,13 +1160,13 @@ def _verified_projection_reader(
             raise ProjectionStateError(
                 ProjectionStateCode.PROJECTION_REBUILD_REQUIRED,
                 "projection schema is unsupported or incomplete",
-                details={"error": str(exc)},
+                details={"error": safe_error_detail(exc)},
             ) from exc
         except (OSError, ValueError) as exc:
             raise ProjectionStateError(
                 ProjectionStateCode.PROJECTION_REBUILD_REQUIRED,
                 "projection metadata is incomplete or invalid",
-                details={"error": str(exc)},
+                details={"error": safe_error_detail(exc)},
             ) from exc
 
         try:

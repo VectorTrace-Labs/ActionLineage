@@ -24,11 +24,13 @@ from actionlineage.domain import (
     deterministic_json_bytes,
 )
 from actionlineage.domain.events import JsonObject, event_type_value, model_json, thaw_json_value
+from actionlineage.errors import safe_error_detail
 from actionlineage.evidence.normalization import EvidenceNormalizer
 from actionlineage.journal import (
     JournalAppendError,
     JournalError,
     JournalReader,
+    JournalStoragePermissionError,
     JournalWriter,
     LocalJournal,
     VerifiedJournalSnapshot,
@@ -420,6 +422,8 @@ def import_evidence_batch_atomically(
         _ensure_private_directory(journal.path.parent)
     except OSError as exc:
         raise JournalAppendError("failed to prepare journal directory") from exc
+    except JournalStoragePermissionError as exc:
+        raise JournalAppendError(safe_error_detail(exc)) from exc
 
     outcomes: list[IngestOutcome] = []
     with _journal_lock(

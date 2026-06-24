@@ -3,6 +3,8 @@ from __future__ import annotations
 from datetime import UTC, datetime
 from pathlib import Path
 
+import pytest
+
 import actionlineage.evidence.ingestion as ingestion_module
 from actionlineage.domain import (
     Classification,
@@ -31,7 +33,7 @@ from actionlineage.evidence import (
     import_evidence_batch,
     import_evidence_batch_atomically,
 )
-from actionlineage.journal import LocalJournal
+from actionlineage.journal import JournalAppendError, JournalStoragePermissionError, LocalJournal
 
 BASE_TIME = datetime(2026, 6, 21, 18, 42, 12, tzinfo=UTC)
 
@@ -261,6 +263,30 @@ def test_atomic_batch_import_reports_partial_commit_on_later_append_failure(
     assert "simulated disk full" not in str(result.as_dict())
     assert snapshot.ok
     assert snapshot.record_count == 1
+
+
+def test_atomic_batch_import_directory_permission_failure_redacts_exception_detail(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    journal = LocalJournal(tmp_path / "events.jsonl")
+    raw_secret = "batchpermissionsecretvalue123456789"
+
+    def fail_directory_check(_path: Path) -> None:
+        raise JournalStoragePermissionError(f"batch path rejected for Bearer {raw_secret}")
+
+    monkeypatch.setattr(ingestion_module, "_ensure_private_directory", fail_directory_check)
+
+    with pytest.raises(JournalAppendError) as error:
+        import_evidence_batch_atomically(
+            (root_record(),),
+            normalizer=make_normalizer(),
+            journal=journal,
+        )
+
+    message = str(error.value)
+    assert raw_secret not in message
+    assert "Bearer [REDACTED:bearer_token]" in message
 
 
 def test_batch_import_redacts_before_persistence(tmp_path: Path) -> None:
