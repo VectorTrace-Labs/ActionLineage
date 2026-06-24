@@ -161,6 +161,12 @@ Supported corroboration types:
 - `self_reported`
 - `unknown`
 
+ADR-0012 governs when an observation may be described as
+`independent_observer`. A trust label alone is not enough; production
+independence requires a reviewed declaration of producer identity, collection
+method, boundaries, shared dependencies, blind spots, failure behavior,
+redaction scope, policy version, owner, and review date.
+
 Supported verification statuses:
 
 - `unknown`

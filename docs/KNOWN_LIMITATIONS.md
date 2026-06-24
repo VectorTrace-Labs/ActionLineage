@@ -37,6 +37,9 @@ supported, local-proof, preview, planned, and external-validation labels.
 - Service mode is not documented as production ready.
 - Live cloud observers are fixture-backed in the current public alpha unless
   separately validated.
+- Observer trust labels do not by themselves prove independence. ADR-0012 keeps
+  production `independent_observer` claims behind reviewed attestation
+  declarations and executable validation.
 
 ## Evaluation Scope
 

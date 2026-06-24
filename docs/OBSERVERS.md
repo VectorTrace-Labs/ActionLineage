@@ -3,6 +3,12 @@
 Observers produce evidence about side effects independently from tool
 acknowledgements. They do not authorize tool execution.
 
+ADR-0012 defines the observer-attestation policy boundary. In the current public
+alpha, trust labels and limitations describe local fixture evidence and reviewed
+external records, but they do not by themselves prove that a producer is
+independent from the tool, principal, host, network path, storage plane, or
+control plane involved in the side effect.
+
 ## Implemented Local Observers
 
 - `FilesystemObserver`: observes local file state, conflicts, timeout, and
@@ -71,6 +77,25 @@ OS audit, network, process, or file telemetry. Core code normalizes already
 reviewed records and redacts observed state. It does not install agents, load
 kernel programs, or collect live endpoint telemetry.
 
+## Attestation Policy Boundary
+
+An observation should be treated as unqualified `independent_observer`
+corroboration only when a reviewed declaration, adapter configuration, fixture
+manifest, or future versioned model records the producer identity, collection
+method, covered action/resource types, independence boundaries, shared
+dependencies, blind spots, failure behavior, tamper assumptions, redaction
+scope, policy version, owner, and review date.
+
+If that declaration is missing, stale, incomplete, contradictory, or outside its
+stated scope, ActionLineage should keep the evidence explicitly limited. It may
+still record a fixture oracle, post-action readback, external sensor feed,
+self-reported observation, or unknown corroboration type, but it must not turn a
+label such as `external` or `trusted` into a stronger independence claim.
+
+Cryptographic remote attestation, signed sensor statements, WORM retention, or
+managed evidence storage can strengthen a future declaration, but none of those
+mechanisms alone proves semantic independence from the subject action.
+
 ## Verification Helpers
 
 `verify_observation()` maps observer outcomes into side-effect verification
@@ -97,9 +122,14 @@ that absence of an observation proves absence of a side effect.
 Production observers should document:
 
 - Observer identity.
+- Producer identity and collection method.
 - Trust boundary.
 - Failure and timeout behavior.
 - Corroboration type.
 - Known blind spots.
 - Whether the observer can be tampered with by the same principal that executed
   the tool.
+- Shared credentials, hosts, network paths, storage planes, or administrative
+  control planes with the subject action.
+- Redaction and digest scopes for any captured content.
+- Policy version, owner, and review date.

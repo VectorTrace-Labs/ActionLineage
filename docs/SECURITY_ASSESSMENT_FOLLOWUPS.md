@@ -158,8 +158,10 @@ and does not expand ActionLineage into a generic tracing platform.
   requires future append indexes to remain rebuildable caches bound to verified
   journal state rather than trusted evidence.
 - **Observer independence**: partially confirmed. Observer records carry trust
-  labels and limitations, but independence is not yet the result of a structured
-  attestation policy. This requires an ADR and versioned model work.
+  labels and limitations, and ADR-0012 now proposes a structured attestation
+  policy for future independent-observer declarations. Runtime enforcement and
+  versioned model work remain open before stronger production independence
+  claims.
 - **External trust root**: confirmed as future work. Local hash chains and local
   anchors remain local tamper evidence only. Remote witness, KMS/HSM signing,
   transparency log, or WORM storage support needs a checkpoint ADR before code.
@@ -233,6 +235,7 @@ and does not expand ActionLineage into a generic tracing platform.
 
 1. Use the captured 10k/100k/250k benchmark evidence before proposing segmented
    journals, checkpoint indexes, or ADR-0011 append-index cache work.
-2. Draft ADRs for observer attestation policy, canonicalization v1, causal edge
-   evolution, and external checkpoint trust roots.
+2. Resolve and implement ADR-0012 observer attestation policy, then draft ADRs
+   for canonicalization v1, causal edge evolution, and external checkpoint trust
+   roots.
 3. Audit redaction digest behavior across any future structured log surfaces.

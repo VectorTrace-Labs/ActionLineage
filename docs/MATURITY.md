@@ -77,6 +77,7 @@ evidence and limitations.
 - GHCR container-image publication from version-tagged release workflow runs.
 - Optional Postgres projection schema and verifier.
 - Cloud, Kubernetes, and external sensor observers backed by local fixtures.
+- Observer attestation policy for future independent-observer declarations.
 - Desktop bundle export for future native shells.
 
 ## Planned Or External Validation

@@ -139,6 +139,30 @@ def test_append_checkpoint_scope_decision_is_tracked() -> None:
     assert "Append checkpoint/index scope" in followups
 
 
+def test_observer_attestation_policy_boundary_is_tracked() -> None:
+    adr = (PROJECT_ROOT / "docs/ADR/0012-observer-attestation-policy.md").read_text(
+        encoding="utf-8"
+    )
+    observers = (PROJECT_ROOT / "docs/OBSERVERS.md").read_text(encoding="utf-8")
+    data_model = (PROJECT_ROOT / "docs/DATA_MODEL.md").read_text(encoding="utf-8")
+    scorecard = (PROJECT_ROOT / "docs/QUALITY_SCORECARD.md").read_text(encoding="utf-8")
+    maturity = (PROJECT_ROOT / "docs/MATURITY.md").read_text(encoding="utf-8")
+    followups = (PROJECT_ROOT / "docs/SECURITY_ASSESSMENT_FOLLOWUPS.md").read_text(encoding="utf-8")
+
+    assert "- Status: Proposed" in adr
+    assert "do not change the public `v1alpha1` event schema" in adr
+    assert "reviewed independence declaration" in adr
+    assert "Independence boundaries" in adr
+    assert "trust labels and limitations" in observers
+    assert "do not by themselves prove" in observers
+    assert "Attestation Policy Boundary" in observers
+    assert "A trust label alone is not enough" in data_model
+    assert "Observer independence requires a reviewed attestation policy" in scorecard
+    assert "future independent-observer declarations" in maturity
+    assert "ADR-0012 now proposes a structured" in followups
+    assert "policy for future independent-observer declarations" in followups
+
+
 def test_local_release_planning_docs_are_ignored_and_not_linked_publicly() -> None:
     gitignore = (PROJECT_ROOT / ".gitignore").read_text(encoding="utf-8")
     ignore_patterns = tuple(

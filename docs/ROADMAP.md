@@ -33,7 +33,8 @@ already delivered.
 
 1. Fresh-clone release validation on macOS and Linux.
 2. More public fixture packs for common agent and tool patterns.
-3. Additional observer adapters with clear trust and limitation labels.
+3. Additional observer adapters with clear trust labels, limitation labels, and
+   ADR-0012-style attestation declarations.
 4. Expanded detection rule corpus and benign/adversarial replay sets.
 5. Better service-mode deployment examples and operational runbooks.
 6. Static console polish driven by real analyst workflows.
