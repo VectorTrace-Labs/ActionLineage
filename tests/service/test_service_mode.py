@@ -756,6 +756,65 @@ def test_service_ingest_reports_projection_stale_after_committed_append(
     assert snapshot.record_count == initial_count + 1
 
 
+def test_service_ingest_duplicate_retry_repairs_stale_projection(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    demo = run_demo(tmp_path / "demo")
+    client = _client(
+        demo.journal_path,
+        demo.database_path,
+        token="writer",
+        roles=frozenset({ServiceRole.WRITE, ServiceRole.READ}),
+    )
+    original_rebuild = service_api_module.rebuild_projection
+    rebuild_attempts = 0
+
+    def fail_first_rebuild(*args: object, **kwargs: object) -> object:
+        nonlocal rebuild_attempts
+        rebuild_attempts += 1
+        if rebuild_attempts == 1:
+            raise service_api_module.ProjectionError("simulated projection rebuild failure")
+        return original_rebuild(*args, **kwargs)
+
+    monkeypatch.setattr(service_api_module, "rebuild_projection", fail_first_rebuild)
+    body = {
+        "correlation": {"trace_id": "trace_service", "run_id": "run_service"},
+        "records": [
+            {
+                "idempotency_key": "service-record-retry-rebuild",
+                "event_type": "agent.intent.recorded",
+                "payload": {"intent": {"summary": "service ingest"}},
+                "source_kind": "external_json",
+                "sort_key": "001",
+            }
+        ],
+    }
+
+    stale = client.post("/ingest", headers={"Authorization": "Bearer writer"}, json=body)
+    recovered = client.post(
+        "/ingest",
+        headers={"Authorization": "Bearer writer", "X-Request-ID": "retry-after-loss"},
+        json=body,
+    )
+    timeline = client.get(
+        "/timeline",
+        params={"trace_id": "trace_service"},
+        headers={"Authorization": "Bearer writer"},
+    )
+
+    assert stale.status_code == 503
+    assert stale.json()["imported_count"] == 1
+    assert stale.json()["projection"]["state"] == "stale"
+    assert recovered.status_code == 200
+    assert recovered.json()["imported_count"] == 0
+    assert recovered.json()["duplicate_count"] == 1
+    assert recovered.json()["projection"]["state"] == "rebuilt"
+    assert timeline.status_code == 200
+    assert timeline.json()["event_count"] == 1
+    assert rebuild_attempts == 2
+
+
 def test_service_concurrent_duplicate_ingest_reports_duplicate_not_failure(
     tmp_path: Path,
 ) -> None:

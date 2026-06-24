@@ -109,7 +109,9 @@ returns `duplicate`; reusing the key for a different record returns HTTP 409 and
 record-level failure returns HTTP 207 with per-record outcomes. If the journal
 append commits but the rebuildable projection fails afterward, the response is
 HTTP 503 with `journal_committed: true` and `projection.state: "stale"`; clients
-can retry safely with the same idempotency key.
+can retry safely with the same idempotency key. A duplicate retry also attempts
+to rebuild the projection, so response-loss and post-append rebuild failures can
+recover without appending another event.
 
 Service-mode case exports are written under a configured export root. Set
 `ACTIONLINEAGE_EXPORT_ROOT` for environment-driven service startup; otherwise

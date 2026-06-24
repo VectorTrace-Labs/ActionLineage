@@ -189,7 +189,7 @@ def create_app(
                 normalizer=normalizer,
                 journal=journal,
             )
-            if result.imported_count:
+            if result.imported_count or result.duplicate_count:
                 try:
                     rebuild_projection(journal_path, database_path)
                 except ProjectionError as exc:

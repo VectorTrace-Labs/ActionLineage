@@ -53,6 +53,10 @@ and does not expand ActionLineage into a generic tracing platform.
   static token mappings, JWT capability-only credentials, and tenant decisions
   that reject capability-only principals. Capability grants authorize explicit
   capability checks but no longer satisfy global or tenant role checks.
+- **Service ingest retry recovery**: local regression tests cover the case where
+  a journal append commits but projection rebuild fails. Retrying the same
+  idempotency key now reports a duplicate and rebuilds the projection instead
+  of leaving the query surface stale.
 
 ## Implemented before this slice
 
@@ -100,11 +104,11 @@ and does not expand ActionLineage into a generic tracing platform.
   have executable validation.
 - **Concurrency, idempotency, and batch semantics**: partially confirmed.
   Source ingestion and service-mode local journal writes have deterministic
-  duplicate, conflict, partial-batch, and projection-stale tests. Remaining work
-  includes process-crash fault injection, authenticated append indexes or
-  checkpoints for stronger replay recovery, and a deliberate decision if future
-  APIs need all-or-nothing transactional batch semantics instead of explicit
-  partial success.
+  duplicate, conflict, partial-batch, projection-stale, and duplicate retry
+  recovery tests. Remaining work includes process-crash fault injection,
+  authenticated append indexes or checkpoints for stronger replay recovery, and
+  a deliberate decision if future APIs need all-or-nothing transactional batch
+  semantics instead of explicit partial success.
 - **Tenant isolation**: partially confirmed. Tenant-aware authorization
   primitives exist, but end-to-end tenant isolation across storage, projections,
   exports, logs, caches, and anchors is not demonstrated.
@@ -129,7 +133,7 @@ and does not expand ActionLineage into a generic tracing platform.
    before proposing segmented journals or checkpoint indexes.
 3. Draft ADRs for observer attestation policy, canonicalization v1, causal edge
    evolution, and external checkpoint trust roots.
-4. Add service ingestion crash/fault injection around response loss, process
-   restart after append, and storage errors during multi-record batches.
+4. Add deeper service ingestion crash/fault injection around process restart
+   after append and storage errors during multi-record batches.
 5. Audit attachment-count limits and redaction digest behavior across journal,
    projection, export, logs, exceptions, and test snapshots.
