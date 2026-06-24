@@ -134,6 +134,14 @@ and does not expand ActionLineage into a generic tracing platform.
   issue messages/details. These core exception exits now redact and bound risky
   text before returning `JournalAppendError`, `ProjectionStateError` details, or
   service health JSON.
+- **Structured log digest boundary**: local domain regressions cover
+  future log-adjacent JSON fields that include canaries, oversized values,
+  bounded capture markers, and unscoped capture-like digests.
+  `redact_structured_log_fields()` redacts before emission, omits capture marker
+  `value` content from log records, preserves
+  `actionlineage.capture.v1/redaction-boundary` digest scope when present, and
+  suppresses unscoped digests rather than presenting them as raw content hashes
+  or signatures.
 - **Release diagnostic redaction**: local release-consistency and
   release-hardening regressions cover bearer-token, API-key, access-token, and
   signed-URL-shaped canaries in URL-open failures, curl stderr/stdout fallback
@@ -215,9 +223,10 @@ and does not expand ActionLineage into a generic tracing platform.
   and bounds exception text before JSON/HTTP output, release smoke artifacts
   redact captured stdout/stderr before writing bounded command output, core
   journal/ingestion/projection/health exception exits redact lower-level
-  exception text, and release diagnostic scripts redact network and artifact
-  generation failures before writing JSON or Markdown proof artifacts. Broader
-  digest-correlation review across future structured log surfaces remains open.
+  exception text, structured log helpers omit bounded capture values while
+  preserving scoped redaction-boundary digest metadata, and release diagnostic
+  scripts redact network and artifact generation failures before writing JSON or
+  Markdown proof artifacts.
 - **Container and deployment defaults**: partially confirmed. Runtime hardening
   should remain preview/local-ops scoped until container and Kubernetes defaults
   have executable validation.
@@ -251,7 +260,6 @@ and does not expand ActionLineage into a generic tracing platform.
 
 1. Use the captured 10k/100k/250k benchmark evidence before proposing segmented
    journals, checkpoint indexes, or ADR-0011 append-index cache work.
-2. Audit redaction digest behavior across any future structured log surfaces.
-3. Draft a protected-kernel boundary ADR for event/evidence, journal
+2. Draft a protected-kernel boundary ADR for event/evidence, journal
    verification, anchoring, observer policy, projection contracts, and
    query/export trust boundaries.

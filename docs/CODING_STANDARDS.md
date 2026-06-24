@@ -21,6 +21,10 @@
 - Use structured logs.
 - Correlate by run, trace, and event ID.
 - Log event IDs and digests instead of raw sensitive payloads.
+- Pass user, event, observer, exporter, or exception-derived fields through
+  `redact_structured_log_fields()` before emission.
+- Do not log bounded capture marker `value` content; preserve
+  `digest_scope` when a capture digest is emitted.
 - Test log output for canary-secret leakage.
 
 ## Tests

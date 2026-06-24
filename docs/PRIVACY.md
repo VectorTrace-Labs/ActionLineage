@@ -10,6 +10,8 @@ verification links.
 - Store digests, descriptors, and bounded metadata instead of raw content where
   possible.
 - Use `RedactionPolicy` for known sensitive JSON paths.
+- Use `redact_structured_log_fields()` before emitting structured log fields
+  derived from evidence, exceptions, observers, exporters, or user input.
 - Treat authorization headers, bearer tokens, API keys, private keys, passwords,
   session cookies, and configured sensitive fields as never-persist values.
 - Keep observer payloads explicit about trust, scope, and limitations.

@@ -33,11 +33,17 @@ from actionlineage.domain.events import (
 )
 from actionlineage.domain.ids import FixedIdGenerator, IdGenerator, PrefixedUuidGenerator
 from actionlineage.domain.redaction import (
+    CAPTURE_DIGEST_SCOPE,
+    STRUCTURED_LOG_CAPTURE_MARKER,
+    STRUCTURED_LOG_DIGEST_UNAVAILABLE,
+    STRUCTURED_LOG_REDACTION_FAILURE_MARKER,
     CaptureMetadata,
     RedactionError,
     RedactionPolicy,
     capture_bytes,
     capture_string,
+    redact_structured_log_fields,
+    redact_structured_log_value,
 )
 from actionlineage.domain.serialization import (
     deterministic_json_bytes,
@@ -51,11 +57,15 @@ from actionlineage.domain.time import Clock, FixedClock, SystemClock
 
 __all__ = [
     "CANONICALIZATION_VERSION",
+    "CAPTURE_DIGEST_SCOPE",
     "DEFAULT_JSON_MAX_ARRAY_LENGTH",
     "DEFAULT_JSON_MAX_DEPTH",
     "DEFAULT_JSON_MAX_OBJECT_MEMBERS",
     "PLANNED_CANONICALIZATION_VERSION",
     "SPEC_VERSION",
+    "STRUCTURED_LOG_CAPTURE_MARKER",
+    "STRUCTURED_LOG_DIGEST_UNAVAILABLE",
+    "STRUCTURED_LOG_REDACTION_FAILURE_MARKER",
     "SUPPORTED_PERSISTED_EVENT_CANONICALIZATIONS",
     "CanonicalizationError",
     "CaptureMetadata",
@@ -91,6 +101,8 @@ __all__ = [
     "is_supported_persisted_event_canonicalization",
     "parse_event",
     "persisted_event_canonicalization_policy",
+    "redact_structured_log_fields",
+    "redact_structured_log_value",
     "require_supported_persisted_event_canonicalization",
     "serialize_event",
     "serialize_event_for_persistence",

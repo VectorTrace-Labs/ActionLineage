@@ -65,6 +65,7 @@ Default local bounds:
 | Aggregate captured content | 65536 encoded bytes per redaction pass | `RedactionPolicy.max_capture_bytes` |
 | Event envelope control fields | capture-exempt after sensitive path checks | `RedactionPolicy.capture_exempt_paths` |
 | Capture digest | scoped SHA-256 over redaction-boundary content | `actionlineage.capture.v1/redaction-boundary` digest scope |
+| Structured log capture summary | omit bounded captured values and retain digests only with supported digest scope | `redact_structured_log_fields` |
 | Sensitive field aliases | common token, cookie, cloud session, database URL, signed URL, webhook secret, and proxy authorization field names | `RedactionPolicy.sensitive_field_names` |
 | Credential-bearing text | bearer tokens, key-value secret assignments, signed URL parameters, and common credential-bearing database URLs | `RedactionPolicy.patterns` |
 | Observer fixture digests | caller-supplied strings with explicit fixture scopes | `actionlineage.observer.body-digest.v1`, `actionlineage.observer.signature-digest.v1` |
@@ -111,6 +112,13 @@ release consistency checks, release-candidate manifest generation, release
 review-index rendering, and CI quality-summary generation. Bearer-token,
 API-key, access-token, and signed-URL-shaped canaries are redacted before those
 scripts write JSON or Markdown proof artifacts.
+
+Structured log regressions cover future log-adjacent JSON fields that carry
+bounded capture metadata. `redact_structured_log_fields()` redacts fields before
+emission, strips captured `value` content from capture markers, preserves the
+`actionlineage.capture.v1/redaction-boundary` digest scope when present, and
+suppresses unscoped digests rather than presenting them as raw external content
+hashes.
 
 ## Supply Chain
 

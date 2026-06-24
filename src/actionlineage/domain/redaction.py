@@ -20,11 +20,25 @@ from actionlineage.domain.events import (
 type Path = tuple[str, ...]
 type CaptureMarker = Literal["actionlineage.capture.v1"]
 type CaptureDigestScope = Literal["actionlineage.capture.v1/redaction-boundary"]
+type StructuredLogCaptureMarker = Literal["actionlineage.structured_log.capture.v1"]
+type StructuredLogRedactionFailureMarker = Literal[
+    "actionlineage.structured_log.redaction_failed.v1"
+]
 
 REDACTED_VALUE = "[REDACTED:sensitive]"
 CAPTURE_DIGEST_SCOPE: CaptureDigestScope = "actionlineage.capture.v1/redaction-boundary"
+STRUCTURED_LOG_CAPTURE_MARKER: StructuredLogCaptureMarker = (
+    "actionlineage.structured_log.capture.v1"
+)
+STRUCTURED_LOG_REDACTION_FAILURE_MARKER: StructuredLogRedactionFailureMarker = (
+    "actionlineage.structured_log.redaction_failed.v1"
+)
+STRUCTURED_LOG_CAPTURE_VALUE = "[OMITTED:bounded-capture]"
+STRUCTURED_LOG_DIGEST_UNAVAILABLE = "[UNAVAILABLE:missing-or-unsupported-digest-scope]"
 DEFAULT_MAX_STRING_LENGTH = 4096
 DEFAULT_MAX_BYTES_LENGTH = 4096
+DEFAULT_STRUCTURED_LOG_MAX_STRING_LENGTH = 512
+DEFAULT_STRUCTURED_LOG_MAX_BYTES_LENGTH = 512
 DEFAULT_MAX_CAPTURE_COUNT = 128
 DEFAULT_MAX_CAPTURE_BYTES = 65536
 DEFAULT_SENSITIVE_FIELD_NAMES = frozenset(
@@ -371,6 +385,100 @@ def redacted_marker(reason: str) -> dict[str, JsonValue]:
         "reason": reason,
         "value": REDACTED_VALUE,
     }
+
+
+def redact_structured_log_fields(
+    fields: Mapping[str, object],
+    *,
+    redaction_policy: RedactionBoundary | None = None,
+) -> dict[str, JsonValue]:
+    """Return JSON-safe structured log fields after redaction and capture summarization."""
+
+    redacted = redact_structured_log_value(fields, redaction_policy=redaction_policy)
+    if isinstance(redacted, dict):
+        return redacted
+    return {
+        "marker": STRUCTURED_LOG_REDACTION_FAILURE_MARKER,
+        "reason": "redaction_produced_non_object",
+        "value": "[REDACTION_FAILED]",
+    }
+
+
+def redact_structured_log_value(
+    value: object,
+    *,
+    redaction_policy: RedactionBoundary | None = None,
+) -> JsonValue:
+    """Redact arbitrary log data and remove captured content from log records.
+
+    Capture digests are preserved only when their scope is the redaction-boundary
+    digest scope. The bounded captured value is never copied into the log record.
+    """
+
+    policy = redaction_policy or RedactionPolicy(
+        max_string_length=DEFAULT_STRUCTURED_LOG_MAX_STRING_LENGTH,
+        max_bytes_length=DEFAULT_STRUCTURED_LOG_MAX_BYTES_LENGTH,
+    )
+    try:
+        redacted = policy.apply(value)
+    except Exception:
+        return {
+            "marker": STRUCTURED_LOG_REDACTION_FAILURE_MARKER,
+            "reason": "redaction_failed",
+            "value": "[REDACTION_FAILED]",
+        }
+    return summarize_capture_markers_for_structured_log(redacted)
+
+
+def summarize_capture_markers_for_structured_log(value: JsonValue) -> JsonValue:
+    """Replace bounded capture markers with log-safe summaries."""
+
+    if isinstance(value, dict):
+        if value.get("marker") == "actionlineage.capture.v1":
+            return _structured_log_capture_summary(value)
+        return {
+            key: summarize_capture_markers_for_structured_log(child) for key, child in value.items()
+        }
+    if isinstance(value, list):
+        return [summarize_capture_markers_for_structured_log(child) for child in value]
+    return value
+
+
+def _structured_log_capture_summary(metadata: Mapping[str, JsonValue]) -> dict[str, JsonValue]:
+    digest_scope = metadata.get("digest_scope")
+    digest = metadata.get("digest")
+    summary: dict[str, JsonValue] = {
+        "marker": STRUCTURED_LOG_CAPTURE_MARKER,
+        "value": STRUCTURED_LOG_CAPTURE_VALUE,
+        "encoding": _string_or_unknown(metadata.get("encoding")),
+        "original_length": _int_or_unknown(metadata.get("original_length")),
+        "captured_length": _int_or_unknown(metadata.get("captured_length")),
+        "truncated": _bool_or_unknown(metadata.get("truncated")),
+        "digest_scope": _string_or_unknown(digest_scope),
+    }
+    if digest_scope == CAPTURE_DIGEST_SCOPE and isinstance(digest, str):
+        summary["digest"] = digest
+    else:
+        summary["digest"] = STRUCTURED_LOG_DIGEST_UNAVAILABLE
+    return summary
+
+
+def _string_or_unknown(value: object) -> str:
+    if isinstance(value, str):
+        return value
+    return "unknown"
+
+
+def _int_or_unknown(value: object) -> int | str:
+    if isinstance(value, int) and not isinstance(value, bool):
+        return value
+    return "unknown"
+
+
+def _bool_or_unknown(value: object) -> bool | str:
+    if isinstance(value, bool):
+        return value
+    return "unknown"
 
 
 def capture_string(value: str, *, max_length: int = DEFAULT_MAX_STRING_LENGTH) -> JsonValue:

@@ -237,6 +237,28 @@ def test_external_checkpoint_trust_root_boundary_is_tracked() -> None:
     assert "ADR-0015 now defines" in followups
 
 
+def test_structured_log_redaction_boundary_is_tracked() -> None:
+    redaction_source = (PROJECT_ROOT / "src/actionlineage/domain/redaction.py").read_text(
+        encoding="utf-8"
+    )
+    security_hardening = (PROJECT_ROOT / "docs/SECURITY_HARDENING.md").read_text(encoding="utf-8")
+    coding_standards = (PROJECT_ROOT / "docs/CODING_STANDARDS.md").read_text(encoding="utf-8")
+    scorecard = (PROJECT_ROOT / "docs/QUALITY_SCORECARD.md").read_text(encoding="utf-8")
+    followups = (PROJECT_ROOT / "docs/SECURITY_ASSESSMENT_FOLLOWUPS.md").read_text(encoding="utf-8")
+
+    assert "redact_structured_log_fields" in redaction_source
+    assert "STRUCTURED_LOG_CAPTURE_MARKER" in redaction_source
+    assert "STRUCTURED_LOG_DIGEST_UNAVAILABLE" in redaction_source
+    assert "Structured log capture summary" in security_hardening
+    assert "Pass user, event, observer, exporter, or exception-derived fields" in coding_standards
+    assert "Structured log fields have a reusable redaction" in scorecard
+    assert "Structured log digest boundary" in followups
+    assert (
+        "Broader\n  digest-correlation review across future structured log surfaces remains open"
+        not in (followups)
+    )
+
+
 def test_local_release_planning_docs_are_ignored_and_not_linked_publicly() -> None:
     gitignore = (PROJECT_ROOT / ".gitignore").read_text(encoding="utf-8")
     ignore_patterns = tuple(

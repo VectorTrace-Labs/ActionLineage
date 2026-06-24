@@ -16,6 +16,11 @@ from actionlineage.domain import (
 from actionlineage.domain.events import JsonValue
 from actionlineage.domain.redaction import (
     CAPTURE_DIGEST_SCOPE,
+    STRUCTURED_LOG_CAPTURE_MARKER,
+    STRUCTURED_LOG_DIGEST_UNAVAILABLE,
+    STRUCTURED_LOG_REDACTION_FAILURE_MARKER,
+    redact_structured_log_fields,
+    redact_structured_log_value,
     sha256_capture_bytes,
     sha256_capture_text,
 )
@@ -214,6 +219,82 @@ def test_bytes_capture_is_bounded_and_json_compatible() -> None:
 
 def test_capture_digest_scope_separates_text_and_bytes() -> None:
     assert sha256_capture_text("abcdef") != sha256_capture_bytes(b"abcdef")
+
+
+def test_structured_log_fields_redact_and_summarize_capture_without_value() -> None:
+    raw_token = "structuredlogsecretvalue123456789"
+    oversized_body = "visible-body-prefix-" * 12
+    fields = {
+        "trace_id": "trace_01",
+        "message": f"request used Bearer {raw_token}",
+        "authorization": f"Bearer {raw_token}",
+        "body": oversized_body,
+    }
+
+    redacted = redact_structured_log_fields(
+        fields,
+        redaction_policy=RedactionPolicy(max_string_length=64),
+    )
+    encoded = json.dumps(redacted, sort_keys=True)
+
+    assert raw_token not in encoded
+    assert oversized_body not in encoded
+    assert oversized_body[:64] not in encoded
+    assert "Bearer [REDACTED:bearer_token]" in encoded
+    assert redacted["authorization"]["marker"] == "actionlineage.redacted.v1"
+    body = redacted["body"]
+    assert isinstance(body, dict)
+    assert body["marker"] == STRUCTURED_LOG_CAPTURE_MARKER
+    assert body["value"] == "[OMITTED:bounded-capture]"
+    assert body["digest"] == sha256_capture_text(oversized_body)
+    assert body["digest_scope"] == CAPTURE_DIGEST_SCOPE
+
+
+def test_structured_log_capture_summary_requires_supported_digest_scope() -> None:
+    unscoped_digest = "sha256:" + "a" * 64
+    preexisting_capture = {
+        "marker": "actionlineage.capture.v1",
+        "encoding": "text",
+        "value": "secretprefix",
+        "original_length": 128,
+        "captured_length": 12,
+        "truncated": True,
+        "digest": unscoped_digest,
+    }
+
+    redacted = redact_structured_log_value(
+        {"payload": preexisting_capture},
+        redaction_policy=RedactionPolicy(max_string_length=1024),
+    )
+    encoded = json.dumps(redacted, sort_keys=True)
+
+    assert "secretprefix" not in encoded
+    assert unscoped_digest not in encoded
+    assert isinstance(redacted, dict)
+    payload = redacted["payload"]
+    assert isinstance(payload, dict)
+    assert payload["marker"] == STRUCTURED_LOG_CAPTURE_MARKER
+    assert payload["digest"] == STRUCTURED_LOG_DIGEST_UNAVAILABLE
+    assert payload["digest_scope"] == "unknown"
+
+
+def test_structured_log_redaction_failure_returns_generic_marker() -> None:
+    raw_secret = "structured-log-failure-secret-123456789"
+
+    class FailingBoundary:
+        def apply(self, value: object) -> JsonValue:
+            raise RuntimeError(f"failed on {raw_secret}")
+
+    redacted = redact_structured_log_value(
+        {"message": raw_secret},
+        redaction_policy=FailingBoundary(),
+    )
+    encoded = json.dumps(redacted, sort_keys=True)
+
+    assert raw_secret not in encoded
+    assert isinstance(redacted, dict)
+    assert redacted["marker"] == STRUCTURED_LOG_REDACTION_FAILURE_MARKER
+    assert redacted["reason"] == "redaction_failed"
 
 
 def test_redaction_failure_cannot_silently_serialize_original_value() -> None:
