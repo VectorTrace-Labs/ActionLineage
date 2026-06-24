@@ -15,7 +15,8 @@ from importlib.metadata import PackageNotFoundError, version
 from pathlib import Path
 from typing import Protocol
 
-from actionlineage.domain import EventEnvelope, parse_event
+from actionlineage.domain import EventEnvelope, deterministic_json_bytes, parse_event
+from actionlineage.domain.events import JsonObject
 from actionlineage.domain.redaction import RedactionBoundary
 from actionlineage.errors import ActionLineageError
 from actionlineage.journal.hashing import compute_event_hash, prepare_event_for_append
@@ -28,6 +29,7 @@ except ImportError:  # pragma: no cover
 
 PRIVATE_DIR_MODE = 0o700
 PRIVATE_FILE_MODE = 0o600
+JOURNAL_SOURCE_IDENTITY_VERSION = "actionlineage.dev/journal-source-identity-v1"
 _PROCESS_START_IDENTITY = f"{os.getpid()}:{time.monotonic_ns()}"
 
 
@@ -116,6 +118,12 @@ class VerifiedJournalSnapshot:
 
         return self.verification.last_event_hash
 
+    @property
+    def source_identity(self) -> str:
+        """Stable identity for the verified journal bytes and terminal chain state."""
+
+        return journal_source_identity(self)
+
     def as_dict(self) -> dict[str, object]:
         """Return a JSON-compatible snapshot summary without event payloads."""
 
@@ -125,6 +133,7 @@ class VerifiedJournalSnapshot:
             "record_count": self.record_count,
             "terminal_hash": self.terminal_hash,
             "journal_sha256": self.journal_sha256,
+            "source_identity": self.source_identity,
             "verification": self.verification.as_dict(),
         }
 
@@ -271,6 +280,27 @@ def verify_journal(
         expected_record_count=expected_record_count,
         expected_last_event_hash=expected_last_event_hash,
     ).verification
+
+
+def journal_source_identity(snapshot: VerifiedJournalSnapshot) -> str:
+    """Return a path-independent identity for one verified journal snapshot.
+
+    The identity is local tamper-evidence metadata, not an external trust root.
+    It binds the verified byte digest, verified record count, and terminal event
+    hash into a namespaced digest so projections can follow moved journals while
+    still failing closed for changed journal contents.
+    """
+
+    if not snapshot.ok:
+        raise ValueError("cannot compute source identity for an invalid journal snapshot")
+    preimage: JsonObject = {
+        "journal_sha256": snapshot.journal_sha256,
+        "record_count": snapshot.record_count,
+        "terminal_hash": snapshot.terminal_hash,
+        "version": JOURNAL_SOURCE_IDENTITY_VERSION,
+    }
+    digest = hashlib.sha256(deterministic_json_bytes(preimage)).hexdigest()
+    return f"{JOURNAL_SOURCE_IDENTITY_VERSION}:sha256:{digest}"
 
 
 def verified_journal_snapshot(

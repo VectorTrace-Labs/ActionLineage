@@ -21,8 +21,10 @@ from actionlineage.domain import (
 )
 from actionlineage.domain.events import event_type_value
 from actionlineage.journal import (
+    JOURNAL_SOURCE_IDENTITY_VERSION,
     VerificationResult,
     VerifiedJournalSnapshot,
+    journal_source_identity,
     verified_journal_snapshot,
 )
 
@@ -161,6 +163,7 @@ class VerifiedProjectionSnapshot:
     last_event_hash: str | None
     source_journal_path: str
     source_journal_identity: str
+    source_journal_sha256: str | None
     projection_identity: str
     schema_version: int = PROJECTION_SCHEMA_VERSION
     state: ProjectionStateCode = ProjectionStateCode.HEALTHY
@@ -187,6 +190,7 @@ class VerifiedProjectionSnapshot:
             "database_path": str(self.database_path),
             "source_journal_path": self.source_journal_path,
             "source_journal_identity": self.source_journal_identity,
+            "source_journal_sha256": self.source_journal_sha256,
             "projection_identity": self.projection_identity,
             "records_indexed": self.records_indexed,
             "record_count": self.record_count,
@@ -472,7 +476,9 @@ def rebuild_projection(journal_path: Path, database_path: Path) -> RebuildResult
                 {
                     "schema_version": str(PROJECTION_SCHEMA_VERSION),
                     "source_journal_path": str(journal_path),
-                    "source_journal_identity": _journal_identity(journal_path),
+                    "source_journal_identity": journal_source_identity(snapshot),
+                    "source_journal_identity_version": JOURNAL_SOURCE_IDENTITY_VERSION,
+                    "source_journal_sha256": snapshot.journal_sha256 or "",
                     "projection_identity": _projection_identity(database_path),
                     "records_indexed": str(indexed_count),
                     "last_event_hash": snapshot.terminal_hash or "",
@@ -1199,23 +1205,7 @@ def _verify_projection_state_on_connection(
 ) -> VerifiedProjectionSnapshot:
     validate_schema(connection)
     metadata = _get_metadata(connection)
-    resolved_journal_path = _projection_journal_path(
-        metadata,
-        explicit_journal_path=journal_path,
-    )
-    expected_identity = _journal_identity(resolved_journal_path)
-    stored_identity = metadata.get("source_journal_identity")
-    if not stored_identity:
-        raise ValueError("projection metadata is missing source_journal_identity")
-    if stored_identity != expected_identity:
-        raise ProjectionStateError(
-            ProjectionStateCode.PROJECTION_MISMATCH,
-            "projection source journal identity does not match the verified journal",
-            details={
-                "source_journal_identity": stored_identity,
-                "expected_source_journal_identity": expected_identity,
-            },
-        )
+    source_journal_path = _projection_source_path_hint(metadata)
 
     expected_projection_identity = _projection_identity(database_path)
     stored_projection_identity = metadata.get("projection_identity")
@@ -1231,7 +1221,7 @@ def _verify_projection_state_on_connection(
             },
         )
 
-    snapshot = verified_journal_snapshot(resolved_journal_path)
+    snapshot = verified_journal_snapshot(journal_path)
     if not snapshot.ok:
         raise ProjectionStateError(
             ProjectionStateCode.JOURNAL_INVALID,
@@ -1241,6 +1231,70 @@ def _verify_projection_state_on_connection(
 
     records_indexed = _metadata_int(metadata, "records_indexed")
     last_event_hash = _metadata_hash(metadata, "last_event_hash")
+    expected_identity = journal_source_identity(snapshot)
+    stored_identity = metadata.get("source_journal_identity")
+    if not stored_identity:
+        raise ValueError("projection metadata is missing source_journal_identity")
+    if stored_identity.startswith("local-file:"):
+        raise ProjectionStateError(
+            ProjectionStateCode.PROJECTION_REBUILD_REQUIRED,
+            "projection uses legacy path-based source journal identity; rebuild required",
+            details={
+                "source_journal_identity": stored_identity,
+                "expected_source_journal_identity": expected_identity,
+            },
+        )
+    stored_identity_version = metadata.get("source_journal_identity_version")
+    if stored_identity_version is None:
+        raise ValueError("projection metadata is missing source_journal_identity_version")
+    if stored_identity_version != JOURNAL_SOURCE_IDENTITY_VERSION:
+        raise ProjectionStateError(
+            ProjectionStateCode.PROJECTION_REBUILD_REQUIRED,
+            "projection source journal identity version is unsupported; rebuild required",
+            details={
+                "source_journal_identity_version": stored_identity_version,
+                "expected_source_journal_identity_version": JOURNAL_SOURCE_IDENTITY_VERSION,
+            },
+        )
+    if stored_identity != expected_identity:
+        if _projection_matches_verified_journal_prefix(
+            connection,
+            snapshot,
+            records_indexed=records_indexed,
+            last_event_hash=last_event_hash,
+        ):
+            raise ProjectionStateError(
+                ProjectionStateCode.PROJECTION_STALE,
+                "projection matches a verified prefix of the source journal; rebuild required",
+                details={
+                    "records_indexed": records_indexed,
+                    "record_count": snapshot.record_count,
+                    "last_event_hash": last_event_hash,
+                    "terminal_hash": snapshot.terminal_hash,
+                },
+            )
+        raise ProjectionStateError(
+            ProjectionStateCode.PROJECTION_MISMATCH,
+            "projection source journal identity does not match the verified journal",
+            details={
+                "source_journal_identity": stored_identity,
+                "expected_source_journal_identity": expected_identity,
+            },
+        )
+    stored_journal_sha256 = metadata.get("source_journal_sha256")
+    expected_journal_sha256 = snapshot.journal_sha256 or ""
+    if stored_journal_sha256 is None:
+        raise ValueError("projection metadata is missing source_journal_sha256")
+    if stored_journal_sha256 != expected_journal_sha256:
+        raise ProjectionStateError(
+            ProjectionStateCode.PROJECTION_MISMATCH,
+            "projection source journal byte digest does not match the verified journal",
+            details={
+                "source_journal_sha256": stored_journal_sha256,
+                "expected_source_journal_sha256": expected_journal_sha256,
+            },
+        )
+
     projection_metadata_matches = (
         records_indexed == snapshot.record_count and last_event_hash == snapshot.terminal_hash
     )
@@ -1263,13 +1317,14 @@ def _verify_projection_state_on_connection(
 
     _verify_projected_rows(connection, snapshot)
     return VerifiedProjectionSnapshot(
-        journal_path=resolved_journal_path,
+        journal_path=journal_path,
         database_path=database_path,
         journal_snapshot=snapshot,
         records_indexed=records_indexed,
         last_event_hash=last_event_hash,
-        source_journal_path=metadata["source_journal_path"],
+        source_journal_path=source_journal_path,
         source_journal_identity=stored_identity,
+        source_journal_sha256=stored_journal_sha256 or None,
         projection_identity=stored_projection_identity,
     )
 
@@ -1326,27 +1381,12 @@ def _get_metadata(connection: sqlite3.Connection) -> dict[str, str]:
     return {cast(str, key): cast(str, value) for key, value in rows}
 
 
-def _projection_journal_path(
-    metadata: dict[str, str],
-    *,
-    explicit_journal_path: Path,
-) -> Path:
+def _projection_source_path_hint(metadata: dict[str, str]) -> str:
     stored_path = metadata.get("source_journal_path")
     if not stored_path:
         raise ValueError("projection metadata is missing source_journal_path")
 
-    resolved_stored_path = _normalize_journal_path(Path(stored_path))
-    resolved_explicit_path = _normalize_journal_path(Path(explicit_journal_path))
-    if resolved_stored_path != resolved_explicit_path:
-        raise ProjectionStateError(
-            ProjectionStateCode.PROJECTION_MISMATCH,
-            "projection source journal path does not match the requested journal",
-            details={
-                "source_journal_path": str(resolved_stored_path),
-                "requested_journal_path": str(resolved_explicit_path),
-            },
-        )
-    return resolved_explicit_path
+    return str(_normalize_journal_path(Path(stored_path)))
 
 
 def _metadata_int(metadata: dict[str, str], key: str) -> int:
@@ -1373,28 +1413,69 @@ def _verify_projected_rows(
     connection: sqlite3.Connection,
     snapshot: VerifiedJournalSnapshot,
 ) -> None:
+    rows = _projected_row_values_and_types(connection)
+    _verify_projected_row_values(rows, snapshot)
+
+
+def _projection_matches_verified_journal_prefix(
+    connection: sqlite3.Connection,
+    snapshot: VerifiedJournalSnapshot,
+    *,
+    records_indexed: int,
+    last_event_hash: str | None,
+) -> bool:
+    if records_indexed > snapshot.record_count:
+        return False
+    expected_last_hash = (
+        snapshot.events[records_indexed - 1].integrity.event_hash if records_indexed else None
+    )
+    if last_event_hash != expected_last_hash:
+        return False
+    rows = _projected_row_values_and_types(connection)
+    if len(rows) != records_indexed:
+        return False
+    try:
+        _verify_projected_row_values(rows, snapshot, expected_count=records_indexed)
+    except ProjectionStateError:
+        return False
+    return True
+
+
+def _projected_row_values_and_types(connection: sqlite3.Connection) -> list[tuple[object, ...]]:
     select_values = ", ".join(PROJECTED_EVENT_COLUMNS)
     select_types = ", ".join(f"typeof({column})" for column in PROJECTED_EVENT_COLUMNS)
-    rows = connection.execute(
-        f"""
-        SELECT {select_values}, {select_types}
-        FROM events
-        ORDER BY journal_record_number ASC
-        """
-    ).fetchall()
-    if len(rows) != snapshot.record_count:
+    return [
+        tuple(row)
+        for row in connection.execute(
+            f"""
+            SELECT {select_values}, {select_types}
+            FROM events
+            ORDER BY journal_record_number ASC
+            """
+        ).fetchall()
+    ]
+
+
+def _verify_projected_row_values(
+    rows: list[tuple[object, ...]],
+    snapshot: VerifiedJournalSnapshot,
+    *,
+    expected_count: int | None = None,
+) -> None:
+    record_count = snapshot.record_count if expected_count is None else expected_count
+    if len(rows) != record_count:
         code = (
             ProjectionStateCode.PROJECTION_STALE
-            if len(rows) < snapshot.record_count
+            if len(rows) < record_count
             else ProjectionStateCode.PROJECTION_MISMATCH
         )
         raise ProjectionStateError(
             code,
             "projection row count does not match the verified journal",
-            details={"rows": len(rows), "record_count": snapshot.record_count},
+            details={"rows": len(rows), "record_count": record_count},
         )
 
-    for record_number, event in enumerate(snapshot.events, start=1):
+    for record_number, event in enumerate(snapshot.events[:record_count], start=1):
         row = rows[record_number - 1]
         actual_values = tuple(row[: len(PROJECTED_EVENT_COLUMNS)])
         actual_types = tuple(cast(str, value) for value in row[len(PROJECTED_EVENT_COLUMNS) :])
@@ -1432,10 +1513,6 @@ def _verify_projected_rows(
                     "type_mismatched_columns": type_mismatched_columns,
                 },
             )
-
-
-def _journal_identity(journal_path: Path) -> str:
-    return f"local-file:{_normalize_journal_path(journal_path)}"
 
 
 def _projection_identity(database_path: Path) -> str:

@@ -126,6 +126,24 @@ def test_verified_snapshot_is_immutable_after_source_file_changes(tmp_path: Path
     assert journal.verified_snapshot().record_count == 4
 
 
+def test_journal_source_identity_is_path_independent_for_same_verified_bytes(
+    tmp_path: Path,
+) -> None:
+    path = tmp_path / "events.jsonl"
+    copied_path = tmp_path / "copied-events.jsonl"
+    journal = write_valid_journal(path)
+    snapshot = journal.verified_snapshot()
+    copied_path.write_bytes(path.read_bytes())
+    copied_snapshot = LocalJournal(copied_path).verified_snapshot()
+
+    assert snapshot.source_identity.startswith("actionlineage.dev/journal-source-identity-v1:")
+    assert copied_snapshot.source_identity == snapshot.source_identity
+
+    LocalJournal(copied_path).append(make_event(3))
+
+    assert LocalJournal(copied_path).verified_snapshot().source_identity != snapshot.source_identity
+
+
 def test_verified_snapshot_events_reject_nested_payload_mutation(tmp_path: Path) -> None:
     path = tmp_path / "events.jsonl"
     journal = LocalJournal(path)

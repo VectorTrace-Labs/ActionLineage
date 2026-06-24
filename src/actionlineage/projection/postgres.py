@@ -15,7 +15,11 @@ from typing import Protocol
 
 from actionlineage.domain import EventEnvelope, serialize_event
 from actionlineage.domain.events import event_type_value
-from actionlineage.journal import verified_journal_snapshot
+from actionlineage.journal import (
+    JOURNAL_SOURCE_IDENTITY_VERSION,
+    journal_source_identity,
+    verified_journal_snapshot,
+)
 from actionlineage.projection.sqlite import (
     PROJECTION_SCHEMA_VERSION,
     ProjectionRebuildError,
@@ -94,6 +98,8 @@ def rebuild_postgres_projection(
                 ('schema_version', %(schema_version)s),
                 ('source_journal_path', %(source_journal_path)s),
                 ('source_journal_identity', %(source_journal_identity)s),
+                ('source_journal_identity_version', %(source_journal_identity_version)s),
+                ('source_journal_sha256', %(source_journal_sha256)s),
                 ('records_indexed', %(records_indexed)s),
                 ('last_event_hash', %(last_event_hash)s)
             ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value
@@ -101,7 +107,9 @@ def rebuild_postgres_projection(
             {
                 "schema_version": str(POSTGRES_PROJECTION_SCHEMA_VERSION),
                 "source_journal_path": str(journal_path),
-                "source_journal_identity": f"local-file:{journal_path}",
+                "source_journal_identity": journal_source_identity(snapshot),
+                "source_journal_identity_version": JOURNAL_SOURCE_IDENTITY_VERSION,
+                "source_journal_sha256": snapshot.journal_sha256 or "",
                 "records_indexed": str(indexed_count),
                 "last_event_hash": snapshot.terminal_hash or "",
             },

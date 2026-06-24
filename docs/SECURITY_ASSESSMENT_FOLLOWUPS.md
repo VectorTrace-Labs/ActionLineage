@@ -45,11 +45,14 @@ and does not expand ActionLineage into a generic tracing platform.
 - **External trust root**: confirmed as future work. Local hash chains and local
   anchors remain local tamper evidence only. Remote witness, KMS/HSM signing,
   transparency log, or WORM storage support needs a checkpoint ADR before code.
-- **Stable journal identity**: partially confirmed. Verified projection reads
-  now require an independently configured journal path and mandatory projection
-  source identity metadata, with relative and symlink aliases normalized. This
-  remains a path-based local-alpha identity, not a cryptographic journal UUID or
-  externally anchored checkpoint identity.
+- **Stable journal identity**: locally confirmed for projections. ADR-0010
+  defines `actionlineage.dev/journal-source-identity-v1`, a path-independent
+  digest over the verified journal byte digest, record count, and terminal event
+  hash. Verified projection reads still require an explicit caller-supplied
+  journal path, allow moved byte-identical journals, fail closed for changed
+  journal contents, and force rebuild for legacy `local-file:` identities. This
+  remains local tamper evidence, not a journal UUID, signature, WORM guarantee,
+  or externally anchored checkpoint identity.
 - **Canonicalization v1**: partially confirmed. The current deterministic JSON
   boundary is documented as interim. A cross-language canonicalization standard
   or byte-level specification requires conformance vectors and migration notes.
@@ -80,15 +83,13 @@ and does not expand ActionLineage into a generic tracing platform.
 
 ## Next implementation order
 
-1. Draft an ADR for stable journal identity beyond local path strings, including
-   journal UUID/checkpoint behavior and migration semantics.
-2. Add projection-state checks to any future non-SQLite read APIs before those
+1. Add projection-state checks to any future non-SQLite read APIs before those
    APIs are exposed.
-3. Benchmark append verification at 10k, 100k, and feasible larger journals
+2. Benchmark append verification at 10k, 100k, and feasible larger journals
    before proposing segmented journals or checkpoint indexes.
-4. Draft ADRs for observer attestation policy, canonicalization v1, causal edge
+3. Draft ADRs for observer attestation policy, canonicalization v1, causal edge
    evolution, and external checkpoint trust roots.
-5. Expand service ingestion tests for concurrency, idempotency conflicts,
+4. Expand service ingestion tests for concurrency, idempotency conflicts,
    projection rebuild failure after append, and partial batch responses.
-6. Audit input structural limits and redaction digest behavior across journal,
+5. Audit input structural limits and redaction digest behavior across journal,
    projection, export, logs, exceptions, and test snapshots.

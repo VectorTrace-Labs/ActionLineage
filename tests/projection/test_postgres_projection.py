@@ -5,6 +5,7 @@ from pathlib import Path
 import pytest
 
 from actionlineage.demo import run_demo
+from actionlineage.journal import JOURNAL_SOURCE_IDENTITY_VERSION
 from actionlineage.projection import (
     POSTGRES_DEFAULT_TABLE,
     ProjectionRebuildError,
@@ -65,6 +66,16 @@ def test_postgres_projection_rebuilds_from_verified_journal(tmp_path: Path) -> N
     ]
     assert verified
     assert all(isinstance(parameters["event_json"], str) for parameters in inserted)
+    metadata_parameters = next(
+        parameters
+        for statement, parameters in executor.calls
+        if "INSERT INTO actionlineage_events_metadata" in statement and parameters is not None
+    )
+    assert str(metadata_parameters["source_journal_identity"]).startswith(
+        f"{JOURNAL_SOURCE_IDENTITY_VERSION}:sha256:"
+    )
+    assert metadata_parameters["source_journal_identity_version"] == JOURNAL_SOURCE_IDENTITY_VERSION
+    assert str(metadata_parameters["source_journal_sha256"]).startswith("sha256:")
 
 
 def test_postgres_projection_rejects_corrupt_journal_before_writing(tmp_path: Path) -> None:

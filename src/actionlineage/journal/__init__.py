@@ -59,6 +59,7 @@ from actionlineage.journal.git_anchor import (
     write_git_anchor_statement,
 )
 from actionlineage.journal.local import (
+    JOURNAL_SOURCE_IDENTITY_VERSION,
     JournalAppendError,
     JournalError,
     JournalFileMetadata,
@@ -70,6 +71,7 @@ from actionlineage.journal.local import (
     VerifiedJournalSnapshot,
     append_event,
     iter_events,
+    journal_source_identity,
     verified_journal_snapshot,
     verify_journal,
 )
@@ -83,6 +85,7 @@ __all__ = [
     "JOURNAL_ANCHOR_VERSION",
     "JOURNAL_ARCHIVE_MANIFEST_VERSION",
     "JOURNAL_SEGMENT_MANIFEST_VERSION",
+    "JOURNAL_SOURCE_IDENTITY_VERSION",
     "AnchorLogVerificationIssue",
     "AnchorLogVerificationResult",
     "AnchorVerificationIssue",
@@ -122,6 +125,7 @@ __all__ = [
     "create_segment_manifest",
     "export_verified_prefix",
     "iter_events",
+    "journal_source_identity",
     "load_external_anchor_attestation",
     "load_git_anchor_statement",
     "load_journal_anchor",

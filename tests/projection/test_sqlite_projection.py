@@ -385,12 +385,37 @@ def test_projection_verification_detects_unexpected_sqlite_runtime_types(
     assert exc_info.value.details["type_mismatched_columns"] == ["event_hash"]
 
 
-def test_projection_source_identity_mismatch_fails_closed(tmp_path: Path) -> None:
+def test_projection_source_identity_allows_byte_identical_moved_journal(tmp_path: Path) -> None:
     journal_path = tmp_path / "events.jsonl"
     other_journal_path = tmp_path / "other.jsonl"
     database_path = tmp_path / "projection.sqlite"
     write_journal(journal_path, complete_timeline_events())
     write_journal(other_journal_path, complete_timeline_events())
+    rebuild_projection(journal_path, database_path)
+
+    timeline = query_timeline(database_path, journal_path=other_journal_path, trace_id="trace_01")
+
+    assert timeline.as_dict()["event_count"] == 5
+    assert timeline.verification is not None
+    assert timeline.verification.journal_path == other_journal_path.resolve(strict=False)
+    assert timeline.verification.source_journal_identity == (
+        timeline.verification.journal_snapshot.source_identity
+    )
+
+
+def test_projection_source_identity_mismatch_fails_closed(tmp_path: Path) -> None:
+    journal_path = tmp_path / "events.jsonl"
+    other_journal_path = tmp_path / "other.jsonl"
+    database_path = tmp_path / "projection.sqlite"
+    write_journal(journal_path, complete_timeline_events())
+    other_events = list(complete_timeline_events())
+    other_events[3] = timeline_event(
+        3,
+        EventType.AGENT_TOOL_CALL_DENIED,
+        parent_event_id="evt_2",
+        payload={"reason": "different source content"},
+    )
+    write_journal(other_journal_path, tuple(other_events))
     rebuild_projection(journal_path, database_path)
 
     with pytest.raises(ProjectionStateError) as exc_info:
@@ -414,7 +439,7 @@ def test_projection_missing_source_identity_requires_rebuild(tmp_path: Path) -> 
     assert exc_info.value.code == ProjectionStateCode.PROJECTION_REBUILD_REQUIRED
 
 
-def test_projection_mismatched_source_identity_fails_closed(tmp_path: Path) -> None:
+def test_projection_legacy_path_source_identity_requires_rebuild(tmp_path: Path) -> None:
     journal_path = tmp_path / "events.jsonl"
     database_path = tmp_path / "projection.sqlite"
     write_journal(journal_path, complete_timeline_events())
@@ -432,7 +457,46 @@ def test_projection_mismatched_source_identity_fails_closed(tmp_path: Path) -> N
     with pytest.raises(ProjectionStateError) as exc_info:
         query_timeline(database_path, journal_path=journal_path, trace_id="trace_01")
 
+    assert exc_info.value.code == ProjectionStateCode.PROJECTION_REBUILD_REQUIRED
+
+
+def test_projection_mismatched_source_journal_sha256_fails_closed(tmp_path: Path) -> None:
+    journal_path = tmp_path / "events.jsonl"
+    database_path = tmp_path / "projection.sqlite"
+    write_journal(journal_path, complete_timeline_events())
+    rebuild_projection(journal_path, database_path)
+
+    with closing(sqlite3.connect(database_path)) as connection, connection:
+        connection.execute(
+            """
+            UPDATE projection_metadata
+            SET value = 'sha256:tampered'
+            WHERE key = 'source_journal_sha256'
+            """
+        )
+
+    with pytest.raises(ProjectionStateError) as exc_info:
+        query_timeline(database_path, journal_path=journal_path, trace_id="trace_01")
+
     assert exc_info.value.code == ProjectionStateCode.PROJECTION_MISMATCH
+
+
+def test_projection_moved_journal_path_keeps_stored_path_as_audit_hint(tmp_path: Path) -> None:
+    journal_path = tmp_path / "events.jsonl"
+    moved_journal_path = tmp_path / "moved-events.jsonl"
+    database_path = tmp_path / "projection.sqlite"
+    write_journal(journal_path, complete_timeline_events())
+    rebuild_projection(journal_path, database_path)
+    journal_path.rename(moved_journal_path)
+
+    timeline = query_timeline(database_path, journal_path=moved_journal_path, trace_id="trace_01")
+
+    assert timeline.verification is not None
+    assert timeline.verification.journal_path == moved_journal_path.resolve(strict=False)
+    assert timeline.verification.source_journal_path == str(journal_path.resolve(strict=False))
+    assert timeline.as_dict()["verification"]["journal_path"] == str(
+        moved_journal_path.resolve(strict=False)
+    )
 
 
 def test_projection_journal_path_aliases_are_normalized(
