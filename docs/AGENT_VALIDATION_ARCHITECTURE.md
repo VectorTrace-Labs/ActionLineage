@@ -270,8 +270,8 @@ Scheduled no-model lane:
 - Model requests: zero.
 - Runs the deterministic scripted suite, a no-model Inspect smoke, replay path,
   reviewed regression corpus, artifact audit, public-report generation, trend
-  report generation, and `check-public-baseline` freshness checks from trusted
-  code.
+  report generation, and `check-public-baseline --allow-input-drift`
+  semantic-only freshness checks from trusted code.
 - Uploads generated artifacts for maintainer review.
 
 Scheduled live-model lane:

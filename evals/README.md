@@ -112,6 +112,9 @@ provenance-only changes such as commit SHA and artifact root, but fails on
 semantic evidence drift or changes to the eval-relevant input digest unless the
 committed baseline is refreshed.
 
+CI may pass `--allow-input-drift` for push/scheduled runs that should fail only
+on semantic baseline drift while still reporting input drift in the emitted JSON.
+
 The scheduled GitHub Models lane currently runs the first six scenarios through
 Inspect with strict request and tool budgets. `AVL-007` is a
 deterministic no-model provider-failure control, `AVL-008` is a budget

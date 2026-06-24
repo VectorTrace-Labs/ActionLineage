@@ -79,6 +79,12 @@ Expected current baseline:
 - committed baseline check passes with either exact match or provenance-only
   drift.
 
+The scheduled and push Agent Validation workflow runs the same baseline check
+with semantic-only acceptance (`--allow-input-drift`): input drift remains
+reported in the JSON output, but CI only fails when regenerated baseline
+semantics drift. Release evidence refreshes should continue to use the strict
+command above.
+
 See `docs/AGENT_VALIDATION_EVIDENCE.md` for the current scenario index,
 failure-class counts, and known gaps. The generated committed baseline is in
 `docs/evidence/agent-validation-baseline.md` and

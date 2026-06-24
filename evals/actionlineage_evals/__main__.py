@@ -8,7 +8,7 @@ import sys
 from pathlib import Path
 
 from actionlineage_evals.artifact_audit import audit_artifacts
-from actionlineage_evals.baseline import check_public_baseline
+from actionlineage_evals.baseline import baseline_check_passes, check_public_baseline
 from actionlineage_evals.boundary import check_eval_import_boundaries
 from actionlineage_evals.environment import DockerComposeEnvironmentController
 from actionlineage_evals.linting import lint_scenarios
@@ -211,6 +211,14 @@ def main(argv: list[str] | None = None) -> int:
         type=Path,
         default=Path("evals/SCENARIO_SCHEMA.json"),
     )
+    check_baseline.add_argument(
+        "--allow-input-drift",
+        action="store_true",
+        help=(
+            "Exit successfully when regenerated artifacts have only input/provenance "
+            "drift and no semantic baseline drift."
+        ),
+    )
 
     audit = subcommands.add_parser("audit-artifacts")
     audit.add_argument("artifact_root", type=Path)
@@ -367,8 +375,14 @@ def main(argv: list[str] | None = None) -> int:
             coverage_path=args.coverage_path,
             schema_path=args.schema_path,
         )
+        gate_ok = baseline_check_passes(report, allow_input_drift=args.allow_input_drift)
+        report["gate"] = {
+            "accepted": gate_ok,
+            "allow_input_drift": args.allow_input_drift,
+            "policy": "semantic-only" if args.allow_input_drift else "strict-inputs",
+        }
         _print(report)
-        return 0 if report["ok"] else 1
+        return 0 if gate_ok else 1
     if args.command == "audit-artifacts":
         audit_result = audit_artifacts(
             args.artifact_root,

@@ -20,7 +20,7 @@ from actionlineage_evals.adapters import (  # noqa: E402
     ProviderError,
 )
 from actionlineage_evals.artifact_audit import audit_artifacts  # noqa: E402
-from actionlineage_evals.baseline import check_public_baseline  # noqa: E402
+from actionlineage_evals.baseline import baseline_check_passes, check_public_baseline  # noqa: E402
 from actionlineage_evals.boundary import check_eval_import_boundaries  # noqa: E402
 from actionlineage_evals.linting import lint_scenarios  # noqa: E402
 from actionlineage_evals.minimization import (  # noqa: E402
@@ -949,6 +949,8 @@ def test_public_baseline_check_fails_on_semantic_drift(tmp_path: Path) -> None:
     assert check["status"] == "semantic_drift"
     assert check["semantic_differences"]
     assert check["semantic_differences"][0]["path"] == "$.suite.failed_count"
+    assert baseline_check_passes(check) is False
+    assert baseline_check_passes(check, allow_input_drift=True) is False
 
 
 def test_public_baseline_check_fails_on_input_drift(tmp_path: Path) -> None:
@@ -973,6 +975,8 @@ def test_public_baseline_check_fails_on_input_drift(tmp_path: Path) -> None:
     assert check["status"] == "input_drift"
     assert check["semantic_differences"] == []
     assert check["input_differences"]["committed_digest"] == "sha256:stale"
+    assert baseline_check_passes(check) is False
+    assert baseline_check_passes(check, allow_input_drift=True) is True
 
 
 def test_inspect_task_accepts_live_configuration_metadata() -> None:

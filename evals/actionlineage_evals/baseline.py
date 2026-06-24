@@ -73,6 +73,14 @@ def check_public_baseline(
     }
 
 
+def baseline_check_passes(report: Mapping[str, Any], *, allow_input_drift: bool = False) -> bool:
+    """Return whether a baseline-check report passes the selected gate policy."""
+
+    if allow_input_drift:
+        return not bool(report.get("semantic_differences"))
+    return bool(report.get("ok"))
+
+
 def semantic_public_baseline_report(report: Mapping[str, Any]) -> JsonMap:
     """Return only release-relevant public-baseline semantics."""
 

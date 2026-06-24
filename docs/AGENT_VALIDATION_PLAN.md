@@ -111,8 +111,10 @@ Current baseline-freshness slice:
    with `docs/evidence/agent-validation-baseline.json`.
 3. Treat commit SHA, artifact root, and reproduction-command differences as
    provenance-only drift when semantic evidence and input fingerprints match.
-4. Fail on semantic evidence drift or eval-relevant input drift unless the
-   committed baseline is refreshed in the same change.
+4. Keep strict local checks failing on semantic evidence drift or eval-relevant
+   input drift unless the committed baseline is refreshed in the same change.
+   Push/scheduled workflow checks use semantic-only acceptance so input drift is
+   reported without creating failure noise for ordinary source commits.
 
 Completed concurrent-run-isolation slice:
 

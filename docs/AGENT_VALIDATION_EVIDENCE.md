@@ -55,8 +55,8 @@ PYTHONPATH=evals uv run --group eval python -m actionlineage_evals check-public-
 | Eval import boundary | No ActionLineage core imports from eval-only packages |
 | Scripted no-model suite | 15 scorecards, 0 failed |
 | Artifact audit | 367 files scanned, 0 leaks |
-| Baseline freshness gate | Committed baseline is checked against regenerated no-model artifacts; provenance-only drift is allowed, input or semantic drift fails |
-| Scheduled no-model lane | Trusted workflow generates deterministic artifacts, reviewed regression replay, no-model Inspect smoke, public-report outputs, and trend outputs without model credentials |
+| Baseline freshness gate | Strict local baseline checks fail on input or semantic drift; workflow checks use semantic-only acceptance so input drift remains reported without hiding evidence regressions |
+| Scheduled no-model lane | Trusted workflow generates deterministic artifacts, reviewed regression replay, no-model Inspect smoke, public-report outputs, trend outputs, and semantic-only baseline checks without model credentials |
 | Scheduled live-model lane | Optional Inspect-driven lane skipped unless maintainers configure `GH_MODELS_TOKEN`; provider instability remains non-blocking |
 | Replay equivalence in the scripted baseline | 0/0 because replay is a separate command path |
 | Public baseline report | `docs/evidence/agent-validation-baseline.md` and `docs/evidence/agent-validation-baseline.json` |
