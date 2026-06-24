@@ -24,9 +24,15 @@ from actionlineage.service.runtime import (
 from actionlineage.service.tenancy import (
     ServiceTenant,
     TenantAccessDecision,
+    TenantIsolationError,
     TenantRegistry,
     TenantRoleBinding,
+    TenantStorageLayout,
+    TenantStorageScope,
+    confined_service_path,
     require_tenant_role,
+    require_tenant_storage_scope,
+    validate_tenant_id,
 )
 
 __all__ = [
@@ -48,12 +54,18 @@ __all__ = [
     "ServiceTenant",
     "StaticTokenAuthenticator",
     "TenantAccessDecision",
+    "TenantIsolationError",
     "TenantRegistry",
     "TenantRoleBinding",
+    "TenantStorageLayout",
+    "TenantStorageScope",
     "check_local_health",
+    "confined_service_path",
     "create_app",
     "create_service_app_from_env",
     "require_capability",
     "require_role",
     "require_tenant_role",
+    "require_tenant_storage_scope",
+    "validate_tenant_id",
 ]

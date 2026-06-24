@@ -73,13 +73,17 @@ evidence and limitations.
 - Canonicalization v1 conformance vectors and migration guardrails are
   checked in and executable, while persisted journal hashes remain on
   `actionlineage.dev/json-deterministic-v0`.
+- Tenant storage layout and tenant-scoped service authorization are locally
+  demonstrated for optional service wrappers: known tenants derive separate
+  journal, projection, export, service-log, cache, and anchor namespaces, and
+  storage scope requires both global role membership and tenant role binding.
 
 ## Preview Surface
 
 - MCP descriptor/runtime helpers and optional policy adapter semantics.
 - OpenTelemetry, SIEM/export, STIX/TAXII, and webhook/file sink integrations.
-- Optional FastAPI service mode, JWT/OIDC helpers, tenant checks, Docker,
-  Kubernetes, and Helm deployment examples.
+- Optional FastAPI service mode, JWT/OIDC helpers, Docker, Kubernetes, and Helm
+  deployment examples.
 - GHCR container-image publication from version-tagged release workflow runs.
 - Optional Postgres projection schema and verifier.
 - Cloud, Kubernetes, and external sensor observers backed by local fixtures.

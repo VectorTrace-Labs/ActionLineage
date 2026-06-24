@@ -288,6 +288,41 @@ def test_protected_evidence_kernel_boundary_is_tracked() -> None:
     assert "FORBIDDEN_OPTIONAL_IMPORT_ROOTS" in boundary_test
 
 
+def test_tenant_isolation_boundary_is_tracked() -> None:
+    adr = (PROJECT_ROOT / "docs/ADR/0017-tenant-isolation-boundary.md").read_text(encoding="utf-8")
+    architecture = (PROJECT_ROOT / "ARCHITECTURE.md").read_text(encoding="utf-8")
+    operations = (PROJECT_ROOT / "docs/OPERATIONS.md").read_text(encoding="utf-8")
+    scorecard = (PROJECT_ROOT / "docs/QUALITY_SCORECARD.md").read_text(encoding="utf-8")
+    maturity = (PROJECT_ROOT / "docs/MATURITY.md").read_text(encoding="utf-8")
+    followups = (PROJECT_ROOT / "docs/SECURITY_ASSESSMENT_FOLLOWUPS.md").read_text(encoding="utf-8")
+    tenancy_source = (PROJECT_ROOT / "src/actionlineage/service/tenancy.py").read_text(
+        encoding="utf-8"
+    )
+    service_tests = (PROJECT_ROOT / "tests/service/test_service_mode.py").read_text(
+        encoding="utf-8"
+    )
+
+    assert "- Status: Accepted" in adr
+    assert "actionlineage.dev/tenant-storage-layout-v1" in adr
+    assert "journal_path" in adr
+    assert "database_path" in adr
+    assert "export_root" in adr
+    assert "service_log_path" in adr
+    assert "cache_root" in adr
+    assert "anchor_root" in adr
+    assert "Future shared database, object-storage, or hosted multi-tenant service work" in adr
+    assert "Tenant service boundary" in architecture
+    assert "`TenantStorageLayout` and\n`TenantStorageScope`" in operations
+    assert "Tenant service boundary is explicit and path-tested" in scorecard
+    assert "Tenant storage layout and tenant-scoped service authorization" in maturity
+    assert "**Tenant isolation**: locally confirmed" in followups
+    assert "Hosted SaaS\n  isolation" in followups
+    assert "TenantStorageLayout" in tenancy_source
+    assert "require_tenant_storage_scope" in tenancy_source
+    assert "test_tenant_storage_layout_derives_isolated_surface_paths" in service_tests
+    assert "test_tenant_storage_scope_requires_global_role_and_tenant_binding" in service_tests
+
+
 def test_local_release_planning_docs_are_ignored_and_not_linked_publicly() -> None:
     gitignore = (PROJECT_ROOT / ".gitignore").read_text(encoding="utf-8")
     ignore_patterns = tuple(

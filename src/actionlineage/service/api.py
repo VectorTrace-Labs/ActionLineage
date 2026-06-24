@@ -46,6 +46,7 @@ from actionlineage.service.auth import (
     require_capability,
 )
 from actionlineage.service.health import check_local_health
+from actionlineage.service.tenancy import confined_service_path
 
 
 class ServiceDependencyError(RuntimeError):
@@ -479,15 +480,4 @@ def _ingest_response_body(
 
 
 def _service_export_dir(export_root: Path, requested_output_dir: str) -> Path:
-    if not requested_output_dir.strip():
-        raise ValueError("output_dir must be a relative directory under export_root")
-
-    requested = Path(requested_output_dir)
-    if requested.is_absolute() or any(part in {"", ".", ".."} for part in requested.parts):
-        raise ValueError("output_dir must be a relative directory under export_root")
-
-    root = Path(export_root).resolve(strict=False)
-    candidate = (root / requested).resolve(strict=False)
-    if candidate == root or not candidate.is_relative_to(root):
-        raise ValueError("output_dir must stay under export_root")
-    return candidate
+    return confined_service_path(export_root, requested_output_dir, field_name="output_dir")

@@ -162,6 +162,13 @@ and does not expand ActionLineage into a generic tracing platform.
   SDK/framework dependency roots so adapters, service mode, cloud collectors,
   telemetry mirrors, model providers, demos, labs, and presentation surfaces do
   not become implicit trust roots.
+- **Tenant isolation boundary**: ADR-0017 now defines
+  `actionlineage.dev/tenant-storage-layout-v1` for optional service wrappers.
+  Local service regressions cover known-tenant storage-scope derivation across
+  journals, projections, exports, service logs, caches, and anchors; strict
+  tenant ID validation; confined tenant export paths; and
+  `require_tenant_storage_scope()` requiring both global service role membership
+  and tenant role binding before returning paths.
 
 ## Implemented before this slice
 
@@ -247,9 +254,12 @@ and does not expand ActionLineage into a generic tracing platform.
   rebuildable cache. Remaining work includes a deliberate decision if future
   APIs need all-or-nothing transactional batch semantics instead of explicit
   partial success.
-- **Tenant isolation**: partially confirmed. Tenant-aware authorization
-  primitives exist, but end-to-end tenant isolation across storage, projections,
-  exports, logs, caches, and anchors is not demonstrated.
+- **Tenant isolation**: locally confirmed for optional local service wrappers.
+  ADR-0017 defines the tenant storage boundary, and local tests cover known
+  tenants, global-role plus tenant-binding authorization, and isolated journal,
+  projection, export, service-log, cache, and anchor paths. Hosted SaaS
+  isolation, shared database row-level security, object-storage isolation, and
+  production backend validation remain external/future work.
 - **Protected kernel boundary**: locally confirmed. ADR-0016 defines the
   protected evidence kernel, and release import-boundary tests cover
   event/evidence, journal, anchoring, observer policy, projection, contract,
@@ -268,5 +278,5 @@ and does not expand ActionLineage into a generic tracing platform.
 
 1. Use the captured 10k/100k/250k benchmark evidence before proposing segmented
    journals, checkpoint indexes, or ADR-0011 append-index cache work.
-2. Define end-to-end tenant isolation boundaries across storage, projections,
-   exports, logs, caches, anchors, and service authorization.
+2. Add case-bundle signature or longer-running recovery fault injection only
+   after the local durability threat model and failure semantics are narrowed.

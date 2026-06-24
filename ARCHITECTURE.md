@@ -103,6 +103,16 @@ Policy decisions are evidence. Enforcement adapters may deny dispatch, but core 
 
 Emit spans and attributes without making OpenTelemetry the canonical evidence store. Trace export failure must not silently erase the local journal record.
 
+### Tenant service boundary
+
+Optional service deployments may use `TenantStorageLayout` and
+`TenantStorageScope` to route known tenants to distinct journal, projection,
+export, service-log, cache, and anchor namespaces. ADR-0017 keeps this as a
+local deployment boundary: tenant-scoped service authorization requires both
+global service role membership and a tenant role binding, and the derived
+surfaces remain tied to each tenant journal rather than becoming a hosted SaaS
+isolation claim.
+
 ### 7. Detection engine
 
 Consume normalized events and evaluate declarative sequence rules. Keep detection asynchronous with respect to journal persistence. Detection rules should distinguish acknowledged, observed, and verified outcomes.

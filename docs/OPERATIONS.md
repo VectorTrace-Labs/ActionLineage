@@ -142,9 +142,24 @@ Explicit capability grants do not satisfy global or tenant role checks; use
 capability checks for endpoint permissions and tenant role checks for
 tenant-scoped authorization decisions.
 
-These helpers do not create a hosted SaaS control plane, provision tenants, or
-move journals into a shared database. Deployment code remains responsible for
-using separate journal/projection paths or storage prefixes for each tenant.
+ADR-0017 defines the local tenant isolation boundary. `TenantStorageLayout` and
+`TenantStorageScope` derive per-tenant journal, projection, export, service-log,
+cache, and anchor paths from configured roots using
+`actionlineage.dev/tenant-storage-layout-v1`. Unknown tenants fail closed before
+paths are returned, and tenant IDs must be single portable path segments
+containing only ASCII letters, digits, `_`, and `-`.
+
+Use `require_tenant_storage_scope()` when a service wrapper needs to authorize a
+request and select the tenant's local storage namespace in one step. Case-export
+paths must remain relative paths below the tenant export root; absolute paths,
+`.`, `..`, and traversal attempts are rejected before bundle generation.
+
+These helpers do not create a hosted SaaS control plane, provision tenants,
+prove database row-level security, or move journals into a shared canonical
+store. Deployment code remains responsible for routing each tenant request to
+its own tenant storage scope and for validating any future shared database,
+object-storage, log, cache, or anchor backend before making production isolation
+claims.
 
 ## Backup And Restore
 

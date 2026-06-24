@@ -29,14 +29,17 @@ from actionlineage.service import (
     ServiceRuntimeConfigError,
     ServiceTenant,
     StaticTokenAuthenticator,
+    TenantIsolationError,
     TenantRegistry,
     TenantRoleBinding,
+    TenantStorageLayout,
     check_local_health,
     create_app,
     create_service_app_from_env,
     require_capability,
     require_role,
     require_tenant_role,
+    require_tenant_storage_scope,
 )
 
 JWT_HS256_KEY = "test-key-material-for-hs256-000000"
@@ -258,6 +261,143 @@ def test_require_tenant_role_rejects_unknown_tenant() -> None:
             principal,
             tenant_id="tenant-missing",
             role=ServiceRole.READ,
+        )
+
+
+def test_tenant_storage_layout_derives_isolated_surface_paths(tmp_path: Path) -> None:
+    layout = TenantStorageLayout.under_base(tmp_path / "service-state")
+    registry = TenantRegistry(
+        tenants=(
+            ServiceTenant(tenant_id="tenant-a", display_name="Tenant A"),
+            ServiceTenant(tenant_id="tenant-b", display_name="Tenant B"),
+        ),
+        bindings=(),
+    )
+
+    tenant_a = registry.storage_scope(layout, tenant_id="tenant-a")
+    tenant_b = registry.storage_scope(layout, tenant_id="tenant-b")
+
+    assert tenant_a.tenant_id == "tenant-a"
+    assert tenant_a.journal_path.name == "actionlineage.journal"
+    assert tenant_a.database_path.name == "projection.sqlite"
+    assert tenant_a.service_log_path.name == "service.ndjson"
+    assert tenant_a.anchor_path.name == "journal-anchor.json"
+    assert tenant_a.anchor_log_path.name == "anchor-log.jsonl"
+    assert tenant_a.journal_path != tenant_b.journal_path
+    assert tenant_a.database_path != tenant_b.database_path
+    assert tenant_a.export_root != tenant_b.export_root
+    assert tenant_a.service_log_path != tenant_b.service_log_path
+    assert tenant_a.cache_root != tenant_b.cache_root
+    assert tenant_a.anchor_root != tenant_b.anchor_root
+    for path in (
+        tenant_a.journal_path,
+        tenant_a.database_path,
+        tenant_a.export_root,
+        tenant_a.service_log_path,
+        tenant_a.cache_root,
+        tenant_a.anchor_root,
+    ):
+        assert "tenant-a" in path.parts
+        assert path.is_relative_to(tmp_path / "service-state")
+    assert tenant_a.as_dict()["layout_version"] == "actionlineage.dev/tenant-storage-layout-v1"
+
+
+def test_tenant_storage_scope_requires_known_tenant(tmp_path: Path) -> None:
+    layout = TenantStorageLayout.under_base(tmp_path / "service-state")
+    registry = TenantRegistry(
+        tenants=(ServiceTenant(tenant_id="tenant-a", display_name="Tenant A"),),
+        bindings=(),
+    )
+
+    with pytest.raises(ServiceAuthError, match="tenant storage scope required: tenant-b"):
+        registry.storage_scope(layout, tenant_id="tenant-b")
+
+
+@pytest.mark.parametrize(
+    "tenant_id",
+    ("", ".", "..", "../tenant-a", "tenant/a", "tenant.a", "tenant a", "tenant:a"),
+)
+def test_tenant_storage_layout_rejects_pathlike_tenant_ids(
+    tmp_path: Path,
+    tenant_id: str,
+) -> None:
+    layout = TenantStorageLayout.under_base(tmp_path / "service-state")
+
+    with pytest.raises(TenantIsolationError):
+        layout.scope_for(tenant_id)
+
+
+def test_tenant_storage_scope_confines_export_directories(tmp_path: Path) -> None:
+    layout = TenantStorageLayout.under_base(tmp_path / "service-state")
+    scope = layout.scope_for("tenant-a")
+
+    case_dir = scope.export_dir("cases/case-1")
+
+    assert case_dir == scope.export_root / "cases" / "case-1"
+    assert case_dir.is_relative_to(scope.export_root)
+    with pytest.raises(ValueError, match="output_dir"):
+        scope.export_dir("../outside")
+    with pytest.raises(ValueError, match="output_dir"):
+        scope.export_dir(str(tmp_path / "outside"))
+    with pytest.raises(ValueError, match="output_dir"):
+        scope.export_dir(".")
+
+
+def test_tenant_storage_scope_requires_global_role_and_tenant_binding(tmp_path: Path) -> None:
+    layout = TenantStorageLayout.under_base(tmp_path / "service-state")
+    registry = TenantRegistry(
+        tenants=(ServiceTenant(tenant_id="tenant-a", display_name="Tenant A"),),
+        bindings=(
+            TenantRoleBinding(
+                tenant_id="tenant-a",
+                principal_id="analyst",
+                roles=frozenset({ServiceRole.READ}),
+            ),
+            TenantRoleBinding(
+                tenant_id="tenant-a",
+                principal_id="capability-reader",
+                roles=frozenset({ServiceRole.READ}),
+            ),
+        ),
+    )
+    analyst = ServicePrincipal(
+        principal_id="analyst",
+        roles=frozenset({ServiceRole.READ}),
+    )
+    writer_without_binding = ServicePrincipal(
+        principal_id="writer",
+        roles=frozenset({ServiceRole.WRITE}),
+    )
+    capability_only_reader = ServicePrincipal(
+        principal_id="capability-reader",
+        roles=frozenset(),
+        capabilities=frozenset({ServiceCapability.EVENTS_READ}),
+    )
+
+    scope = require_tenant_storage_scope(
+        registry,
+        analyst,
+        tenant_id="tenant-a",
+        role=ServiceRole.READ,
+        layout=layout,
+    )
+
+    assert scope.tenant_id == "tenant-a"
+    with pytest.raises(ServiceAuthError, match="principal_role_missing"):
+        require_tenant_storage_scope(
+            registry,
+            capability_only_reader,
+            tenant_id="tenant-a",
+            role=ServiceRole.READ,
+            layout=layout,
+        )
+    with pytest.raises(ServiceAuthError, match="tenant_binding_missing"):
+        require_tenant_storage_scope(
+            registry,
+            writer_without_binding,
+            tenant_id="tenant-a",
+            role=ServiceRole.WRITE,
+            layout=layout,
         )
 
 

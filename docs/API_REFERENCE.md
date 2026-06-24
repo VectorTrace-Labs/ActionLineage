@@ -80,7 +80,9 @@ external validation and production operating guidance are complete.
 - `TaxiiHttpSink`, `taxii_envelope_for_stix_bundle`
 - `StaticTokenAuthenticator`, `JwtAuthenticator`, `OidcJwtAuthenticator`
 - `ServiceTenant`, `TenantRegistry`, `TenantRoleBinding`
-- `require_tenant_role`
+- `TenantStorageLayout`, `TenantStorageScope`, `TenantIsolationError`
+- `validate_tenant_id`, `confined_service_path`
+- `require_tenant_role`, `require_tenant_storage_scope`
 - `check_local_health`, `create_app`
 - `create_service_app_from_env`
 - `ConsoleExport`, `ConsoleNote`, `ConsoleSavedView`
