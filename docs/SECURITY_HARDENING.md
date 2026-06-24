@@ -62,6 +62,8 @@ Default local bounds:
 | String capture | 4096 characters | `RedactionPolicy.max_string_length` |
 | Bytes capture | 4096 bytes | `RedactionPolicy.max_bytes_length` |
 | Capture digest | scoped SHA-256 over redaction-boundary content | `actionlineage.capture.v1/redaction-boundary` digest scope |
+| Sensitive field aliases | common token, cookie, cloud session, database URL, signed URL, webhook secret, and proxy authorization field names | `RedactionPolicy.sensitive_field_names` |
+| Credential-bearing text | bearer tokens, key-value secret assignments, signed URL parameters, and common credential-bearing database URLs | `RedactionPolicy.patterns` |
 | Observer fixture digests | caller-supplied strings with explicit fixture scopes | `actionlineage.observer.body-digest.v1`, `actionlineage.observer.signature-digest.v1` |
 | JSON nesting depth | 64 levels | `validate_json_value`, `normalize_json`, `RedactionPolicy.max_json_depth` |
 | JSON object members | 4096 members per object | `validate_json_value`, `normalize_json`, `RedactionPolicy.max_object_members` |

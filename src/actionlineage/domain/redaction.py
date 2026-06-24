@@ -27,16 +27,45 @@ DEFAULT_MAX_STRING_LENGTH = 4096
 DEFAULT_MAX_BYTES_LENGTH = 4096
 DEFAULT_SENSITIVE_FIELD_NAMES = frozenset(
     {
+        "access_token",
         "api_key",
         "apikey",
+        "auth_token",
         "authorization",
+        "aws_access_key_id",
+        "aws_secret_access_key",
+        "aws_session_token",
         "bearer_token",
+        "client_secret",
+        "client_secret_value",
+        "cloud_session_token",
+        "connection_string",
         "cookie",
+        "database_dsn",
+        "database_url",
+        "db_url",
+        "dsn",
+        "id_token",
+        "oauth_token",
         "password",
+        "pre_signed_url",
+        "presigned_url",
+        "private_key_pem",
         "private_key",
+        "proxy_authorization",
+        "refresh_token",
         "secret",
+        "security_token",
+        "set_cookie",
+        "signed_url",
+        "signing_secret",
         "session_cookie",
+        "session_token",
+        "ssh_private_key",
         "token",
+        "webhook_secret",
+        "webhook_signature",
+        "webhook_token",
         "x_api_key",
     }
 )
@@ -294,9 +323,33 @@ DEFAULT_PATTERNS: tuple[RedactionPattern, ...] = (
         replacement="Bearer [REDACTED:bearer_token]",
     ),
     RedactionPattern(
+        name="database_url",
+        pattern=re.compile(
+            r"(?i)\b(?:postgres(?:ql)?|mysql|mariadb|mongodb(?:\+srv)?|redis|rediss|amqp|amqps)"
+            r"://[^\s\"'<>]+"
+        ),
+        replacement="[REDACTED:database_url]",
+    ),
+    RedactionPattern(
+        name="signed_url_parameter",
+        pattern=re.compile(
+            r"(?i)\b("
+            r"x-amz-signature|x-amz-credential|x-amz-security-token|signature|sig|"
+            r"access_token|refresh_token|client_secret|token"
+            r")=([^&\s\"'<>]{8,})"
+        ),
+        replacement=r"\1=[REDACTED:secret]",
+    ),
+    RedactionPattern(
         name="key_value_secret",
         pattern=re.compile(
-            r"(?i)\b(api[_-]?key|token|password|secret)\b\s*[:=]\s*['\"]?"
+            r"(?i)(?<![A-Za-z0-9])("
+            r"api[_-]?key|access[_-]?token|refresh[_-]?token|id[_-]?token|"
+            r"client[_-]?secret|webhook[_-]?(?:secret|token|signature)|"
+            r"signing[_-]?secret|session[_-]?token|security[_-]?token|"
+            r"aws[_-]?secret[_-]?access[_-]?key|aws[_-]?session[_-]?token|"
+            r"private[_-]?key|token|password|secret"
+            r")(?![A-Za-z0-9])\s*[:=]\s*['\"]?"
             r"[A-Za-z0-9._~+/=-]{8,}['\"]?"
         ),
         replacement=r"\1=[REDACTED:secret]",

@@ -131,8 +131,11 @@ and does not expand ActionLineage into a generic tracing platform.
   normalization, and redaction now enforce default JSON nesting-depth,
   object-member, and array-length limits. Bounded capture metadata uses scoped
   digests at the redaction boundary. HTTP fixture observers label
-  observer-supplied body and signature digests with explicit scope metadata.
-  Attachment-count limits and broader digest-correlation review across
+  observer-supplied body and signature digests with explicit scope metadata. The
+  default redaction policy covers common token, cookie, cloud-session, database
+  URL, signed URL, webhook, and proxy-authorization field aliases, plus common
+  inline assignment, signed URL parameter, and credential-bearing database URL
+  forms. Attachment-count limits and broader digest-correlation review across
   non-observer sinks remain open.
 - **Container and deployment defaults**: partially confirmed. Runtime hardening
   should remain preview/local-ops scoped until container and Kubernetes defaults

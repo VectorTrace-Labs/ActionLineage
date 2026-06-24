@@ -69,6 +69,63 @@ def test_configured_sensitive_json_path_is_redacted_before_persistence() -> None
     assert data["payload"]["arguments"]["benign"] == "kept"
 
 
+@pytest.mark.parametrize(
+    "field_name",
+    [
+        "access_token",
+        "refresh_token",
+        "client_secret",
+        "set-cookie",
+        "proxy-authorization",
+        "aws_secret_access_key",
+        "aws_session_token",
+        "database_url",
+        "webhook_secret",
+        "signed_url",
+    ],
+)
+def test_default_sensitive_field_aliases_are_redacted_before_persistence(
+    field_name: str,
+) -> None:
+    raw_secret = f"{field_name}-raw-secret-value-123456789"
+    event = build_event(payload={"metadata": {field_name: raw_secret, "safe": "kept"}})
+
+    serialized = serialize_event_for_persistence(event)
+    serialized_text = serialized.decode("utf-8")
+    data = json.loads(serialized_text)
+
+    assert raw_secret not in serialized_text
+    assert data["payload"]["metadata"][field_name]["marker"] == "actionlineage.redacted.v1"
+    assert data["payload"]["metadata"]["safe"] == "kept"
+
+
+def test_default_text_patterns_redact_common_secret_forms_before_persistence() -> None:
+    secret_values = {
+        "access": "al_access_token_123456789",
+        "refresh": "al_refresh_token_123456789",
+        "client": "al_client_secret_123456789",
+        "signature": "abcdef1234567890",
+        "postgres_password": "pgpassword123456789",
+        "mysql_password": "mysqlpassword123456789",
+    }
+    message = (
+        f"access_token={secret_values['access']} "
+        f'refresh_token: "{secret_values["refresh"]}" '
+        f"client_secret={secret_values['client']} "
+        f"https://example.com/object?X-Amz-Signature={secret_values['signature']} "
+        f"postgres://user:{secret_values['postgres_password']}@db.example/app "
+        f"mysql://user:{secret_values['mysql_password']}@db.example/app"
+    )
+    event = build_event(payload={"message": message})
+
+    serialized = serialize_event_for_persistence(event).decode("utf-8")
+
+    for raw_secret in secret_values.values():
+        assert raw_secret not in serialized
+    assert "[REDACTED:database_url]" in serialized
+    assert "X-Amz-Signature=[REDACTED:secret]" in serialized
+
+
 def test_oversized_payload_is_truncated_with_metadata_and_digest() -> None:
     oversized_value = "x" * 80
     event = build_event(payload={"body": oversized_value})
