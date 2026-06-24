@@ -101,8 +101,13 @@ def complete_timeline_events() -> tuple[EventEnvelope, ...]:
     )
 
 
-def write_journal(path: Path, events: tuple[EventEnvelope, ...]) -> LocalJournal:
-    journal = LocalJournal(path)
+def write_journal(
+    path: Path,
+    events: tuple[EventEnvelope, ...],
+    *,
+    redaction_policy: RedactionPolicy | None = None,
+) -> LocalJournal:
+    journal = LocalJournal(path, redaction_policy=redaction_policy)
     for event in events:
         journal.append(event)
     return journal
@@ -954,6 +959,67 @@ def test_incident_export_includes_investigation_summary(tmp_path: Path) -> None:
     assert summary["verification_statuses"] == {"observed": 1, "verified": 1}
     assert summary["evidence_links"][0]["subject_event_id"] == "evt_1"
     assert "No observation recorded is not proof" in summary["claims_language"]
+
+
+def test_incident_summary_preserves_scoped_capture_notes_for_bounded_values(
+    tmp_path: Path,
+) -> None:
+    journal_path = tmp_path / "events.jsonl"
+    database_path = tmp_path / "projection.sqlite"
+    long_tool = "safe_http." + ("tool" * 32)
+    long_resource = "demo://workspace/" + ("resource" * 32)
+    long_limitation = "fixture limitation " + ("detail" * 32)
+    link = EvidenceLink(
+        subject_event_id="evt_1",
+        relationship=EvidenceRelationship.CORROBORATES,
+        evidence_event_id="evt_2",
+        corroboration_type=CorroborationType.INDEPENDENT_OBSERVER,
+        observer_identity="local_receiver_fixture",
+        confidence=0.95,
+        verification_status=VerificationStatus.VERIFIED,
+        limitations=(long_limitation,),
+    )
+    write_journal(
+        journal_path,
+        (
+            timeline_event(0, EventType.AGENT_INTENT_RECORDED, parent_event_id=None),
+            timeline_event(
+                1,
+                EventType.TOOL_EXECUTION_ACKNOWLEDGED,
+                parent_event_id="evt_0",
+                payload={
+                    "tool_identity": {"name": long_tool},
+                    "resource": {"uri": long_resource},
+                },
+            ),
+            timeline_event(2, EventType.SIDE_EFFECT_OBSERVED, parent_event_id="evt_1"),
+            timeline_event(
+                3,
+                EventType.SIDE_EFFECT_VERIFIED,
+                parent_event_id="evt_2",
+                payload={"evidence_link": link.as_payload()},
+            ),
+        ),
+        redaction_policy=RedactionPolicy(max_string_length=18),
+    )
+    rebuild_projection(journal_path, database_path)
+
+    incident = export_incident(
+        database_path, journal_path=journal_path, trace_id="trace_01"
+    ).as_dict()
+    summary = incident["summary"]
+    summary_json = json.dumps(summary, sort_keys=True)
+
+    for field in ("tools", "resources", "limitations"):
+        values = summary[field]
+        assert isinstance(values, list)
+        assert len(values) == 1
+        assert values[0].startswith("[TRUNCATED ")
+        assert f"digest_scope={CAPTURE_DIGEST_SCOPE}" in values[0]
+
+    assert long_tool not in summary_json
+    assert long_resource not in summary_json
+    assert long_limitation not in summary_json
 
 
 def test_grounded_summary_is_derived_from_incident_evidence(tmp_path: Path) -> None:

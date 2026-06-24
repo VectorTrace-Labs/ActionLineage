@@ -7,7 +7,7 @@ import json
 import os
 import shutil
 import sqlite3
-from collections.abc import Iterable, Iterator
+from collections.abc import Iterable, Iterator, Mapping
 from contextlib import contextmanager, suppress
 from copy import deepcopy
 from dataclasses import dataclass
@@ -2103,17 +2103,35 @@ def _evidence_limitations(event: dict[str, Any]) -> tuple[str, ...]:
     limitations = evidence_link.get("limitations")
     if not isinstance(limitations, list):
         return ()
-    return tuple(value for value in limitations if isinstance(value, str))
+    return tuple(
+        summary_text for value in limitations if (summary_text := _summary_text(value)) is not None
+    )
 
 
 def _tool_names(event: dict[str, Any]) -> tuple[str, ...]:
-    return tuple(_payload_values_for_keys(event.get("payload"), {"name", "tool", "tool_name"}))
+    return tuple(
+        _payload_summary_values_for_keys(event.get("payload"), {"name", "tool", "tool_name"})
+    )
 
 
 def _resource_identifiers(event: dict[str, Any]) -> tuple[str, ...]:
     payload = event.get("payload")
-    identifiers = set(_payload_values_for_keys(payload, {"identifier", "path", "uri", "url"}))
-    return tuple(sorted(identifiers))
+    return tuple(_payload_summary_values_for_keys(payload, {"identifier", "path", "uri", "url"}))
+
+
+def _payload_summary_values_for_keys(value: object, keys: set[str]) -> tuple[str, ...]:
+    matches: set[str] = set()
+    if isinstance(value, Mapping):
+        if _is_capture_marker(value):
+            return ()
+        for key, child in value.items():
+            if key in keys and (summary_text := _summary_text(child)) is not None:
+                matches.add(summary_text)
+            matches.update(_payload_summary_values_for_keys(child, keys))
+    elif isinstance(value, list):
+        for child in value:
+            matches.update(_payload_summary_values_for_keys(child, keys))
+    return tuple(sorted(matches))
 
 
 def _payload_values_for_keys(value: object, keys: set[str]) -> set[str]:
@@ -2140,3 +2158,24 @@ def _string_values(value: object) -> set[str]:
         for child in value:
             values.update(_string_values(child))
     return values
+
+
+def _summary_text(value: object) -> str | None:
+    if isinstance(value, str):
+        return value
+    if _is_capture_marker(value):
+        return _capture_marker_summary(cast(Mapping[str, object], value))
+    return None
+
+
+def _is_capture_marker(value: object) -> bool:
+    return isinstance(value, Mapping) and value.get("marker") == "actionlineage.capture.v1"
+
+
+def _capture_marker_summary(metadata: Mapping[str, object]) -> str:
+    original_length = metadata.get("original_length", "unknown")
+    digest = metadata.get("digest", "unknown")
+    digest_scope = metadata.get("digest_scope", "unknown")
+    return (
+        f"[TRUNCATED original_length={original_length} digest={digest} digest_scope={digest_scope}]"
+    )

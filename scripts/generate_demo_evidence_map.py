@@ -7,9 +7,13 @@ import argparse
 import hashlib
 import json
 from collections import Counter
+from collections.abc import Mapping
 from html import escape
 from pathlib import Path
 from typing import Any, cast
+
+from actionlineage.domain import RedactionPolicy
+from actionlineage.domain.redaction import CAPTURE_DIGEST_SCOPE
 
 EVIDENCE_MAP_FORMAT = "actionlineage.dev/demo-evidence-map-v0"
 STATUS_ORDER = ("verified", "observed", "unverified", "conflicting", "not_dispatched")
@@ -21,6 +25,7 @@ STATUS_COLORS = {
     "not_dispatched": "#475569",
 }
 FONT = 'font-family="Arial, sans-serif"'
+SUMMARY_REDACTION_POLICY = RedactionPolicy(max_string_length=160)
 
 
 def build_evidence_map(incident_path: Path) -> dict[str, Any]:
@@ -86,11 +91,11 @@ def build_evidence_map(incident_path: Path) -> dict[str, Any]:
             "conflicting": list(_string_list(summary.get("conflicting_event_ids", ()))),
             "unknown": list(_string_list(summary.get("unknown_event_ids", ()))),
         },
-        "principals": list(_string_list(summary.get("principals", ()))),
-        "tools": list(_string_list(summary.get("tools", ()))),
-        "resources": list(_string_list(summary.get("resources", ()))),
-        "limitations": list(_string_list(summary.get("limitations", ()))),
-        "claims_language": _string(summary.get("claims_language")),
+        "principals": list(_summary_value_list(summary.get("principals", ()))),
+        "tools": list(_summary_value_list(summary.get("tools", ()))),
+        "resources": list(_summary_value_list(summary.get("resources", ()))),
+        "limitations": list(_summary_value_list(summary.get("limitations", ()))),
+        "claims_language": _summary_value(summary.get("claims_language")),
         "checks": checks,
         "missing_checks": list(missing_checks),
     }
@@ -101,8 +106,8 @@ def render_svg(evidence_map: dict[str, Any]) -> str:
 
     status_counts = cast(dict[str, int], evidence_map["verification_status_counts"])
     event_type_counts = cast(dict[str, int], evidence_map["event_type_counts"])
-    tools = cast(list[str], evidence_map["tools"])
-    limitations = cast(list[str], evidence_map["limitations"])
+    tools = cast(list[object], evidence_map["tools"])
+    limitations = cast(list[object], evidence_map["limitations"])
     cards = "\n".join(
         _status_card(status, status_counts.get(status, 0), index)
         for index, status in enumerate(STATUS_ORDER)
@@ -122,11 +127,13 @@ def render_svg(evidence_map: dict[str, Any]) -> str:
     )
     arrows = "\n".join(_arrow(128 + index * 172, 350) for index in range(5))
     not_dispatched = event_type_counts.get("tool.execution.not_dispatched", 0)
-    trace_id = _string(evidence_map.get("trace_id"))
+    trace_id = _display_summary_value(evidence_map.get("trace_id"))
     event_count = int(evidence_map.get("event_count", 0))
     ok_label = "complete" if evidence_map.get("ok") else "incomplete"
-    tool_line = ", ".join(tools[:4]) if tools else "none recorded"
-    limitation_line = limitations[0] if limitations else "No limitations recorded."
+    tool_line = _display_summary_values(tools[:4]) if tools else "none recorded"
+    limitation_line = (
+        _display_summary_value(limitations[0]) if limitations else "No limitations recorded."
+    )
     svg_open = (
         '<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="720" '
         'viewBox="0 0 1200 720" role="img" aria-labelledby="title desc">'
@@ -357,6 +364,68 @@ def _string_list(value: object) -> tuple[str, ...]:
     if not isinstance(value, list):
         return ()
     return tuple(item for item in value if isinstance(item, str))
+
+
+def _summary_value_list(value: object) -> tuple[object, ...]:
+    if not isinstance(value, list):
+        return ()
+    return tuple(
+        summary_value for item in value if (summary_value := _summary_value(item)) is not None
+    )
+
+
+def _summary_value(value: object) -> object | None:
+    if isinstance(value, str):
+        redacted = SUMMARY_REDACTION_POLICY.apply(value)
+        if isinstance(redacted, str) or _is_capture_marker(redacted):
+            return redacted
+        return json.dumps(redacted, sort_keys=True)
+    if _is_capture_marker(value):
+        return _sanitize_capture_marker(value)
+    return None
+
+
+def _sanitize_capture_marker(metadata: Mapping[str, object]) -> dict[str, object]:
+    value = metadata.get("value")
+    sanitized_value = ""
+    if isinstance(value, str):
+        sanitized = SUMMARY_REDACTION_POLICY.apply(value)
+        sanitized_value = sanitized if isinstance(sanitized, str) else ""
+    return {
+        "marker": "actionlineage.capture.v1",
+        "encoding": metadata.get("encoding", "text"),
+        "value": sanitized_value,
+        "original_length": metadata.get("original_length", "unknown"),
+        "captured_length": len(sanitized_value),
+        "truncated": metadata.get("truncated", True),
+        "digest": metadata.get("digest", "unknown"),
+        "digest_scope": metadata.get("digest_scope", CAPTURE_DIGEST_SCOPE),
+    }
+
+
+def _display_summary_values(values: list[object]) -> str:
+    return ", ".join(_display_summary_value(value) for value in values)
+
+
+def _display_summary_value(value: object) -> str:
+    if isinstance(value, str):
+        return value
+    if _is_capture_marker(value):
+        return _capture_limit_note(value)
+    return ""
+
+
+def _is_capture_marker(value: object) -> bool:
+    return isinstance(value, Mapping) and value.get("marker") == "actionlineage.capture.v1"
+
+
+def _capture_limit_note(metadata: Mapping[str, object]) -> str:
+    original_length = metadata.get("original_length", "unknown")
+    digest = metadata.get("digest", "unknown")
+    digest_scope = metadata.get("digest_scope", "unknown")
+    return (
+        f"[TRUNCATED original_length={original_length} digest={digest} digest_scope={digest_scope}]"
+    )
 
 
 def _sha256_file(path: Path) -> str:

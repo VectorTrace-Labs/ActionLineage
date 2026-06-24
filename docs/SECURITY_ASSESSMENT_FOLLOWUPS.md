@@ -101,6 +101,11 @@ and does not expand ActionLineage into a generic tracing platform.
   `events.ndjson`. Exported bounded-capture digests retain
   `actionlineage.capture.v1/redaction-boundary`; summary-only Markdown does not
   carry payload digest metadata.
+- **Generated summary and demo-map capture scope**: local projection and release
+  hardening regressions cover incident summaries and demo evidence-map artifacts
+  that encounter bounded capture metadata. Generated summary labels preserve
+  redaction-boundary digest scope as bounded notes and the demo-map generator
+  redacts canaries before writing its JSON sidecar or SVG.
 
 ## Implemented before this slice
 
@@ -151,10 +156,10 @@ and does not expand ActionLineage into a generic tracing platform.
   inline assignment, signed URL parameter, and credential-bearing database URL
   forms. Bounded capture now enforces per-event capture-count and aggregate
   captured-content ceilings without corrupting event-envelope control fields.
-  Machine-readable exporter and case-bundle artifacts that carry bounded
-  capture metadata preserve redaction-boundary digest scope. Broader
-  digest-correlation review across logs, exceptions, and generated test
-  snapshots remains open.
+  Machine-readable exporter, case-bundle, incident-summary, and demo-map
+  artifacts that carry bounded capture metadata preserve redaction-boundary
+  digest scope. Broader digest-correlation review across logs and exceptions
+  remains open.
 - **Container and deployment defaults**: partially confirmed. Runtime hardening
   should remain preview/local-ops scoped until container and Kubernetes defaults
   have executable validation.
@@ -194,5 +199,4 @@ and does not expand ActionLineage into a generic tracing platform.
    evolution, and external checkpoint trust roots.
 4. Capture benchmark artifacts before implementing any ADR-0011 append-index
    cache.
-5. Audit redaction digest behavior across logs, exceptions, and generated test
-   snapshots.
+5. Audit redaction digest behavior across logs and exceptions.

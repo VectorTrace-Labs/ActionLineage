@@ -845,6 +845,78 @@ def test_demo_evidence_map_is_deterministic_and_checkable(tmp_path: Path) -> Non
     assert generator.check_evidence_map(demo.incident_path, svg_path, summary_path) == ["svg_stale"]
 
 
+def test_demo_evidence_map_preserves_capture_scope_without_canary_leakage(
+    tmp_path: Path,
+) -> None:
+    generator = _load_script("generate_demo_evidence_map")
+    bearer_secret = "artifactsecretvalue123456789"
+    marker_secret = "GENERATEDSNAPSHOT" + "SECRET123"
+    raw_bearer = "Bearer " + bearer_secret
+    captured_resource = capture_string("generated snapshot resource " + ("x" * 96), max_length=12)
+    assert isinstance(captured_resource, dict)
+    captured_resource = dict(captured_resource)
+    captured_resource["value"] = "token=" + marker_secret
+    incident_path = tmp_path / "incident.json"
+    incident_path.write_text(
+        json.dumps(
+            {
+                "selector": {"type": "trace_id", "value": "trace_generated"},
+                "event_count": 2,
+                "summary": {
+                    "principals": ["agent_demo"],
+                    "tools": [raw_bearer],
+                    "resources": [captured_resource],
+                    "verification_statuses": {
+                        "verified": 1,
+                        "unverified": 1,
+                        "conflicting": 1,
+                    },
+                    "evidence_links": [
+                        {"verification_status": "verified"},
+                        {"verification_status": "unverified"},
+                        {"verification_status": "conflicting"},
+                    ],
+                    "conflicting_event_ids": ["evt_conflict"],
+                    "unknown_event_ids": [],
+                    "limitations": [captured_resource],
+                    "claims_language": (
+                        "No observation recorded is not proof that a side effect did not occur."
+                    ),
+                },
+                "events": [
+                    {
+                        "event_id": "evt_ack",
+                        "event_type": "tool.execution.acknowledged",
+                        "correlation": {"trace_id": "trace_generated", "run_id": "run_generated"},
+                    },
+                    {
+                        "event_id": "evt_denied",
+                        "event_type": "tool.execution.not_dispatched",
+                        "correlation": {"trace_id": "trace_generated", "run_id": "run_generated"},
+                    },
+                ],
+            },
+            sort_keys=True,
+        ),
+        encoding="utf-8",
+    )
+
+    evidence_map = generator.build_evidence_map(incident_path)
+    svg = generator.render_svg(evidence_map)
+    sidecar = json.dumps(evidence_map, sort_keys=True)
+    resources = evidence_map["resources"]
+
+    assert isinstance(resources[0], dict)
+    assert resources[0]["digest_scope"] == CAPTURE_DIGEST_SCOPE
+    assert CAPTURE_DIGEST_SCOPE in svg
+    assert bearer_secret not in sidecar
+    assert bearer_secret not in svg
+    assert marker_secret not in sidecar
+    assert marker_secret not in svg
+    assert "Bearer [REDACTED:bearer_token]" in sidecar
+    assert "token=[REDACTED:secret]" in sidecar
+
+
 def test_adversarial_fixture_categories_are_complete() -> None:
     fixture = json.loads(ADVERSARIAL_FIXTURE.read_text(encoding="utf-8"))
 
