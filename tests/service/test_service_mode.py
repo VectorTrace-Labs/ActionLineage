@@ -10,6 +10,7 @@ from threading import Barrier
 import pytest
 from fastapi.testclient import TestClient
 
+import actionlineage.evidence.ingestion as ingestion_module
 import actionlineage.service.api as service_api_module
 from actionlineage.contracts import ContractEventRequirement, LineageContract, contract_to_dict
 from actionlineage.demo import run_demo
@@ -710,6 +711,73 @@ def test_service_ingest_partial_batch_uses_multi_status(tmp_path: Path) -> None:
     assert response.json()["failed_count"] == 1
     assert response.json()["journal_committed"] is True
     assert snapshot.record_count == initial_count + 1
+
+
+def test_service_ingest_reports_partial_commit_on_later_append_failure(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    demo = run_demo(tmp_path / "demo")
+    client = _client(
+        demo.journal_path,
+        demo.database_path,
+        token="writer",
+        roles=frozenset({ServiceRole.WRITE, ServiceRole.READ}),
+    )
+    initial_count = LocalJournal(demo.journal_path).verified_snapshot().record_count
+    original_append = ingestion_module._append_line
+    append_attempts = 0
+
+    def fail_second_append(path: Path, data: bytes) -> None:
+        nonlocal append_attempts
+        append_attempts += 1
+        if append_attempts == 2:
+            raise OSError("simulated disk full with raw storage detail")
+        original_append(path, data)
+
+    monkeypatch.setattr(ingestion_module, "_append_line", fail_second_append)
+
+    response = client.post(
+        "/ingest",
+        headers={"Authorization": "Bearer writer"},
+        json={
+            "correlation": {"trace_id": "trace_service", "run_id": "run_service"},
+            "records": [
+                {
+                    "idempotency_key": "service-record-partial-commit-ok",
+                    "event_type": "agent.intent.recorded",
+                    "payload": {"intent": {"summary": "first commit"}},
+                    "source_kind": "external_json",
+                    "sort_key": "001",
+                },
+                {
+                    "idempotency_key": "service-record-partial-commit-failed",
+                    "event_type": "agent.intent.recorded",
+                    "payload": {"intent": {"summary": "second commit"}},
+                    "source_kind": "external_json",
+                    "sort_key": "002",
+                },
+            ],
+        },
+    )
+    snapshot = LocalJournal(demo.journal_path).verified_snapshot()
+    timeline = client.get(
+        "/timeline",
+        params={"trace_id": "trace_service"},
+        headers={"Authorization": "Bearer writer"},
+    )
+
+    assert response.status_code == 207
+    assert response.json()["ok"] is False
+    assert response.json()["imported_count"] == 1
+    assert response.json()["failed_count"] == 1
+    assert response.json()["journal_committed"] is True
+    assert response.json()["projection"]["state"] == "rebuilt"
+    assert response.json()["outcomes"][1]["error"] == "JournalAppendError"
+    assert "simulated disk full" not in str(response.json())
+    assert snapshot.record_count == initial_count + 1
+    assert timeline.status_code == 200
+    assert timeline.json()["event_count"] == 1
 
 
 def test_service_ingest_reports_projection_stale_after_committed_append(

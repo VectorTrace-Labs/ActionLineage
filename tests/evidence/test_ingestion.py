@@ -3,6 +3,7 @@ from __future__ import annotations
 from datetime import UTC, datetime
 from pathlib import Path
 
+import actionlineage.evidence.ingestion as ingestion_module
 from actionlineage.domain import (
     Classification,
     Correlation,
@@ -217,6 +218,49 @@ def test_atomic_batch_import_assigns_sequence_from_locked_journal_snapshot(
     assert result.imported_count == 1
     assert snapshot.events[-1].causality.sequence == 1
     assert snapshot.events[-1].payload["ingest"]["idempotency_key"] == "100-root-2"
+
+
+def test_atomic_batch_import_reports_partial_commit_on_later_append_failure(
+    monkeypatch,
+    tmp_path: Path,
+) -> None:
+    journal = LocalJournal(tmp_path / "events.jsonl")
+    original_append = ingestion_module._append_line
+    append_attempts = 0
+
+    def fail_second_append(path: Path, data: bytes) -> None:
+        nonlocal append_attempts
+        append_attempts += 1
+        if append_attempts == 2:
+            raise OSError("simulated disk full containing raw detail")
+        original_append(path, data)
+
+    monkeypatch.setattr(ingestion_module, "_append_line", fail_second_append)
+
+    result = import_evidence_batch_atomically(
+        (
+            root_record(),
+            EvidenceRecord(
+                idempotency_key="100-root-2",
+                event_type=EventType.AGENT_INTENT_RECORDED,
+                payload={"intent": "second imported root"},
+                source_kind=EvidenceSourceKind.EXTERNAL_JSON,
+                sort_key="100",
+            ),
+        ),
+        normalizer=make_normalizer(),
+        journal=journal,
+    )
+    snapshot = journal.verified_snapshot()
+
+    assert result.imported_count == 1
+    assert result.failed_count == 1
+    assert result.outcomes[0].status == IngestOutcomeStatus.IMPORTED
+    assert result.outcomes[1].status == IngestOutcomeStatus.FAILED
+    assert result.outcomes[1].error == "JournalAppendError"
+    assert "simulated disk full" not in str(result.as_dict())
+    assert snapshot.ok
+    assert snapshot.record_count == 1
 
 
 def test_batch_import_redacts_before_persistence(tmp_path: Path) -> None:

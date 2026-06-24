@@ -471,8 +471,17 @@ def import_evidence_batch_atomically(
                     event,
                     previous_event_hash=previous_event_hash,
                 )
-            except JournalError:
-                raise
+            except JournalError as exc:
+                if not batch_seen:
+                    raise
+                outcomes.append(
+                    IngestOutcome(
+                        idempotency_key=record.idempotency_key,
+                        status=IngestOutcomeStatus.FAILED,
+                        error=_safe_error_message(exc),
+                    )
+                )
+                break
             except ValueError as exc:
                 outcomes.append(
                     IngestOutcome(

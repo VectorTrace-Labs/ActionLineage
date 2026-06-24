@@ -57,6 +57,10 @@ and does not expand ActionLineage into a generic tracing platform.
   a journal append commits but projection rebuild fails. Retrying the same
   idempotency key now reports a duplicate and rebuilds the projection instead
   of leaving the query surface stale.
+- **Service ingest partial append failure**: local regression tests cover a
+  multi-record service ingest where the first append commits and a later append
+  fails. The service now returns HTTP 207 with `journal_committed: true`, a
+  bounded failed outcome, and a rebuilt projection for the committed prefix.
 - **Capture digest scope**: local regression and property tests cover scoped
   capture digests for truncated text and byte values. Capture metadata now
   records `actionlineage.capture.v1/redaction-boundary` so bounded-content
@@ -116,10 +120,11 @@ and does not expand ActionLineage into a generic tracing platform.
 - **Concurrency, idempotency, and batch semantics**: partially confirmed.
   Source ingestion and service-mode local journal writes have deterministic
   duplicate, conflict, partial-batch, projection-stale, and duplicate retry
-  recovery tests. Remaining work includes process-crash fault injection,
-  authenticated append indexes or checkpoints for stronger replay recovery, and
-  a deliberate decision if future APIs need all-or-nothing transactional batch
-  semantics instead of explicit partial success.
+  recovery tests, plus later-append storage failure handling after a committed
+  prefix. Remaining work includes process-crash fault injection, authenticated
+  append indexes or checkpoints for stronger replay recovery, and a deliberate
+  decision if future APIs need all-or-nothing transactional batch semantics
+  instead of explicit partial success.
 - **Tenant isolation**: partially confirmed. Tenant-aware authorization
   primitives exist, but end-to-end tenant isolation across storage, projections,
   exports, logs, caches, and anchors is not demonstrated.
@@ -145,6 +150,6 @@ and does not expand ActionLineage into a generic tracing platform.
 3. Draft ADRs for observer attestation policy, canonicalization v1, causal edge
    evolution, and external checkpoint trust roots.
 4. Add deeper service ingestion crash/fault injection around process restart
-   after append and storage errors during multi-record batches.
+   after append and response loss during multi-record batches.
 5. Audit attachment-count limits and redaction digest behavior across journal,
    projection, export, logs, exceptions, and test snapshots.

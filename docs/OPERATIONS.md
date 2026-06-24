@@ -113,6 +113,12 @@ can retry safely with the same idempotency key. A duplicate retry also attempts
 to rebuild the projection, so response-loss and post-append rebuild failures can
 recover without appending another event.
 
+If a multi-record batch commits an earlier record and a later journal append
+fails, the service reports the committed prefix and the failed record with HTTP
+207, keeps `journal_committed: true`, and attempts to rebuild the projection for
+the committed prefix. Storage exception details are bounded to an error type in
+the per-record outcome.
+
 Service-mode case exports are written under a configured export root. Set
 `ACTIONLINEAGE_EXPORT_ROOT` for environment-driven service startup; otherwise
 the runtime uses `/data/exports`. The `/export-case` endpoint accepts a relative
