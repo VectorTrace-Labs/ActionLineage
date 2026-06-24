@@ -20,6 +20,8 @@ from actionlineage.domain import (
 from actionlineage.journal import LocalJournal
 from actionlineage.projection import (
     ProjectionQueryError,
+    ProjectionStateCode,
+    ProjectionStateError,
     ProjectionVerificationError,
     explain_event,
     export_case_bundle,
@@ -29,6 +31,7 @@ from actionlineage.projection import (
     query_timeline,
     rebuild_projection,
     summarize_incident,
+    verify_projection_state,
 )
 from actionlineage.projection.sqlite import ensure_schema, index_event
 from tests.domain.test_events import BASE_TIME, build_event
@@ -130,6 +133,153 @@ def test_projection_rebuild_is_repeatable_and_rebuilds_after_delete(tmp_path: Pa
     ]
 
 
+def test_projection_state_verifies_against_journal_snapshot(tmp_path: Path) -> None:
+    journal_path = tmp_path / "events.jsonl"
+    database_path = tmp_path / "projection.sqlite"
+    journal = write_journal(journal_path, complete_timeline_events())
+    rebuild_projection(journal_path, database_path)
+
+    projection = verify_projection_state(database_path, journal_path=journal_path)
+
+    assert projection.state == ProjectionStateCode.HEALTHY
+    assert projection.record_count == journal.verify().records_verified
+    assert projection.terminal_hash == journal.verify().last_event_hash
+
+
+def test_timeline_query_fails_closed_when_journal_advances_after_rebuild(
+    tmp_path: Path,
+) -> None:
+    journal_path = tmp_path / "events.jsonl"
+    database_path = tmp_path / "projection.sqlite"
+    journal = write_journal(journal_path, complete_timeline_events())
+    rebuild_projection(journal_path, database_path)
+    journal.append(
+        timeline_event(
+            5,
+            EventType.AGENT_RUN_COMPLETED,
+            parent_event_id="evt_4",
+            payload={"outcome": "late_event"},
+        )
+    )
+
+    with pytest.raises(ProjectionStateError) as exc_info:
+        query_timeline(database_path, trace_id="trace_01")
+
+    assert exc_info.value.code == ProjectionStateCode.PROJECTION_STALE
+
+
+def test_projection_verification_detects_missing_extra_and_tampered_rows(
+    tmp_path: Path,
+) -> None:
+    journal_path = tmp_path / "events.jsonl"
+    database_path = tmp_path / "projection.sqlite"
+    write_journal(journal_path, complete_timeline_events())
+    rebuild_projection(journal_path, database_path)
+
+    with closing(sqlite3.connect(database_path)) as connection, connection:
+        connection.execute("DELETE FROM events WHERE journal_record_number = 5")
+    with pytest.raises(ProjectionStateError) as missing:
+        query_timeline(database_path, trace_id="trace_01")
+    assert missing.value.code == ProjectionStateCode.PROJECTION_STALE
+
+    rebuild_projection(journal_path, database_path)
+    with closing(sqlite3.connect(database_path)) as connection, connection:
+        connection.execute(
+            """
+            INSERT INTO events (
+                event_id,
+                spec_version,
+                event_type,
+                occurred_at,
+                observed_at,
+                trace_id,
+                run_id,
+                span_id,
+                session_id,
+                root_event_id,
+                parent_event_id,
+                sequence,
+                event_hash,
+                previous_event_hash,
+                verification_status,
+                evidence_subject_event_id,
+                evidence_event_id,
+                journal_record_number,
+                event_json
+            )
+            SELECT
+                'evt_extra',
+                spec_version,
+                event_type,
+                occurred_at,
+                observed_at,
+                trace_id,
+                run_id,
+                span_id,
+                session_id,
+                root_event_id,
+                parent_event_id,
+                sequence,
+                event_hash,
+                previous_event_hash,
+                verification_status,
+                evidence_subject_event_id,
+                evidence_event_id,
+                999,
+                event_json
+            FROM events
+            WHERE journal_record_number = 1
+            """
+        )
+    with pytest.raises(ProjectionStateError) as extra:
+        query_timeline(database_path, trace_id="trace_01")
+    assert extra.value.code == ProjectionStateCode.PROJECTION_MISMATCH
+
+    rebuild_projection(journal_path, database_path)
+    with closing(sqlite3.connect(database_path)) as connection, connection:
+        connection.execute(
+            "UPDATE events SET event_json = replace(event_json, 'started', 'tampered') "
+            "WHERE journal_record_number = 1"
+        )
+    with pytest.raises(ProjectionStateError) as tampered:
+        query_timeline(database_path, trace_id="trace_01")
+    assert tampered.value.code == ProjectionStateCode.PROJECTION_MISMATCH
+
+
+def test_projection_source_identity_mismatch_fails_closed(tmp_path: Path) -> None:
+    journal_path = tmp_path / "events.jsonl"
+    other_journal_path = tmp_path / "other.jsonl"
+    database_path = tmp_path / "projection.sqlite"
+    write_journal(journal_path, complete_timeline_events())
+    write_journal(other_journal_path, complete_timeline_events())
+    rebuild_projection(journal_path, database_path)
+
+    with pytest.raises(ProjectionStateError) as exc_info:
+        query_timeline(database_path, journal_path=other_journal_path, trace_id="trace_01")
+
+    assert exc_info.value.code == ProjectionStateCode.PROJECTION_MISMATCH
+
+
+def test_incident_export_is_blocked_when_projection_is_stale(tmp_path: Path) -> None:
+    journal_path = tmp_path / "events.jsonl"
+    database_path = tmp_path / "projection.sqlite"
+    journal = write_journal(journal_path, complete_timeline_events())
+    rebuild_projection(journal_path, database_path)
+    journal.append(
+        timeline_event(
+            5,
+            EventType.AGENT_RUN_COMPLETED,
+            parent_event_id="evt_4",
+            payload={"outcome": "late_event"},
+        )
+    )
+
+    with pytest.raises(ProjectionStateError) as exc_info:
+        export_incident(database_path, trace_id="trace_01")
+
+    assert exc_info.value.code == ProjectionStateCode.PROJECTION_STALE
+
+
 def test_timeline_selector_values_are_bound_as_data(tmp_path: Path) -> None:
     journal_path = tmp_path / "events.jsonl"
     database_path = tmp_path / "projection.sqlite"
@@ -212,11 +362,10 @@ def test_corrupt_journal_is_rejected_without_replacing_existing_projection(tmp_p
     with pytest.raises(ProjectionVerificationError) as exc_info:
         rebuild_projection(journal_path, database_path)
 
-    timeline = query_timeline(database_path, run_id="run_01")
-
     assert exc_info.value.verification.ok is False
-    assert timeline.as_dict()["event_count"] == 5
-    assert timeline.events[2].event["payload"]["rule_id"] == "demo.restricted_external"
+    with pytest.raises(ProjectionStateError) as query_error:
+        query_timeline(database_path, run_id="run_01")
+    assert query_error.value.code == ProjectionStateCode.JOURNAL_INVALID
 
 
 def test_unknown_event_type_is_preserved_in_projected_timeline(tmp_path: Path) -> None:

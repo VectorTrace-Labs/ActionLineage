@@ -7,6 +7,11 @@ from enum import StrEnum
 from pathlib import Path
 
 from actionlineage.journal import JournalError, verify_journal
+from actionlineage.projection import (
+    ProjectionStateCode,
+    ProjectionStateError,
+    verify_projection_state,
+)
 
 
 class HealthState(StrEnum):
@@ -65,18 +70,22 @@ def check_local_health(*, journal_path: Path, database_path: Path | None = None)
     if verification is not None and not verification.ok:
         issues.append(
             HealthIssue(
-                code="journal_integrity_error",
+                code=ProjectionStateCode.JOURNAL_INVALID.value,
                 message="local journal verification failed",
                 details={"verification": verification.as_dict()},
             )
         )
-    if database_path is not None and not Path(database_path).exists():
-        issues.append(
-            HealthIssue(
-                code="projection_missing",
-                message="projection database does not exist or has not been rebuilt",
+    if database_path is not None and verification is not None and verification.ok:
+        try:
+            verify_projection_state(database_path, journal_path=journal_path)
+        except ProjectionStateError as exc:
+            issues.append(
+                HealthIssue(
+                    code=exc.code.value,
+                    message=str(exc),
+                    details=exc.details,
+                )
             )
-        )
     return HealthReport(
         state=HealthState.DEGRADED if issues else HealthState.OK,
         issues=tuple(issues),

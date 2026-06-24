@@ -15,6 +15,7 @@ from actionlineage.service import (
     JwtAuthenticator,
     OidcJwtAuthenticator,
     ServiceAuthError,
+    ServiceCapability,
     ServicePrincipal,
     ServiceRole,
     ServiceRuntimeConfigError,
@@ -25,6 +26,7 @@ from actionlineage.service import (
     check_local_health,
     create_app,
     create_service_app_from_env,
+    require_capability,
     require_role,
     require_tenant_role,
 )
@@ -47,6 +49,41 @@ def test_static_token_authenticator_and_rbac() -> None:
         authenticator.authenticate("bad")
     with pytest.raises(ServiceAuthError):
         require_role(principal, ServiceRole.ADMIN)
+
+
+def test_role_bundles_do_not_use_ordinal_privilege_inheritance() -> None:
+    reader = ServicePrincipal(principal_id="reader", roles=frozenset({ServiceRole.READ}))
+    writer = ServicePrincipal(principal_id="writer", roles=frozenset({ServiceRole.WRITE}))
+    exporter = ServicePrincipal(principal_id="exporter", roles=frozenset({ServiceRole.EXPORT}))
+    detector = ServicePrincipal(
+        principal_id="detector",
+        roles=frozenset(),
+        capabilities=frozenset({ServiceCapability.DETECTIONS_RUN}),
+    )
+    tenant_manager = ServicePrincipal(
+        principal_id="tenant-manager",
+        roles=frozenset(),
+        capabilities=frozenset({ServiceCapability.TENANTS_MANAGE}),
+    )
+
+    require_capability(reader, ServiceCapability.EVENTS_READ)
+    require_capability(writer, ServiceCapability.EVENTS_WRITE)
+    require_capability(exporter, ServiceCapability.CASES_EXPORT)
+    require_capability(detector, ServiceCapability.DETECTIONS_RUN)
+    require_capability(tenant_manager, ServiceCapability.TENANTS_MANAGE)
+
+    with pytest.raises(ServiceAuthError):
+        require_capability(reader, ServiceCapability.EVENTS_WRITE)
+    with pytest.raises(ServiceAuthError):
+        require_capability(reader, ServiceCapability.PROJECTIONS_REBUILD)
+    with pytest.raises(ServiceAuthError):
+        require_capability(writer, ServiceCapability.CASES_EXPORT)
+    with pytest.raises(ServiceAuthError):
+        require_capability(exporter, ServiceCapability.EVENTS_WRITE)
+    with pytest.raises(ServiceAuthError):
+        require_capability(detector, ServiceCapability.EVENTS_READ)
+    with pytest.raises(ServiceAuthError):
+        require_capability(tenant_manager, ServiceCapability.ADMIN_CONFIGURE)
 
 
 def test_tenant_registry_enforces_tenant_scoped_roles() -> None:
@@ -152,6 +189,34 @@ def test_jwt_authenticator_maps_claims_to_principal() -> None:
     assert principal.has_role(ServiceRole.EXPORT)
 
 
+def test_jwt_authenticator_rejects_malformed_roles_and_capabilities() -> None:
+    import jwt
+
+    authenticator = JwtAuthenticator(
+        verification_key=JWT_HS256_KEY,
+        algorithms=("HS256",),
+    )
+    bad_role_token = jwt.encode(
+        {"sub": "jwt-analyst", "roles": ["read", 7]},
+        JWT_HS256_KEY,
+        algorithm="HS256",
+    )
+    bad_capability_token = jwt.encode(
+        {
+            "sub": "jwt-analyst",
+            "roles": ["read"],
+            "capabilities": ["detections:run", "events:delete"],
+        },
+        JWT_HS256_KEY,
+        algorithm="HS256",
+    )
+
+    with pytest.raises(ServiceAuthError, match="invalid service JWT"):
+        authenticator.authenticate(bad_role_token)
+    with pytest.raises(ServiceAuthError, match="invalid service JWT"):
+        authenticator.authenticate(bad_capability_token)
+
+
 def test_jwt_authenticator_rejects_invalid_signature_without_leaking_claims() -> None:
     import jwt
 
@@ -232,13 +297,13 @@ def test_service_health_split_and_corrupt_journal_readiness(tmp_path: Path) -> N
     assert live.json()["state"] == "live"
     assert ready.status_code == 503
     assert health.status_code == 503
-    assert ready.json()["issues"][0]["code"] == "journal_integrity_error"
+    assert ready.json()["issues"][0]["code"] == "journal_invalid"
     assert ready.json()["issues"][0]["details"]["verification"]["issues"][0]["code"] == (
         "event_hash_mismatch"
     )
 
 
-def test_service_readiness_accepts_empty_private_journal(tmp_path: Path) -> None:
+def test_service_readiness_rejects_unrebuilt_projection(tmp_path: Path) -> None:
     journal_path = tmp_path / "events.jsonl"
     database_path = tmp_path / "projection.sqlite"
     _write_private_bytes(journal_path, b"")
@@ -252,8 +317,8 @@ def test_service_readiness_accepts_empty_private_journal(tmp_path: Path) -> None
 
     ready = client.get("/ready")
 
-    assert ready.status_code == 200
-    assert ready.json()["ok"] is True
+    assert ready.status_code == 503
+    assert ready.json()["issues"][0]["code"] == "projection_rebuild_required"
 
 
 def test_service_readiness_rejects_malformed_journal(tmp_path: Path) -> None:
@@ -271,7 +336,7 @@ def test_service_readiness_rejects_malformed_journal(tmp_path: Path) -> None:
     ready = client.get("/ready")
 
     assert ready.status_code == 503
-    assert ready.json()["issues"][0]["code"] == "journal_integrity_error"
+    assert ready.json()["issues"][0]["code"] == "journal_invalid"
     assert ready.json()["issues"][0]["details"]["verification"]["issues"][0]["code"] == (
         "parse_error"
     )
@@ -600,6 +665,7 @@ def test_service_contract_and_detection_endpoints(tmp_path: Path) -> None:
         demo.database_path,
         token="reader",
         roles=frozenset({ServiceRole.READ}),
+        capabilities=frozenset({ServiceCapability.DETECTIONS_RUN}),
     )
     contract = LineageContract(
         name="service-contract",
@@ -624,6 +690,25 @@ def test_service_contract_and_detection_endpoints(tmp_path: Path) -> None:
     assert detection_response.json()["match_count"] == 1
 
 
+def test_service_read_only_principal_cannot_run_detections(tmp_path: Path) -> None:
+    demo = run_demo(tmp_path / "demo")
+    client = _client(
+        demo.journal_path,
+        demo.database_path,
+        token="reader",
+        roles=frozenset({ServiceRole.READ}),
+    )
+
+    response = client.post(
+        "/detections/evaluate",
+        headers={"Authorization": "Bearer reader"},
+        json={"rule_ids": ["AL-DET-003"]},
+    )
+
+    assert response.status_code == 403
+    assert "detections:run" in response.json()["detail"]
+
+
 def test_service_journal_dependent_endpoints_fail_closed_on_corruption(tmp_path: Path) -> None:
     demo = run_demo(tmp_path / "demo")
     _tamper_record_three(demo.journal_path)
@@ -632,6 +717,7 @@ def test_service_journal_dependent_endpoints_fail_closed_on_corruption(tmp_path:
         demo.database_path,
         token="reader",
         roles=frozenset({ServiceRole.READ}),
+        capabilities=frozenset({ServiceCapability.DETECTIONS_RUN}),
     )
     contract = LineageContract(
         name="service-contract",
@@ -665,6 +751,7 @@ def test_service_detection_endpoint_rejects_malformed_rule_ids(tmp_path: Path) -
         demo.database_path,
         token="reader",
         roles=frozenset({ServiceRole.READ}),
+        capabilities=frozenset({ServiceCapability.DETECTIONS_RUN}),
     )
 
     response = client.post(
@@ -724,6 +811,7 @@ def _client(
     *,
     token: str,
     roles: frozenset[ServiceRole],
+    capabilities: frozenset[ServiceCapability] = frozenset(),
     principal_id: str | None = None,
     export_root=None,
 ) -> TestClient:
@@ -732,6 +820,7 @@ def _client(
             token: ServicePrincipal(
                 principal_id=principal_id or token,
                 roles=roles,
+                capabilities=capabilities,
             )
         }
     )

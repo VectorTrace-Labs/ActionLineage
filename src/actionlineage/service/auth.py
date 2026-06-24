@@ -18,11 +18,37 @@ class ServiceRole(StrEnum):
     ADMIN = "admin"
 
 
-ROLE_ORDER: dict[ServiceRole, int] = {
-    ServiceRole.READ: 1,
-    ServiceRole.WRITE: 2,
-    ServiceRole.EXPORT: 3,
-    ServiceRole.ADMIN: 4,
+class ServiceCapability(StrEnum):
+    """Explicit service capabilities granted by role bundles or credentials."""
+
+    EVENTS_READ = "events:read"
+    EVENTS_WRITE = "events:write"
+    JOURNAL_VERIFY = "journal:verify"
+    PROJECTIONS_REBUILD = "projections:rebuild"
+    DETECTIONS_RUN = "detections:run"
+    CASES_READ = "cases:read"
+    CASES_EXPORT = "cases:export"
+    ADMIN_CONFIGURE = "admin:configure"
+    TENANTS_MANAGE = "tenants:manage"
+
+
+ROLE_CAPABILITIES: dict[ServiceRole, frozenset[ServiceCapability]] = {
+    ServiceRole.READ: frozenset(
+        {
+            ServiceCapability.EVENTS_READ,
+            ServiceCapability.JOURNAL_VERIFY,
+            ServiceCapability.CASES_READ,
+        }
+    ),
+    ServiceRole.WRITE: frozenset(
+        {
+            ServiceCapability.EVENTS_WRITE,
+            ServiceCapability.JOURNAL_VERIFY,
+            ServiceCapability.PROJECTIONS_REBUILD,
+        }
+    ),
+    ServiceRole.EXPORT: frozenset({ServiceCapability.CASES_EXPORT}),
+    ServiceRole.ADMIN: frozenset(ServiceCapability),
 }
 
 
@@ -32,10 +58,24 @@ class ServicePrincipal:
 
     principal_id: str
     roles: frozenset[ServiceRole]
+    capabilities: frozenset[ServiceCapability] = frozenset()
 
     def has_role(self, required: ServiceRole) -> bool:
-        required_rank = ROLE_ORDER[required]
-        return any(ROLE_ORDER[role] >= required_rank for role in self.roles)
+        return ROLE_CAPABILITIES[required].issubset(self.effective_capabilities)
+
+    @property
+    def effective_capabilities(self) -> frozenset[ServiceCapability]:
+        """Return explicit capabilities plus capabilities granted by role bundles."""
+
+        capabilities: set[ServiceCapability] = set(self.capabilities)
+        for role in self.roles:
+            capabilities.update(ROLE_CAPABILITIES[role])
+        return frozenset(capabilities)
+
+    def has_capability(self, required: ServiceCapability) -> bool:
+        """Return true when the principal has the exact required capability."""
+
+        return required in self.effective_capabilities
 
 
 class ServiceAuthError(RuntimeError):
@@ -68,6 +108,7 @@ class JwtAuthenticator:
     audience: str | None = None
     principal_claim: str = "sub"
     roles_claim: str = "roles"
+    capabilities_claim: str = "capabilities"
 
     def authenticate(self, token: str | None) -> ServicePrincipal:
         if token is None:
@@ -88,6 +129,7 @@ class JwtAuthenticator:
             claims,
             principal_claim=self.principal_claim,
             roles_claim=self.roles_claim,
+            capabilities_claim=self.capabilities_claim,
         )
 
 
@@ -135,6 +177,7 @@ class OidcJwtAuthenticator:
     audience: str
     principal_claim: str = "sub"
     roles_claim: str = "roles"
+    capabilities_claim: str = "capabilities"
     jwk_client_factory: JwkClientFactory | None = None
 
     def authenticate(self, token: str | None) -> ServicePrincipal:
@@ -157,6 +200,7 @@ class OidcJwtAuthenticator:
             claims,
             principal_claim=self.principal_claim,
             roles_claim=self.roles_claim,
+            capabilities_claim=self.capabilities_claim,
         )
 
     def _jwk_client(self, jwt_module: JwtModule) -> JwkClient:
@@ -170,6 +214,13 @@ def require_role(principal: ServicePrincipal, role: ServiceRole) -> None:
 
     if not principal.has_role(role):
         raise ServiceAuthError(f"service role required: {role.value}")
+
+
+def require_capability(principal: ServicePrincipal, capability: ServiceCapability) -> None:
+    """Raise if a principal lacks an explicit service capability."""
+
+    if not principal.has_capability(capability):
+        raise ServiceAuthError(f"service capability required: {capability.value}")
 
 
 def _jwt_module() -> JwtModule:
@@ -186,6 +237,7 @@ def _principal_from_claims(
     *,
     principal_claim: str,
     roles_claim: str,
+    capabilities_claim: str,
 ) -> ServicePrincipal:
     if not isinstance(claims, dict):
         raise ServiceAuthError("invalid service JWT claims")
@@ -195,6 +247,7 @@ def _principal_from_claims(
     return ServicePrincipal(
         principal_id=principal_id,
         roles=frozenset(_roles_from_claim(claims.get(roles_claim))),
+        capabilities=frozenset(_capabilities_from_claim(claims.get(capabilities_claim))),
     )
 
 
@@ -202,6 +255,8 @@ def _roles_from_claim(value: Any) -> tuple[ServiceRole, ...]:
     if isinstance(value, str):
         raw_roles = tuple(part for part in value.split() if part)
     elif isinstance(value, list):
+        if not all(isinstance(role, str) for role in value):
+            raise ServiceAuthError("invalid service JWT roles")
         raw_roles = tuple(role for role in value if isinstance(role, str))
     else:
         raise ServiceAuthError("invalid service JWT roles")
@@ -214,3 +269,23 @@ def _roles_from_claim(value: Any) -> tuple[ServiceRole, ...]:
     if not roles:
         raise ServiceAuthError("invalid service JWT roles")
     return tuple(roles)
+
+
+def _capabilities_from_claim(value: Any) -> tuple[ServiceCapability, ...]:
+    if value is None:
+        return ()
+    if isinstance(value, str):
+        raw_capabilities = tuple(part for part in value.split() if part)
+    elif isinstance(value, list):
+        if not all(isinstance(capability, str) for capability in value):
+            raise ServiceAuthError("invalid service JWT capabilities")
+        raw_capabilities = tuple(capability for capability in value if isinstance(capability, str))
+    else:
+        raise ServiceAuthError("invalid service JWT capabilities")
+    capabilities: list[ServiceCapability] = []
+    for raw_capability in raw_capabilities:
+        try:
+            capabilities.append(ServiceCapability(raw_capability))
+        except ValueError as exc:
+            raise ServiceAuthError("invalid service JWT capabilities") from exc
+    return tuple(capabilities)

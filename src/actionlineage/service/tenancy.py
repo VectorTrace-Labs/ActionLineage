@@ -4,7 +4,13 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from actionlineage.service.auth import ROLE_ORDER, ServiceAuthError, ServicePrincipal, ServiceRole
+from actionlineage.service.auth import (
+    ROLE_CAPABILITIES,
+    ServiceAuthError,
+    ServiceCapability,
+    ServicePrincipal,
+    ServiceRole,
+)
 
 
 @dataclass(frozen=True, slots=True)
@@ -36,8 +42,10 @@ class TenantRoleBinding:
     def has_role(self, required: ServiceRole) -> bool:
         """Return true when the binding grants at least the requested role."""
 
-        required_rank = ROLE_ORDER[required]
-        return any(ROLE_ORDER[role] >= required_rank for role in self.roles)
+        capabilities: set[ServiceCapability] = set()
+        for role in self.roles:
+            capabilities.update(ROLE_CAPABILITIES[role])
+        return ROLE_CAPABILITIES[required].issubset(capabilities)
 
     def as_dict(self) -> dict[str, object]:
         """Return a JSON-compatible binding without credentials."""

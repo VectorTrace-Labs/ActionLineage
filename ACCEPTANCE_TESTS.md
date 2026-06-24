@@ -178,7 +178,9 @@ Each test must be executable. Documentation-only evidence does not satisfy an ac
   canonical journals.
 - **AT-OPS-002**: Optional service mode exposes ingest, query, export, health, contract, and
   detection endpoints behind explicit extras.
-- **AT-OPS-003**: Optional service auth and RBAC enforce read, write, admin, and export scopes.
+- **AT-OPS-003**: Optional service auth enforces explicit read, write,
+  detection, tenant-management, admin-configuration, and export capabilities
+  without ordinal privilege inheritance.
 - **AT-OPS-004**: Optional Postgres projection rebuilds from canonical journal evidence.
 - **AT-OPS-005**: Backup, restore, sizing, health, and degraded-mode procedures are executable.
 - **AT-OPS-006**: Journal archive manifests verify local journal bytes and trusted tail values

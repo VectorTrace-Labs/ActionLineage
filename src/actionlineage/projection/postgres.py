@@ -93,6 +93,7 @@ def rebuild_postgres_projection(
             VALUES
                 ('schema_version', %(schema_version)s),
                 ('source_journal_path', %(source_journal_path)s),
+                ('source_journal_identity', %(source_journal_identity)s),
                 ('records_indexed', %(records_indexed)s),
                 ('last_event_hash', %(last_event_hash)s)
             ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value
@@ -100,6 +101,7 @@ def rebuild_postgres_projection(
             {
                 "schema_version": str(POSTGRES_PROJECTION_SCHEMA_VERSION),
                 "source_journal_path": str(journal_path),
+                "source_journal_identity": f"local-file:{journal_path}",
                 "records_indexed": str(indexed_count),
                 "last_event_hash": snapshot.terminal_hash or "",
             },
@@ -231,7 +233,7 @@ def _event_projection_parameters(
 
     payload = event.payload
     evidence_link = payload.get("evidence_link")
-    evidence = evidence_link if isinstance(evidence_link, dict) else {}
+    evidence = evidence_link if isinstance(evidence_link, Mapping) else {}
     verification_status = _string_or_none(evidence.get("verification_status")) or _string_or_none(
         payload.get("verification_status")
     )

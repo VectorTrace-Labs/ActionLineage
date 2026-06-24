@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import time
+from collections.abc import Mapping
 from dataclasses import dataclass
 from datetime import timedelta
 from enum import StrEnum
@@ -367,7 +368,7 @@ def _missing_optional_field(
     for event in events:
         payload = dict(event.payload)
         acknowledgement = payload.get("acknowledgement")
-        if not removed and isinstance(acknowledgement, dict) and "note" in acknowledgement:
+        if not removed and isinstance(acknowledgement, Mapping) and "note" in acknowledgement:
             acknowledgement = dict(acknowledgement)
             acknowledgement.pop("note")
             payload["acknowledgement"] = acknowledgement
@@ -408,9 +409,9 @@ def _path_url_normalization(
 def _normalize_path_url_value(value: object) -> object:
     if isinstance(value, str):
         return _normalize_path_url_string(value)
-    if isinstance(value, list):
+    if isinstance(value, list | tuple):
         return [_normalize_path_url_value(item) for item in value]
-    if isinstance(value, dict):
+    if isinstance(value, Mapping):
         return {str(key): _normalize_path_url_value(child) for key, child in value.items()}
     return value
 
@@ -430,7 +431,7 @@ def _outcome_uncertainty(events: tuple[EventEnvelope, ...], *, seed: int) -> Mut
         if not replaced and event_type_value(event) == EventType.SIDE_EFFECT_VERIFIED.value:
             payload = dict(event.payload)
             evidence_link = payload.get("evidence_link")
-            if isinstance(evidence_link, dict):
+            if isinstance(evidence_link, Mapping):
                 evidence_link = dict(evidence_link)
                 evidence_link["verification_status"] = "unverified"
                 evidence_link["limitations"] = [

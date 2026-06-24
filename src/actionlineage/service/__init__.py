@@ -6,9 +6,11 @@ from actionlineage.service.auth import (
     JwtLibraryUnavailable,
     OidcJwtAuthenticator,
     ServiceAuthError,
+    ServiceCapability,
     ServicePrincipal,
     ServiceRole,
     StaticTokenAuthenticator,
+    require_capability,
     require_role,
 )
 from actionlineage.service.health import HealthIssue, HealthReport, HealthState, check_local_health
@@ -38,6 +40,7 @@ __all__ = [
     "JwtLibraryUnavailable",
     "OidcJwtAuthenticator",
     "ServiceAuthError",
+    "ServiceCapability",
     "ServiceDependencyError",
     "ServicePrincipal",
     "ServiceRole",
@@ -50,6 +53,7 @@ __all__ = [
     "check_local_health",
     "create_app",
     "create_service_app_from_env",
+    "require_capability",
     "require_role",
     "require_tenant_role",
 ]

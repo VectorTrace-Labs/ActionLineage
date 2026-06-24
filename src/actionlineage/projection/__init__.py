@@ -28,10 +28,13 @@ from actionlineage.projection.sqlite import (
     ProjectionQueryError,
     ProjectionRebuildError,
     ProjectionSchemaError,
+    ProjectionStateCode,
+    ProjectionStateError,
     ProjectionVerificationError,
     RebuildResult,
     TimelineEvent,
     TimelineResult,
+    VerifiedProjectionSnapshot,
     explain_event,
     export_case_bundle,
     export_incident,
@@ -43,6 +46,7 @@ from actionlineage.projection.sqlite import (
     query_timeline,
     rebuild_projection,
     summarize_incident,
+    verify_projection_state,
 )
 
 __all__ = [
@@ -68,10 +72,13 @@ __all__ = [
     "ProjectionQueryError",
     "ProjectionRebuildError",
     "ProjectionSchemaError",
+    "ProjectionStateCode",
+    "ProjectionStateError",
     "ProjectionVerificationError",
     "RebuildResult",
     "TimelineEvent",
     "TimelineResult",
+    "VerifiedProjectionSnapshot",
     "explain_event",
     "export_case_bundle",
     "export_incident",
@@ -86,4 +93,5 @@ __all__ = [
     "rebuild_postgres_projection",
     "rebuild_projection",
     "summarize_incident",
+    "verify_projection_state",
 ]

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Mapping
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
@@ -34,10 +35,10 @@ from actionlineage.projection import (
 )
 from actionlineage.service.auth import (
     ServiceAuthError,
+    ServiceCapability,
     ServicePrincipal,
-    ServiceRole,
     StaticTokenAuthenticator,
-    require_role,
+    require_capability,
 )
 from actionlineage.service.health import check_local_health
 
@@ -97,15 +98,23 @@ def create_app(
         service_principal: Any = principal_dependency,
     ) -> dict[str, object]:
         try:
-            require_role(service_principal, ServiceRole.READ)
+            require_capability(service_principal, ServiceCapability.EVENTS_READ)
         except ServiceAuthError as exc:
             raise HTTPException(status_code=403, detail=str(exc)) from exc
-        return query_timeline(database_path, trace_id=trace_id, run_id=run_id).as_dict()
+        try:
+            return query_timeline(
+                database_path,
+                journal_path=journal_path,
+                trace_id=trace_id,
+                run_id=run_id,
+            ).as_dict()
+        except ProjectionError as exc:
+            raise HTTPException(status_code=503, detail=_safe_detail(exc)) from exc
 
     @app.get("/events")
     def events(service_principal: Any = principal_dependency) -> dict[str, object]:
         try:
-            require_role(service_principal, ServiceRole.READ)
+            require_capability(service_principal, ServiceCapability.EVENTS_READ)
         except ServiceAuthError as exc:
             raise HTTPException(status_code=403, detail=str(exc)) from exc
         snapshot = _verified_snapshot_or_503(journal_path)
@@ -116,7 +125,7 @@ def create_app(
                     "event_id": event.event_id,
                     "ingestion_provenance": (
                         "service_authenticated"
-                        if isinstance(event.payload.get("ingested_by"), dict)
+                        if isinstance(event.payload.get("ingested_by"), Mapping)
                         else "legacy_no_ingested_by"
                     ),
                 }
@@ -133,13 +142,14 @@ def create_app(
         service_principal: Any = principal_dependency,
     ) -> dict[str, object]:
         try:
-            require_role(service_principal, ServiceRole.EXPORT)
+            require_capability(service_principal, ServiceCapability.CASES_EXPORT)
         except ServiceAuthError as exc:
             raise HTTPException(status_code=403, detail=str(exc)) from exc
         try:
             return export_case_bundle(
                 database_path,
                 _service_export_dir(service_export_root, output_dir),
+                journal_path=journal_path,
                 trace_id=trace_id,
                 run_id=run_id,
             ).as_dict()
@@ -153,7 +163,8 @@ def create_app(
         service_principal: Any = principal_dependency,
     ) -> dict[str, object]:
         try:
-            require_role(service_principal, ServiceRole.WRITE)
+            require_capability(service_principal, ServiceCapability.EVENTS_WRITE)
+            require_capability(service_principal, ServiceCapability.PROJECTIONS_REBUILD)
             journal = LocalJournal(journal_path)
             snapshot = _verified_snapshot_or_503(journal_path)
             _reject_client_ingested_by(body)
@@ -191,7 +202,7 @@ def create_app(
         service_principal: Any = principal_dependency,
     ) -> dict[str, object]:
         try:
-            require_role(service_principal, ServiceRole.READ)
+            require_capability(service_principal, ServiceCapability.EVENTS_READ)
             contract = contract_from_dict(_object_body_field(body, "contract"))
             snapshot = _verified_snapshot_or_503(journal_path)
             detection_results = _built_in_detection_results(snapshot.events)
@@ -212,7 +223,7 @@ def create_app(
         service_principal: Any = principal_dependency,
     ) -> dict[str, object]:
         try:
-            require_role(service_principal, ServiceRole.READ)
+            require_capability(service_principal, ServiceCapability.DETECTIONS_RUN)
             requested_rule_ids = _requested_rule_ids(body or {})
         except ServiceAuthError as exc:
             raise HTTPException(status_code=403, detail=str(exc)) from exc
@@ -375,7 +386,7 @@ def _reject_unprivileged_trusted_classification(
     body: dict[str, Any],
     service_principal: ServicePrincipal,
 ) -> None:
-    if service_principal.has_role(ServiceRole.ADMIN):
+    if service_principal.has_capability(ServiceCapability.ADMIN_CONFIGURE):
         return
 
     if _classification_is_trusted(body.get("classification")):

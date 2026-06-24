@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import logging
+from collections.abc import Mapping
 from datetime import UTC, datetime
 from typing import Any, cast
 
@@ -91,7 +92,7 @@ def normalize_json(value: Any) -> JsonValue:
     if isinstance(value, datetime):
         return canonical_timestamp(value)
 
-    if isinstance(value, dict):
+    if isinstance(value, Mapping):
         normalized: dict[str, JsonValue] = {}
         for key, child in value.items():
             if not isinstance(key, str):
@@ -99,7 +100,7 @@ def normalize_json(value: Any) -> JsonValue:
             normalized[key] = normalize_json(child)
         return normalized
 
-    if isinstance(value, list):
+    if isinstance(value, list | tuple):
         return [normalize_json(child) for child in value]
 
     if value is None or isinstance(value, str | int | float | bool):

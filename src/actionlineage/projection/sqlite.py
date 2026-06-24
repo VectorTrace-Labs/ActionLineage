@@ -8,6 +8,7 @@ import sqlite3
 from collections.abc import Iterable, Iterator
 from contextlib import contextmanager
 from dataclasses import dataclass
+from enum import StrEnum
 from pathlib import Path
 from typing import Any, cast
 
@@ -18,7 +19,11 @@ from actionlineage.domain import (
     serialize_event,
 )
 from actionlineage.domain.events import event_type_value
-from actionlineage.journal import VerificationResult, verified_journal_snapshot
+from actionlineage.journal import (
+    VerificationResult,
+    VerifiedJournalSnapshot,
+    verified_journal_snapshot,
+)
 
 PROJECTION_SCHEMA_VERSION = 2
 INCIDENT_EXPORT_VERSION = "actionlineage.dev/incident-export-v0"
@@ -58,6 +63,33 @@ class ProjectionVerificationError(ProjectionRebuildError):
         self.verification = verification
 
 
+class ProjectionStateCode(StrEnum):
+    """Projection correspondence states used by reads and health checks."""
+
+    HEALTHY = "healthy"
+    JOURNAL_INVALID = "journal_invalid"
+    PROJECTION_MISSING = "projection_missing"
+    PROJECTION_UNAVAILABLE = "projection_unavailable"
+    PROJECTION_STALE = "projection_stale"
+    PROJECTION_MISMATCH = "projection_mismatch"
+    PROJECTION_REBUILD_REQUIRED = "projection_rebuild_required"
+
+
+class ProjectionStateError(ProjectionQueryError):
+    """Raised when a projection is not bound to the verified journal state."""
+
+    def __init__(
+        self,
+        code: ProjectionStateCode,
+        message: str,
+        *,
+        details: dict[str, object] | None = None,
+    ) -> None:
+        super().__init__(message)
+        self.code = code
+        self.details = details or {}
+
+
 @dataclass(frozen=True, slots=True)
 class RebuildResult:
     """Machine-readable projection rebuild result."""
@@ -78,6 +110,49 @@ class RebuildResult:
             "records_indexed": self.records_indexed,
             "last_event_hash": self.last_event_hash,
             "schema_version": self.schema_version,
+        }
+
+
+@dataclass(frozen=True, slots=True)
+class VerifiedProjectionSnapshot:
+    """Projection state proven to correspond to one verified journal snapshot."""
+
+    journal_path: Path
+    database_path: Path
+    journal_snapshot: VerifiedJournalSnapshot
+    records_indexed: int
+    last_event_hash: str | None
+    source_journal_path: str
+    schema_version: int = PROJECTION_SCHEMA_VERSION
+    state: ProjectionStateCode = ProjectionStateCode.HEALTHY
+
+    @property
+    def record_count(self) -> int:
+        """Number of records bound to the verified journal."""
+
+        return self.journal_snapshot.record_count
+
+    @property
+    def terminal_hash(self) -> str | None:
+        """Terminal hash bound to the verified journal."""
+
+        return self.journal_snapshot.terminal_hash
+
+    def as_dict(self) -> dict[str, object]:
+        """Return a JSON-compatible projection verification summary."""
+
+        return {
+            "ok": True,
+            "state": self.state.value,
+            "journal_path": str(self.journal_path),
+            "database_path": str(self.database_path),
+            "source_journal_path": self.source_journal_path,
+            "records_indexed": self.records_indexed,
+            "record_count": self.record_count,
+            "last_event_hash": self.last_event_hash,
+            "terminal_hash": self.terminal_hash,
+            "schema_version": self.schema_version,
+            "journal": self.journal_snapshot.as_dict(),
         }
 
 
@@ -343,6 +418,7 @@ def rebuild_projection(journal_path: Path, database_path: Path) -> RebuildResult
                 {
                     "schema_version": str(PROJECTION_SCHEMA_VERSION),
                     "source_journal_path": str(journal_path),
+                    "source_journal_identity": _journal_identity(journal_path),
                     "records_indexed": str(indexed_count),
                     "last_event_hash": snapshot.terminal_hash or "",
                 },
@@ -355,6 +431,102 @@ def rebuild_projection(journal_path: Path, database_path: Path) -> RebuildResult
         database_path=database_path,
         records_indexed=indexed_count,
         last_event_hash=snapshot.terminal_hash,
+    )
+
+
+def verify_projection_state(
+    database_path: Path,
+    *,
+    journal_path: Path | None = None,
+) -> VerifiedProjectionSnapshot:
+    """Verify that a projection exactly matches a verified journal snapshot."""
+
+    database_path = Path(database_path)
+    if not database_path.exists():
+        raise ProjectionStateError(
+            ProjectionStateCode.PROJECTION_MISSING,
+            f"projection database does not exist: {database_path}",
+        )
+
+    try:
+        with _connect(database_path) as connection:
+            ensure_schema(connection)
+            metadata = _get_metadata(connection)
+            resolved_journal_path = _projection_journal_path(
+                metadata,
+                explicit_journal_path=journal_path,
+            )
+            stored_identity = metadata.get("source_journal_identity")
+            expected_identity = _journal_identity(resolved_journal_path)
+            if stored_identity is not None and stored_identity != expected_identity:
+                raise ProjectionStateError(
+                    ProjectionStateCode.PROJECTION_MISMATCH,
+                    "projection source journal identity does not match the verified journal",
+                    details={
+                        "source_journal_identity": stored_identity,
+                        "expected_source_journal_identity": expected_identity,
+                    },
+                )
+            snapshot = verified_journal_snapshot(resolved_journal_path)
+            if not snapshot.ok:
+                raise ProjectionStateError(
+                    ProjectionStateCode.JOURNAL_INVALID,
+                    "source journal verification failed",
+                    details={"verification": snapshot.verification.as_dict()},
+                )
+
+            records_indexed = _metadata_int(metadata, "records_indexed")
+            last_event_hash = _metadata_hash(metadata, "last_event_hash")
+            projection_metadata_matches = (
+                records_indexed == snapshot.record_count
+                and last_event_hash == snapshot.terminal_hash
+            )
+            if not projection_metadata_matches:
+                code = (
+                    ProjectionStateCode.PROJECTION_STALE
+                    if records_indexed <= snapshot.record_count
+                    else ProjectionStateCode.PROJECTION_MISMATCH
+                )
+                raise ProjectionStateError(
+                    code,
+                    "projection metadata does not match the verified journal",
+                    details={
+                        "records_indexed": records_indexed,
+                        "record_count": snapshot.record_count,
+                        "last_event_hash": last_event_hash,
+                        "terminal_hash": snapshot.terminal_hash,
+                    },
+                )
+
+            _verify_projected_rows(connection, snapshot)
+    except ProjectionStateError:
+        raise
+    except sqlite3.Error as exc:
+        raise ProjectionStateError(
+            ProjectionStateCode.PROJECTION_UNAVAILABLE,
+            "sqlite projection could not be verified",
+            details={"error_type": type(exc).__name__},
+        ) from exc
+    except ProjectionSchemaError as exc:
+        raise ProjectionStateError(
+            ProjectionStateCode.PROJECTION_REBUILD_REQUIRED,
+            "projection schema is unsupported or incomplete",
+            details={"error": str(exc)},
+        ) from exc
+    except (OSError, ValueError) as exc:
+        raise ProjectionStateError(
+            ProjectionStateCode.PROJECTION_REBUILD_REQUIRED,
+            "projection metadata is incomplete or invalid",
+            details={"error": str(exc)},
+        ) from exc
+
+    return VerifiedProjectionSnapshot(
+        journal_path=resolved_journal_path,
+        database_path=database_path,
+        journal_snapshot=snapshot,
+        records_indexed=records_indexed,
+        last_event_hash=last_event_hash,
+        source_journal_path=metadata.get("source_journal_path", ""),
     )
 
 
@@ -422,6 +594,7 @@ def index_event(
 def query_timeline(
     database_path: Path,
     *,
+    journal_path: Path | None = None,
     trace_id: str | None = None,
     run_id: str | None = None,
 ) -> TimelineResult:
@@ -429,8 +602,7 @@ def query_timeline(
 
     selector_type, selector_value = _require_one_selector(trace_id=trace_id, run_id=run_id)
     database_path = Path(database_path)
-    if not database_path.exists():
-        raise ProjectionQueryError(f"projection database does not exist: {database_path}")
+    verify_projection_state(database_path, journal_path=journal_path)
 
     try:
         with _connect(database_path) as connection:
@@ -500,6 +672,7 @@ def query_timeline(
 def query_filtered_timeline(
     database_path: Path,
     *,
+    journal_path: Path | None = None,
     trace_id: str | None = None,
     run_id: str | None = None,
     event_type: str | None = None,
@@ -514,8 +687,7 @@ def query_filtered_timeline(
     """Query projected events with investigation filters."""
 
     database_path = Path(database_path)
-    if not database_path.exists():
-        raise ProjectionQueryError(f"projection database does not exist: {database_path}")
+    verify_projection_state(database_path, journal_path=journal_path)
 
     try:
         with _connect(database_path) as connection:
@@ -573,37 +745,57 @@ def query_filtered_timeline(
 def export_incident(
     database_path: Path,
     *,
+    journal_path: Path | None = None,
     trace_id: str | None = None,
     run_id: str | None = None,
 ) -> IncidentExport:
     """Export a projected timeline as machine-readable incident JSON."""
 
-    return IncidentExport(timeline=query_timeline(database_path, trace_id=trace_id, run_id=run_id))
+    return IncidentExport(
+        timeline=query_timeline(
+            database_path,
+            journal_path=journal_path,
+            trace_id=trace_id,
+            run_id=run_id,
+        )
+    )
 
 
 def summarize_incident(
     database_path: Path,
     *,
+    journal_path: Path | None = None,
     trace_id: str | None = None,
     run_id: str | None = None,
 ) -> GroundedInvestigationSummary:
     """Generate a deterministic summary grounded in a projected incident export."""
 
     return grounded_summary_from_incident(
-        export_incident(database_path, trace_id=trace_id, run_id=run_id)
+        export_incident(
+            database_path,
+            journal_path=journal_path,
+            trace_id=trace_id,
+            run_id=run_id,
+        )
     )
 
 
 def export_investigation_graph(
     database_path: Path,
     *,
+    journal_path: Path | None = None,
     trace_id: str | None = None,
     run_id: str | None = None,
 ) -> InvestigationGraphExport:
     """Export a dependency-free graph derived from a projected incident."""
 
     return investigation_graph_from_incident(
-        export_incident(database_path, trace_id=trace_id, run_id=run_id)
+        export_incident(
+            database_path,
+            journal_path=journal_path,
+            trace_id=trace_id,
+            run_id=run_id,
+        )
     )
 
 
@@ -792,10 +984,15 @@ def grounded_summary_from_incident(
     )
 
 
-def explain_event(database_path: Path, *, event_id: str) -> EventExplanation:
+def explain_event(
+    database_path: Path,
+    *,
+    event_id: str,
+    journal_path: Path | None = None,
+) -> EventExplanation:
     """Explain one event with causal and evidence-link context."""
 
-    timeline = query_filtered_timeline(database_path)
+    timeline = query_filtered_timeline(database_path, journal_path=journal_path)
     events_by_id = {event.event_id: event.event for event in timeline.events}
     if event_id not in events_by_id:
         raise ProjectionQueryError(f"event does not exist in projection: {event_id}")
@@ -825,12 +1022,18 @@ def export_case_bundle(
     database_path: Path,
     output_dir: Path,
     *,
+    journal_path: Path | None = None,
     trace_id: str | None = None,
     run_id: str | None = None,
 ) -> CaseBundleExport:
     """Export JSON, NDJSON, and Markdown case files for one timeline."""
 
-    incident = export_incident(database_path, trace_id=trace_id, run_id=run_id)
+    incident = export_incident(
+        database_path,
+        journal_path=journal_path,
+        trace_id=trace_id,
+        run_id=run_id,
+    )
     output_dir = Path(output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
     json_path, ndjson_path, markdown_path = _case_bundle_paths(output_dir)
@@ -965,6 +1168,106 @@ def _set_metadata(connection: sqlite3.Connection, values: dict[str, str]) -> Non
         """,
         values.items(),
     )
+
+
+def _get_metadata(connection: sqlite3.Connection) -> dict[str, str]:
+    rows = connection.execute("SELECT key, value FROM projection_metadata").fetchall()
+    return {cast(str, key): cast(str, value) for key, value in rows}
+
+
+def _projection_journal_path(
+    metadata: dict[str, str],
+    *,
+    explicit_journal_path: Path | None,
+) -> Path:
+    stored_path = metadata.get("source_journal_path")
+    if explicit_journal_path is None:
+        if not stored_path:
+            raise ValueError("projection metadata is missing source_journal_path")
+        return Path(stored_path)
+
+    if stored_path and stored_path != str(explicit_journal_path):
+        raise ProjectionStateError(
+            ProjectionStateCode.PROJECTION_MISMATCH,
+            "projection source journal path does not match the requested journal",
+            details={
+                "source_journal_path": stored_path,
+                "requested_journal_path": str(explicit_journal_path),
+            },
+        )
+    return Path(explicit_journal_path)
+
+
+def _metadata_int(metadata: dict[str, str], key: str) -> int:
+    value = metadata.get(key)
+    if value is None:
+        raise ValueError(f"projection metadata is missing {key}")
+    try:
+        parsed = int(value)
+    except ValueError as exc:
+        raise ValueError(f"projection metadata {key} is not an integer") from exc
+    if parsed < 0:
+        raise ValueError(f"projection metadata {key} cannot be negative")
+    return parsed
+
+
+def _metadata_hash(metadata: dict[str, str], key: str) -> str | None:
+    value = metadata.get(key)
+    if value is None:
+        raise ValueError(f"projection metadata is missing {key}")
+    return value or None
+
+
+def _verify_projected_rows(
+    connection: sqlite3.Connection,
+    snapshot: VerifiedJournalSnapshot,
+) -> None:
+    rows = connection.execute(
+        """
+        SELECT journal_record_number, event_id, event_hash, event_json
+        FROM events
+        ORDER BY journal_record_number ASC
+        """
+    ).fetchall()
+    if len(rows) != snapshot.record_count:
+        code = (
+            ProjectionStateCode.PROJECTION_STALE
+            if len(rows) < snapshot.record_count
+            else ProjectionStateCode.PROJECTION_MISMATCH
+        )
+        raise ProjectionStateError(
+            code,
+            "projection row count does not match the verified journal",
+            details={"rows": len(rows), "record_count": snapshot.record_count},
+        )
+
+    for record_number, event in enumerate(snapshot.events, start=1):
+        row = rows[record_number - 1]
+        actual_record_number = cast(int, row[0])
+        actual_event_id = cast(str, row[1])
+        actual_event_hash = cast(str, row[2])
+        actual_event_json = cast(str, row[3])
+        expected_event_json = serialize_event(event).decode("utf-8")
+        if (
+            actual_record_number != record_number
+            or actual_event_id != event.event_id
+            or actual_event_hash != event.integrity.event_hash
+            or actual_event_json != expected_event_json
+        ):
+            raise ProjectionStateError(
+                ProjectionStateCode.PROJECTION_MISMATCH,
+                "projection row content does not match the verified journal",
+                details={
+                    "record_number": record_number,
+                    "actual_record_number": actual_record_number,
+                    "event_id": actual_event_id,
+                    "expected_event_id": event.event_id,
+                },
+            )
+
+
+def _journal_identity(journal_path: Path) -> str:
+    return f"local-file:{journal_path}"
 
 
 def _migrate_v1_to_v2(connection: sqlite3.Connection) -> None:

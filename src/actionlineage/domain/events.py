@@ -2,11 +2,19 @@
 
 from __future__ import annotations
 
+from collections.abc import Iterable, Mapping
 from datetime import UTC, datetime
 from enum import StrEnum
-from typing import Any, ClassVar, Literal, cast
+from typing import Any, ClassVar, Literal, NoReturn, Self, SupportsIndex, cast
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
+from pydantic import (
+    BaseModel,
+    ConfigDict,
+    Field,
+    field_serializer,
+    field_validator,
+    model_validator,
+)
 
 SPEC_VERSION: Literal["actionlineage.dev/v1alpha1"] = "actionlineage.dev/v1alpha1"
 CANONICALIZATION_VERSION = "actionlineage.dev/json-deterministic-v0"
@@ -14,6 +22,90 @@ CANONICALIZATION_VERSION = "actionlineage.dev/json-deterministic-v0"
 type JsonScalar = str | int | float | bool | None
 type JsonValue = JsonScalar | list[JsonValue] | dict[str, JsonValue]
 type JsonObject = dict[str, JsonValue]
+
+
+class FrozenJsonDict(dict[str, Any]):
+    """JSON object container that preserves dict behavior but rejects mutation."""
+
+    def _immutable(self) -> NoReturn:
+        raise TypeError("event payload JSON objects are immutable")
+
+    def __setitem__(self, key: str, value: Any) -> None:
+        self._immutable()
+
+    def __delitem__(self, key: str) -> None:
+        self._immutable()
+
+    def clear(self) -> None:
+        self._immutable()
+
+    def pop(self, key: str, default: Any = None) -> Any:
+        self._immutable()
+
+    def popitem(self) -> tuple[str, Any]:
+        self._immutable()
+
+    def setdefault(self, key: str, default: Any = None) -> Any:
+        self._immutable()
+
+    def update(self, *args: object, **kwargs: Any) -> None:
+        self._immutable()
+
+    def __ior__(self, other: Any) -> Self:  # type: ignore[misc, override]
+        self._immutable()
+
+    def copy(self) -> dict[str, Any]:
+        """Return a mutable JSON-compatible copy."""
+
+        return cast(dict[str, Any], thaw_json_value(self))
+
+
+class FrozenJsonList(list[Any]):
+    """JSON array container that preserves list behavior but rejects mutation."""
+
+    def _immutable(self) -> NoReturn:
+        raise TypeError("event payload JSON arrays are immutable")
+
+    def __setitem__(self, index: object, value: Any) -> None:
+        self._immutable()
+
+    def __delitem__(self, index: object) -> None:
+        self._immutable()
+
+    def append(self, item: Any) -> None:
+        self._immutable()
+
+    def clear(self) -> None:
+        self._immutable()
+
+    def extend(self, iterable: Iterable[Any]) -> None:
+        self._immutable()
+
+    def insert(self, index: SupportsIndex, item: Any) -> None:
+        self._immutable()
+
+    def pop(self, index: SupportsIndex = -1) -> Any:
+        self._immutable()
+
+    def remove(self, value: Any) -> None:
+        self._immutable()
+
+    def reverse(self) -> None:
+        self._immutable()
+
+    def sort(self, *args: Any, **kwargs: Any) -> None:
+        self._immutable()
+
+    def __iadd__(self, value: Iterable[Any]) -> Self:  # type: ignore[misc]
+        self._immutable()
+
+    def __imul__(self, value: SupportsIndex) -> Self:
+        self._immutable()
+
+    def copy(self) -> list[Any]:
+        """Return a mutable JSON-compatible copy."""
+
+        return cast(list[Any], thaw_json_value(self))
 
 
 class EventType(StrEnum):
@@ -235,7 +327,7 @@ class EventEnvelope(FrozenDomainModel):
     causality: Causality
     principal: Principal
     classification: Classification
-    payload: dict[str, Any] = Field(default_factory=dict)
+    payload: Mapping[str, Any] = Field(default_factory=dict)
     integrity: IntegrityMetadata = Field(default_factory=IntegrityMetadata)
 
     @field_validator("occurred_at", "observed_at")
@@ -249,11 +341,17 @@ class EventEnvelope(FrozenDomainModel):
 
     @field_validator("payload")
     @classmethod
-    def require_json_payload(cls, value: dict[str, Any]) -> dict[str, Any]:
+    def require_json_payload(cls, value: Mapping[str, Any]) -> Mapping[str, Any]:
         """Reject payload values that cannot cross the JSON event boundary."""
 
         validate_json_value(value)
-        return value
+        return cast(Mapping[str, Any], freeze_json_value(value))
+
+    @field_serializer("payload")
+    def serialize_payload(self, value: Mapping[str, Any]) -> dict[str, Any]:
+        """Serialize immutable payload containers as ordinary JSON objects."""
+
+        return cast(dict[str, Any], thaw_json_value(value))
 
     @model_validator(mode="after")
     def validate_causality(self) -> EventEnvelope:
@@ -292,12 +390,12 @@ def validate_json_value(value: Any) -> None:
     if value is None or isinstance(value, str | int | float | bool):
         return
 
-    if isinstance(value, list):
+    if isinstance(value, list | tuple):
         for item in value:
             validate_json_value(item)
         return
 
-    if isinstance(value, dict):
+    if isinstance(value, Mapping):
         for key, item in value.items():
             if not isinstance(key, str):
                 raise ValueError("payload object keys must be strings")
@@ -305,3 +403,30 @@ def validate_json_value(value: Any) -> None:
         return
 
     raise ValueError(f"payload contains unsupported JSON value type: {type(value).__name__}")
+
+
+def freeze_json_value(value: Any) -> Any:
+    """Return a recursively immutable JSON-compatible value."""
+
+    if value is None or isinstance(value, str | int | float | bool):
+        return value
+
+    if isinstance(value, Mapping):
+        return FrozenJsonDict({key: freeze_json_value(item) for key, item in value.items()})
+
+    if isinstance(value, list | tuple):
+        return FrozenJsonList(freeze_json_value(item) for item in value)
+
+    raise ValueError(f"payload contains unsupported JSON value type: {type(value).__name__}")
+
+
+def thaw_json_value(value: Any) -> Any:
+    """Return ordinary dict/list JSON containers from immutable event values."""
+
+    if isinstance(value, Mapping):
+        return {key: thaw_json_value(item) for key, item in value.items()}
+
+    if isinstance(value, tuple | list):
+        return [thaw_json_value(item) for item in value]
+
+    return value

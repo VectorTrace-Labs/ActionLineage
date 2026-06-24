@@ -11,7 +11,7 @@ from typer.testing import CliRunner
 
 import actionlineage.journal.local as local_journal_module
 from actionlineage.cli import app
-from actionlineage.domain import EventEnvelope, EventType, RedactionPolicy
+from actionlineage.domain import EventEnvelope, EventType, RedactionPolicy, serialize_event
 from actionlineage.journal import (
     JournalAppendError,
     JournalLockError,
@@ -124,6 +124,36 @@ def test_verified_snapshot_is_immutable_after_source_file_changes(tmp_path: Path
     assert snapshot.record_count == 3
     assert snapshot.terminal_hash == original_terminal_hash
     assert journal.verified_snapshot().record_count == 4
+
+
+def test_verified_snapshot_events_reject_nested_payload_mutation(tmp_path: Path) -> None:
+    path = tmp_path / "events.jsonl"
+    journal = LocalJournal(path)
+    journal.append(
+        make_event(0).model_copy(
+            update={
+                "payload": {
+                    "metadata": {"reviewed": True},
+                    "evidence": [{"id": "ev_1", "tags": ["observed"]}],
+                }
+            }
+        )
+    )
+    snapshot = journal.verified_snapshot()
+    event = snapshot.events[0]
+    original_serialized = serialize_event(event)
+    original_hash = event.integrity.event_hash
+
+    with pytest.raises(TypeError):
+        event.payload["metadata"]["reviewed"] = False  # type: ignore[index]
+    with pytest.raises(TypeError):
+        event.payload["evidence"].append({"id": "ev_2"})  # type: ignore[union-attr]
+    with pytest.raises(TypeError):
+        event.payload["evidence"][0]["id"] = "ev_tampered"  # type: ignore[index]
+
+    assert serialize_event(snapshot.events[0]) == original_serialized
+    assert snapshot.events[0].integrity.event_hash == original_hash
+    assert journal.verify().ok
 
 
 def test_mutating_one_byte_fails_at_the_affected_record(tmp_path: Path) -> None:

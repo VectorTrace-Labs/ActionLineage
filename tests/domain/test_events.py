@@ -157,3 +157,28 @@ def test_future_event_type_strings_are_preserved_but_not_interpreted() -> None:
 
     assert serialized["event_type"] == "vendor.future.observed"
     assert parsed.event_type == "vendor.future.observed"
+
+
+def test_event_payload_is_recursively_immutable_and_serializes_stably() -> None:
+    event = build_event(
+        payload={
+            "metadata": {"reviewed": True},
+            "evidence": [{"id": "ev_1", "tags": ["observed", "verified"]}],
+        }
+    )
+    original = serialize_event(event)
+
+    with pytest.raises(TypeError):
+        event.payload["added"] = "mutated"  # type: ignore[index]
+    with pytest.raises(TypeError):
+        event.payload["metadata"]["reviewed"] = False  # type: ignore[index]
+    with pytest.raises(TypeError):
+        event.payload["evidence"].append({"id": "ev_2"})  # type: ignore[union-attr]
+    with pytest.raises(TypeError):
+        event.payload["evidence"][0]["id"] = "ev_tampered"  # type: ignore[index]
+
+    assert serialize_event(event) == original
+    assert event_to_dict(event)["payload"] == {
+        "metadata": {"reviewed": True},
+        "evidence": [{"id": "ev_1", "tags": ["observed", "verified"]}],
+    }
