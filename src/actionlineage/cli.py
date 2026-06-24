@@ -35,7 +35,7 @@ from actionlineage.detection import (
     load_sequence_rules,
 )
 from actionlineage.domain import EventEnvelope
-from actionlineage.errors import ActionLineageValidationError
+from actionlineage.errors import ActionLineageValidationError, safe_error_detail
 from actionlineage.journal import (
     ExternalAttestationType,
     JournalAnchorError,
@@ -92,6 +92,10 @@ app.add_typer(detection_app, name="detection")
 app.add_typer(pack_app, name="pack")
 
 
+def _error_json(exc: Exception) -> str:
+    return json.dumps({"ok": False, "error": safe_error_detail(exc)}, sort_keys=True)
+
+
 @app.command()
 def version() -> None:
     """Print the package version."""
@@ -118,7 +122,7 @@ def pack_validate_command(
     try:
         result = validate_pack_manifest(manifest_path)
     except ActionLineageValidationError as exc:
-        typer.echo(json.dumps({"ok": False, "error": str(exc)}, sort_keys=True))
+        typer.echo(_error_json(exc))
         raise typer.Exit(1) from None
 
     typer.echo(json.dumps(result.as_dict(), sort_keys=True))
@@ -138,7 +142,7 @@ def pack_list_command(
     try:
         manifest = load_pack_manifest(manifest_path)
     except ActionLineageValidationError as exc:
-        typer.echo(json.dumps({"ok": False, "error": str(exc)}, sort_keys=True))
+        typer.echo(_error_json(exc))
         raise typer.Exit(1) from None
 
     typer.echo(
@@ -206,7 +210,7 @@ def contract_explain_command(
     try:
         contract = load_contract(contract_path)
     except ActionLineageValidationError as exc:
-        typer.echo(json.dumps({"ok": False, "error": str(exc)}, sort_keys=True))
+        typer.echo(_error_json(exc))
         raise typer.Exit(1) from None
     typer.echo(json.dumps(explain_contract(contract), sort_keys=True))
 
@@ -281,7 +285,7 @@ def _validate_contract_from_files(
     try:
         contract = load_contract(contract_path)
     except ActionLineageValidationError as exc:
-        typer.echo(json.dumps({"ok": False, "error": str(exc)}, sort_keys=True))
+        typer.echo(_error_json(exc))
         raise typer.Exit(1) from None
     snapshot = LocalJournal(journal_path).verified_snapshot()
     if not snapshot.ok:
@@ -364,7 +368,7 @@ def detection_explain_sequence_command(
     try:
         rules = load_sequence_rules(rule_path)
     except (ActionLineageValidationError, DetectionRuleLoadError) as exc:
-        typer.echo(json.dumps({"ok": False, "error": str(exc)}, sort_keys=True))
+        typer.echo(_error_json(exc))
         raise typer.Exit(1) from None
     snapshot = LocalJournal(journal_path).verified_snapshot()
     if not snapshot.ok:
@@ -566,7 +570,7 @@ def create_git_anchor_statement_command(
             ref=ref,
         )
     except JournalAnchorError as exc:
-        typer.echo(json.dumps({"ok": False, "error": str(exc)}, sort_keys=True))
+        typer.echo(_error_json(exc))
         raise typer.Exit(1) from None
 
     write_git_anchor_statement(statement, statement_path)
@@ -612,7 +616,7 @@ def verify_git_anchor_statement_command(
             ref=ref,
         )
     except JournalAnchorError as exc:
-        typer.echo(json.dumps({"ok": False, "error": str(exc)}, sort_keys=True))
+        typer.echo(_error_json(exc))
         raise typer.Exit(1) from None
 
     typer.echo(json.dumps(result.as_dict(), sort_keys=True))
@@ -662,7 +666,7 @@ def create_external_attestation_command(
             statement_reference=statement_reference,
         )
     except (JournalAnchorError, ValueError) as exc:
-        typer.echo(json.dumps({"ok": False, "error": str(exc)}, sort_keys=True))
+        typer.echo(_error_json(exc))
         raise typer.Exit(1) from None
 
     write_external_anchor_attestation(attestation, attestation_path)
@@ -701,7 +705,7 @@ def verify_external_attestation_command(
             statement_bytes=statement_file.read_bytes() if statement_file else None,
         )
     except (JournalAnchorError, ValueError) as exc:
-        typer.echo(json.dumps({"ok": False, "error": str(exc)}, sort_keys=True))
+        typer.echo(_error_json(exc))
         raise typer.Exit(1) from None
 
     typer.echo(json.dumps(result.as_dict(), sort_keys=True))
@@ -745,7 +749,7 @@ def create_archive_manifest_command(
             storage_class=storage_class,
         )
     except JournalAnchorError as exc:
-        typer.echo(json.dumps({"ok": False, "error": str(exc)}, sort_keys=True))
+        typer.echo(_error_json(exc))
         raise typer.Exit(1) from None
 
     write_journal_archive_manifest(manifest, manifest_path)
@@ -777,7 +781,7 @@ def verify_archive_manifest_command(
             journal_path=journal_path,
         )
     except JournalAnchorError as exc:
-        typer.echo(json.dumps({"ok": False, "error": str(exc)}, sort_keys=True))
+        typer.echo(_error_json(exc))
         raise typer.Exit(1) from None
 
     typer.echo(json.dumps(result.as_dict(), sort_keys=True))
@@ -827,7 +831,7 @@ def export_verified_prefix_command(
             expected_last_event_hash=expected_last_event_hash,
         )
     except JournalAnchorError as exc:
-        typer.echo(json.dumps({"ok": False, "error": str(exc)}, sort_keys=True))
+        typer.echo(_error_json(exc))
         raise typer.Exit(1) from None
 
     typer.echo(json.dumps(result.as_dict(), sort_keys=True))
@@ -862,7 +866,7 @@ def rebuild_projection_command(
         )
         raise typer.Exit(1) from None
     except ProjectionError as exc:
-        typer.echo(json.dumps({"ok": False, "error": str(exc)}, sort_keys=True))
+        typer.echo(_error_json(exc))
         raise typer.Exit(1) from None
 
     typer.echo(json.dumps(result.as_dict(), sort_keys=True))
@@ -897,7 +901,7 @@ def timeline_command(
             run_id=run_id,
         )
     except ProjectionError as exc:
-        typer.echo(json.dumps({"ok": False, "error": str(exc)}, sort_keys=True))
+        typer.echo(_error_json(exc))
         raise typer.Exit(1) from None
 
     typer.echo(json.dumps(result.as_dict(), sort_keys=True))
@@ -942,7 +946,7 @@ def filter_timeline_command(
             descriptor_hash=descriptor_hash,
         )
     except ProjectionError as exc:
-        typer.echo(json.dumps({"ok": False, "error": str(exc)}, sort_keys=True))
+        typer.echo(_error_json(exc))
         raise typer.Exit(1) from None
 
     typer.echo(json.dumps(result.as_dict(), sort_keys=True))
@@ -965,7 +969,7 @@ def explain_event_command(
     try:
         result = explain_event(database_path, event_id=event_id, journal_path=journal_path)
     except ProjectionError as exc:
-        typer.echo(json.dumps({"ok": False, "error": str(exc)}, sort_keys=True))
+        typer.echo(_error_json(exc))
         raise typer.Exit(1) from None
 
     typer.echo(json.dumps(result.as_dict(), sort_keys=True))
@@ -1000,7 +1004,7 @@ def export_incident_command(
             run_id=run_id,
         )
     except ProjectionError as exc:
-        typer.echo(json.dumps({"ok": False, "error": str(exc)}, sort_keys=True))
+        typer.echo(_error_json(exc))
         raise typer.Exit(1) from None
 
     typer.echo(json.dumps(result.as_dict(), sort_keys=True))
@@ -1029,7 +1033,7 @@ def summarize_incident_command(
             run_id=run_id,
         )
     except ProjectionError as exc:
-        typer.echo(json.dumps({"ok": False, "error": str(exc)}, sort_keys=True))
+        typer.echo(_error_json(exc))
         raise typer.Exit(1) from None
 
     typer.echo(json.dumps(result.as_dict(), sort_keys=True))
@@ -1058,7 +1062,7 @@ def export_graph_command(
             run_id=run_id,
         )
     except ProjectionError as exc:
-        typer.echo(json.dumps({"ok": False, "error": str(exc)}, sort_keys=True))
+        typer.echo(_error_json(exc))
         raise typer.Exit(1) from None
 
     typer.echo(json.dumps(result.as_dict(), sort_keys=True))
@@ -1098,7 +1102,7 @@ def export_case_command(
             run_id=run_id,
         )
     except ProjectionError as exc:
-        typer.echo(json.dumps({"ok": False, "error": str(exc)}, sort_keys=True))
+        typer.echo(_error_json(exc))
         raise typer.Exit(1) from None
 
     typer.echo(json.dumps(result.as_dict(), sort_keys=True))
@@ -1153,10 +1157,10 @@ def export_console_command(
             saved_views=saved_views,
         )
     except ConsoleContextError as exc:
-        typer.echo(json.dumps({"ok": False, "error": str(exc)}, sort_keys=True))
+        typer.echo(_error_json(exc))
         raise typer.Exit(1) from None
     except ProjectionError as exc:
-        typer.echo(json.dumps({"ok": False, "error": str(exc)}, sort_keys=True))
+        typer.echo(_error_json(exc))
         raise typer.Exit(1) from None
 
     typer.echo(json.dumps(result.as_dict(), sort_keys=True))
@@ -1211,10 +1215,10 @@ def export_desktop_bundle_command(
             saved_views=saved_views,
         )
     except ConsoleContextError as exc:
-        typer.echo(json.dumps({"ok": False, "error": str(exc)}, sort_keys=True))
+        typer.echo(_error_json(exc))
         raise typer.Exit(1) from None
     except ProjectionError as exc:
-        typer.echo(json.dumps({"ok": False, "error": str(exc)}, sort_keys=True))
+        typer.echo(_error_json(exc))
         raise typer.Exit(1) from None
 
     typer.echo(json.dumps(result.as_dict(), sort_keys=True))

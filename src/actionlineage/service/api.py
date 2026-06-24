@@ -24,7 +24,7 @@ from actionlineage.domain import (
     SystemClock,
     TrustLevel,
 )
-from actionlineage.errors import ActionLineageValidationError
+from actionlineage.errors import ActionLineageValidationError, safe_error_detail
 from actionlineage.evidence import (
     BatchImportResult,
     EvidenceNormalizer,
@@ -447,9 +447,7 @@ def _integrity_detail_from_error(exc: JournalError) -> dict[str, object]:
 
 
 def _safe_detail(exc: Exception) -> str:
-    if isinstance(exc, ValidationError):
-        return "service request validation failed"
-    return str(exc)
+    return safe_error_detail(exc, validation_message="service request validation failed")
 
 
 def _ingest_status_code(result: BatchImportResult) -> int:

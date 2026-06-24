@@ -106,6 +106,10 @@ and does not expand ActionLineage into a generic tracing platform.
   that encounter bounded capture metadata. Generated summary labels preserve
   redaction-boundary digest scope as bounded notes and the demo-map generator
   redacts canaries before writing its JSON sidecar or SVG.
+- **Public error detail redaction**: local CLI and service-mode regressions
+  cover user-controlled identifiers flowing into JSON/HTTP error details.
+  Public error serialization now redacts and bounds exception text before
+  returning it to users, while Pydantic validation details remain generic.
 
 ## Implemented before this slice
 
@@ -158,8 +162,9 @@ and does not expand ActionLineage into a generic tracing platform.
   captured-content ceilings without corrupting event-envelope control fields.
   Machine-readable exporter, case-bundle, incident-summary, and demo-map
   artifacts that carry bounded capture metadata preserve redaction-boundary
-  digest scope. Broader digest-correlation review across logs and exceptions
-  remains open.
+  digest scope. Public CLI and service-mode error detail serialization redacts
+  and bounds exception text before JSON/HTTP output. Broader digest-correlation
+  review across structured logs and lower-level exception paths remains open.
 - **Container and deployment defaults**: partially confirmed. Runtime hardening
   should remain preview/local-ops scoped until container and Kubernetes defaults
   have executable validation.
@@ -199,4 +204,5 @@ and does not expand ActionLineage into a generic tracing platform.
    evolution, and external checkpoint trust roots.
 4. Capture benchmark artifacts before implementing any ADR-0011 append-index
    cache.
-5. Audit redaction digest behavior across logs and exceptions.
+5. Audit redaction digest behavior across structured logs and lower-level
+   exception paths.

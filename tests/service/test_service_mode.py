@@ -1455,6 +1455,33 @@ def test_service_export_case_is_confined_to_export_root(tmp_path: Path) -> None:
     assert not (tmp_path / "outside").exists()
 
 
+def test_service_export_case_error_redacts_output_dir_canary(tmp_path: Path) -> None:
+    demo = run_demo(tmp_path / "demo")
+    export_root = tmp_path / "exports"
+    raw_secret = "servicecaseerrorsecretvalue123456789"
+    output_dir = f"case Bearer {raw_secret}"
+    (export_root / output_dir).mkdir(parents=True)
+    client = _client(
+        demo.journal_path,
+        demo.database_path,
+        token="exporter",
+        roles=frozenset({ServiceRole.EXPORT}),
+        export_root=export_root,
+    )
+
+    response = client.post(
+        "/export-case",
+        headers={"Authorization": "Bearer exporter"},
+        params={"output_dir": output_dir, "trace_id": demo.trace_id},
+    )
+
+    assert response.status_code == 400
+    detail = response.json()["detail"]
+    assert "case bundle output already exists" in detail
+    assert raw_secret not in detail
+    assert "Bearer [REDACTED:bearer_token]" in detail
+
+
 def _client(
     journal_path,
     database_path,

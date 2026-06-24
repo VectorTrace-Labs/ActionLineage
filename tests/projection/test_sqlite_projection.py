@@ -1135,6 +1135,34 @@ def test_event_explanation_links_causality_and_evidence(tmp_path: Path) -> None:
     assert explanation["evidence_links_as_subject"][0]["evidence_event_id"] == "evt_2"
 
 
+def test_projection_cli_error_redacts_missing_event_id_canary(tmp_path: Path) -> None:
+    journal_path = tmp_path / "events.jsonl"
+    database_path = tmp_path / "projection.sqlite"
+    raw_secret = "projectionclierrorsecretvalue123456789"
+    missing_event_id = f"evt_missing Bearer {raw_secret}"
+    write_journal(journal_path, complete_timeline_events())
+    rebuild_projection(journal_path, database_path)
+
+    result = runner.invoke(
+        app,
+        [
+            "projection",
+            "explain-event",
+            str(database_path),
+            missing_event_id,
+            "--journal-path",
+            str(journal_path),
+        ],
+    )
+
+    assert result.exit_code == 1
+    data = json.loads(result.stdout)
+    assert data["ok"] is False
+    assert "event does not exist in projection" in data["error"]
+    assert raw_secret not in result.stdout
+    assert "Bearer [REDACTED:bearer_token]" in result.stdout
+
+
 def test_case_bundle_export_writes_redacted_reports_without_absence_overclaim(
     tmp_path: Path,
 ) -> None:
