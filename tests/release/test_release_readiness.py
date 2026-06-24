@@ -156,11 +156,14 @@ def test_observer_attestation_policy_boundary_is_tracked() -> None:
     assert "trust labels and limitations" in observers
     assert "do not by themselves prove" in observers
     assert "Attestation Policy Boundary" in observers
+    assert "`verify_observation()` defaults to `unknown` corroboration" in observers
+    assert "Missing, stale, expired, shared, incomplete" in observers
     assert "A trust label alone is not enough" in data_model
+    assert "helper defaults to `unknown` corroboration" in data_model
     assert "Observer independence requires a reviewed attestation policy" in scorecard
-    assert "future independent-observer declarations" in maturity
-    assert "ADR-0012 now proposes a structured" in followups
-    assert "policy for future independent-observer declarations" in followups
+    assert "Observer attestation declarations and `verify_observation()` gating" in maturity
+    assert "Observer attestation gate" in followups
+    assert "helper-generated `independent_observer` evidence links now require" in followups
 
 
 def test_canonicalization_v1_boundary_is_tracked() -> None:

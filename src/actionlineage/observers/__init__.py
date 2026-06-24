@@ -1,5 +1,16 @@
 """Observer and side-effect verification adapters."""
 
+from actionlineage.observers.attestation import (
+    DEFAULT_ATTESTATION_MAX_AGE_DAYS,
+    AttestationEvidenceKind,
+    IndependenceBoundary,
+    IndependenceBoundaryStatus,
+    ObserverAttestationDeclaration,
+    ObserverAttestationError,
+    independent_claim_rejection_reasons,
+    observer_attestation_declaration_from_dict,
+    require_independent_observer_attestation,
+)
 from actionlineage.observers.cloud import (
     AwsCloudTrailObserver,
     AzureActivityObserver,
@@ -34,8 +45,10 @@ from actionlineage.observers.verification import (
 )
 
 __all__ = [
+    "DEFAULT_ATTESTATION_MAX_AGE_DAYS",
     "OBSERVER_BODY_DIGEST_SCOPE",
     "OBSERVER_SIGNATURE_DIGEST_SCOPE",
+    "AttestationEvidenceKind",
     "AwsCloudTrailObserver",
     "AzureActivityObserver",
     "ExternalSensorDeclaration",
@@ -46,9 +59,13 @@ __all__ = [
     "GcpAuditLogObserver",
     "HttpResponseReadbackObserver",
     "HttpServerLogObserver",
+    "IndependenceBoundary",
+    "IndependenceBoundaryStatus",
     "KubernetesAuditObserver",
     "MockHttpReceiverObserver",
     "ObservationOutcome",
+    "ObserverAttestationDeclaration",
+    "ObserverAttestationError",
     "ObserverOutcome",
     "ProcessObserver",
     "SqliteReadbackObserver",
@@ -56,6 +73,9 @@ __all__ = [
     "WebhookReceiptObserver",
     "external_sensor_declaration_from_dict",
     "external_sensor_observation_from_dict",
+    "independent_claim_rejection_reasons",
+    "observer_attestation_declaration_from_dict",
+    "require_independent_observer_attestation",
     "self_reported_verification",
     "verify_observation",
 ]

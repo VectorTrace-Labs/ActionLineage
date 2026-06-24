@@ -1,8 +1,8 @@
 {
   "artifact_root": "build/evals/public-alpha",
   "baseline_inputs": {
-    "digest": "sha256:424814d5d70d8383fed7025fac43daace684b9444613da6a06586a7845c27643",
-    "file_count": 88,
+    "digest": "sha256:13f016b7ddc4c228acdcdabe4fa624089ae2159517590c32ee043ad63fcdf4e8",
+    "file_count": 89,
     "files": [
       {
         "path": ".github/uv-version.txt",
@@ -10,7 +10,7 @@
       },
       {
         "path": ".github/workflows/agent-validation.yml",
-        "sha256": "sha256:59e1d055d3c2a4488730590dfb759406d61d1cbd5564a8e98fc17c513e45fec3"
+        "sha256": "sha256:d2320d42dc67be0f70f13cf31993c4e1613b2a987cd9bffc42813ad23ac398af"
       },
       {
         "path": "contracts/examples/cloud-object-write.json",
@@ -38,7 +38,7 @@
       },
       {
         "path": "detections/examples/restricted-read-to-untrusted-send.yaml",
-        "sha256": "sha256:67a3ffddeae78b6bd53f954e8840d1f4395d52eeddd0505503e7b2ef9d28f883"
+        "sha256": "sha256:c02f08de91d9dc5dbf56126f0ae6f426a5742da98e72487a8eda4e4fa78612f0"
       },
       {
         "path": "evals/CAPABILITY_COVERAGE.yaml",
@@ -54,7 +54,7 @@
       },
       {
         "path": "evals/actionlineage_evals/__main__.py",
-        "sha256": "sha256:8561a7e2da4c16cfb59ed806923dd738f97fe49ecf2c6e6496941c3773047f25"
+        "sha256": "sha256:80de4e270718c757db75d7e69b506413ce57239ef74d2d350ec7c4b074436249"
       },
       {
         "path": "evals/actionlineage_evals/adapters.py",
@@ -66,7 +66,7 @@
       },
       {
         "path": "evals/actionlineage_evals/baseline.py",
-        "sha256": "sha256:8f47c24600705aafc72fc83480c56826edf12550051ed01456eb95ea16d170e1"
+        "sha256": "sha256:d9f79f003f8dc5d7d88dbf3dbb7cbfa4eb965dbb2910811edbac4a7cf57bdd97"
       },
       {
         "path": "evals/actionlineage_evals/boundary.py",
@@ -114,7 +114,7 @@
       },
       {
         "path": "evals/actionlineage_evals/scoring.py",
-        "sha256": "sha256:aee75e057ce3a42faa596971cb5cdbdd2350525a0280f8e12304cd6351d9cedd"
+        "sha256": "sha256:fee0bd973f19c09f71037f408fba0584f2d185e3ef4523ea34600bed26b619c7"
       },
       {
         "path": "evals/actionlineage_evals/stateful.py",
@@ -126,7 +126,7 @@
       },
       {
         "path": "evals/actionlineage_evals/tools.py",
-        "sha256": "sha256:3ba46c8e8a9f52672180e13bd18e7c6dbae47b421f7d5be1f6c3248dba2834a6"
+        "sha256": "sha256:957b41fe9fc274c98a19d219e6cde2689761b973e6ba647630787f8f88ce35f6"
       },
       {
         "path": "evals/actionlineage_evals/triage.py",
@@ -190,7 +190,7 @@
       },
       {
         "path": "evals/scenarios/AVL-004.yaml",
-        "sha256": "sha256:15bcfac1116fe226923fbbafaaf602696dffa23ab628e1738bf5a66702964581"
+        "sha256": "sha256:f1465c3509ae6bbcbacde249f0f6260019b33c8e01f7a5e6c3f669e2737e34ad"
       },
       {
         "path": "evals/scenarios/AVL-005.yaml",
@@ -218,7 +218,7 @@
       },
       {
         "path": "evals/scenarios/AVL-011.yaml",
-        "sha256": "sha256:8795165dc24c7e8870c5a79e0852510989e135552154857b1e35f7f0e6c61d06"
+        "sha256": "sha256:ebead3b1ebd8cd004e3452c276a26c75191ab461e6584424321112f065ae4ae6"
       },
       {
         "path": "evals/scenarios/AVL-012.yaml",
@@ -234,7 +234,7 @@
       },
       {
         "path": "evals/scenarios/AVL-015.yaml",
-        "sha256": "sha256:69e2783125b4d490742aaac8091f3c66cb3dbc547196649772db6f9ea39c3f6d"
+        "sha256": "sha256:799ddfee365ac8639f59d855ec7c704c44a274fbccc30b5755ba8cd61de9043c"
       },
       {
         "path": "pyproject.toml",
@@ -266,11 +266,11 @@
       },
       {
         "path": "src/actionlineage/domain/__init__.py",
-        "sha256": "sha256:76c9ab78cc67d131f5c48373f0a46eb97b291900533cec15df3a5ff61736fde0"
+        "sha256": "sha256:e42776937c1b510bd5cf8ef67c3bfde78309e5fad4326b0ee62f0eed055479f9"
       },
       {
         "path": "src/actionlineage/domain/events.py",
-        "sha256": "sha256:955c6dd406cb4f2467a820c2c5276f37d5685e90c635c6f937d8aea49e7715cf"
+        "sha256": "sha256:89981bacf5bd6fc648c6b7bbca60863bcea393826ce7662c5c4cf8ac1a93dafd"
       },
       {
         "path": "src/actionlineage/domain/ids.py",
@@ -278,11 +278,11 @@
       },
       {
         "path": "src/actionlineage/domain/redaction.py",
-        "sha256": "sha256:9e81373341c5d73e5d520c57f47693f9483168cc2f5558584bec56e87c654076"
+        "sha256": "sha256:81eecb20174ebd6c7c8edc7a8412936ac50e6d9b1dd0cea11bbcd0add1992c0f"
       },
       {
         "path": "src/actionlineage/domain/serialization.py",
-        "sha256": "sha256:52936f460462b84bf44b20eae68b22db6e966f09d59bc8823a312f242a9c888d"
+        "sha256": "sha256:8e42c63c5e1e6a9ff44f93f3a93855bd09126053462b888e2ce74051ca5a8fed"
       },
       {
         "path": "src/actionlineage/domain/time.py",
@@ -290,7 +290,7 @@
       },
       {
         "path": "src/actionlineage/journal/__init__.py",
-        "sha256": "sha256:2bc9171ffb32d21e2a990066438f1a42d954cf5471f8f174d2190bcac449029a"
+        "sha256": "sha256:4a4acb0dccb8ca406804423b54b224035b48b6c2bc21a1990cc746a35e7e274b"
       },
       {
         "path": "src/actionlineage/journal/anchors.py",
@@ -314,15 +314,19 @@
       },
       {
         "path": "src/actionlineage/journal/local.py",
-        "sha256": "sha256:1d26435add99842ff7c278f8bb9529675f27d0beedc2b7f225ac70cc9a602f24"
+        "sha256": "sha256:ba7ffa42f11c151d6241bae3ee8155b57c744b9c40aab74c0168c93bf4de404f"
       },
       {
         "path": "src/actionlineage/journal/verify.py",
-        "sha256": "sha256:03299b324c52e117b46bbeae55b2f29ac48b03ceaddd88d312804a0607ffec8a"
+        "sha256": "sha256:b0af226d1490201a8358f07950b1a13f139ebfc9cc59440b99ea58c91ea9ba57"
       },
       {
         "path": "src/actionlineage/observers/__init__.py",
-        "sha256": "sha256:c2931749a792f44ddb93d0acebe760c5a1e16d59349e47e0bba01df38353c01d"
+        "sha256": "sha256:312233d05c998997cf7abf428bc6acc1d96f75145dc3bc4aeceee846ffc05ea5"
+      },
+      {
+        "path": "src/actionlineage/observers/attestation.py",
+        "sha256": "sha256:fdfa43e34ea958d8252a65cd83ae65666aae69d5f7dc51cb170fed0c70aedfaf"
       },
       {
         "path": "src/actionlineage/observers/cloud.py",
@@ -330,27 +334,27 @@
       },
       {
         "path": "src/actionlineage/observers/external.py",
-        "sha256": "sha256:e62f359f033d2c4dc3f3de0a796d329a39910f4e29434da3dca54d0adb6efa7e"
+        "sha256": "sha256:f757a2393e96491b386f6ba3488504acc3d173597350b205fd5be0cfd4fd5c32"
       },
       {
         "path": "src/actionlineage/observers/local.py",
-        "sha256": "sha256:ee76cf178b19969300443a3935c6bbaf8a222b2d365bb84b9d050bc3f9105ba4"
+        "sha256": "sha256:0010f4981a107adc3c41f91463fa1b1cd334e60acb17a0ebb067f8c445f610f4"
       },
       {
         "path": "src/actionlineage/observers/verification.py",
-        "sha256": "sha256:522c05b76f21da85cb94f833f7247cb3aa379535401cf18faa817a1e8568c5f3"
+        "sha256": "sha256:8dda850143e23d2cd86b0405190838c218ee23175678e5c7f9f59bc1943d65f7"
       },
       {
         "path": "src/actionlineage/projection/__init__.py",
-        "sha256": "sha256:99afd2e093444a8b893dd129d6d78a5f57bc1256f6ff7141a0c057948372aa18"
+        "sha256": "sha256:3d2c7483197938804fc2a6d4afa96bd9a400441cab0c137d41fd8b5504cefbc5"
       },
       {
         "path": "src/actionlineage/projection/postgres.py",
-        "sha256": "sha256:fd85689bc5b977c6677f3e5a87b38c03b8d3fab77f71a45df4f2037ebeebb8c7"
+        "sha256": "sha256:8a42f42c318206bc4d127a5a403d625b481c4657c4f88d13964411f30c9b04cc"
       },
       {
         "path": "src/actionlineage/projection/sqlite.py",
-        "sha256": "sha256:b83440ca7e83c99cc84bdb7b07a4d89b35190e34ec0eeb048beed4f9a0c1d743"
+        "sha256": "sha256:45d36c92a9cec27e2fe2b21cebe96b84dd72665a142738e8bce670ee55ee95ad"
       },
       {
         "path": "uv.lock",
@@ -413,7 +417,7 @@
     "strict": true,
     "uncovered_capabilities": []
   },
-  "commit_sha": "9497b2f2da3d8a1cf4987086c255e183d184d9bc",
+  "commit_sha": "8d474ffa72fc3ebb11bc22517592ab43d561f43e",
   "coverage": {
     "contract_coverage": {
       "failed": 1,
@@ -444,7 +448,7 @@
     },
     "evidence_link_coverage": {
       "corroboration_types": {
-        "independent_observer": 2,
+        "fixture_oracle": 2,
         "post_action_readback": 8,
         "self_reported": 8
       },
@@ -1577,7 +1581,7 @@
     0
   ],
   "source_commits": [
-    "9497b2f2da3d8a1cf4987086c255e183d184d9bc"
+    "8d474ffa72fc3ebb11bc22517592ab43d561f43e"
   ],
   "suite": {
     "failed_count": 0,

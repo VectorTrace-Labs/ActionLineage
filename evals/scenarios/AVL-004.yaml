@@ -81,7 +81,7 @@ spec:
         verificationEventType: side_effect.conflict_detected
         relationship: contradicts
         verificationStatus: conflicting
-        corroborationTypes: [independent_observer]
+        corroborationTypes: [fixture_oracle]
     contracts: [AVL-004-contract]
     detections: [AVL-004.descriptor_drift_conflict]
     failureClass: product_failure

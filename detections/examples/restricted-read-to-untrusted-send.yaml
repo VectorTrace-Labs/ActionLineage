@@ -25,5 +25,6 @@ spec:
           in:
             - independent_observer
             - fixture_oracle
+            - post_action_readback
   severity: high
   rationale: Detect a possible agent-mediated restricted-data flow only when side-effect evidence is verified.

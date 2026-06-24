@@ -63,6 +63,11 @@ external validation and production operating guidance are complete.
 - `KubernetesAuditObserver`
 - `ExternalSensorDeclaration`, `ExternalSensorFeedObserver`, `ExternalSensorKind`
 - `ExternalSensorObservationRecord`
+- `ObserverAttestationDeclaration`, `AttestationEvidenceKind`
+- `IndependenceBoundary`, `IndependenceBoundaryStatus`
+- `ObserverAttestationError`, `observer_attestation_declaration_from_dict`
+- `independent_claim_rejection_reasons`,
+  `require_independent_observer_attestation`
 - `verify_observation`, `self_reported_verification`
 - `ExportProfile`, `export_events`, `otel_attributes_for_event`
 - `otel_attributes_for_redacted_event`

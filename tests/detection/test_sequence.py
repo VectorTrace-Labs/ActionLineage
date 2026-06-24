@@ -48,7 +48,11 @@ def verified_file_read_rule() -> SequenceRule:
                 where={
                     "evidence_link.verification_status": "verified",
                     "evidence_link.corroboration_type": {
-                        "in": ["independent_observer", "fixture_oracle"]
+                        "in": [
+                            "independent_observer",
+                            "fixture_oracle",
+                            "post_action_readback",
+                        ]
                     },
                 },
             ),

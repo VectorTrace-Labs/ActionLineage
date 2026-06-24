@@ -27,7 +27,9 @@ from actionlineage.observers import (
 )
 
 
-def test_filesystem_observer_reports_observed_and_verified(tmp_path) -> None:
+def test_filesystem_observer_reports_observed_and_verified_without_independence_claim(
+    tmp_path,
+) -> None:
     path = tmp_path / "observed.txt"
     path.write_text("evidence", encoding="utf-8")
     observation = FilesystemObserver().observe_file_state(path, expected_exists=True)
@@ -43,7 +45,7 @@ def test_filesystem_observer_reports_observed_and_verified(tmp_path) -> None:
     assert observation.event_type == EventType.SIDE_EFFECT_OBSERVED
     assert decision.event_type == EventType.SIDE_EFFECT_VERIFIED
     assert decision.evidence_link.verification_status == VerificationStatus.VERIFIED
-    assert decision.evidence_link.corroboration_type == CorroborationType.INDEPENDENT_OBSERVER
+    assert decision.evidence_link.corroboration_type == CorroborationType.UNKNOWN
 
 
 def test_observation_payload_returns_defensive_observed_state_copy() -> None:

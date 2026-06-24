@@ -91,7 +91,7 @@ spec:
         verificationEventType: side_effect.verified
         relationship: corroborates
         verificationStatus: verified
-        corroborationTypes: [independent_observer]
+        corroborationTypes: [fixture_oracle]
     contracts: [AVL-015-contract]
     detections: [AVL-015.service_auth_denied_then_allowed]
     redactionCanaries:

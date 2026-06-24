@@ -168,6 +168,7 @@ class VerificationRecord(FrozenIngestionModel):
         observer_identity: str,
         confidence: float,
         limitations: tuple[str, ...],
+        corroboration_type: CorroborationType = CorroborationType.UNKNOWN,
     ) -> VerificationRecord:
         """Build a verified evidence-link record."""
 
@@ -176,7 +177,7 @@ class VerificationRecord(FrozenIngestionModel):
                 subject_event_id=subject_event_id,
                 relationship=EvidenceRelationship.CORROBORATES,
                 evidence_event_id=evidence_event_id,
-                corroboration_type=CorroborationType.INDEPENDENT_OBSERVER,
+                corroboration_type=corroboration_type,
                 observer_identity=observer_identity,
                 confidence=confidence,
                 verification_status=VerificationStatus.VERIFIED,

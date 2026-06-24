@@ -92,6 +92,25 @@ still record a fixture oracle, post-action readback, external sensor feed,
 self-reported observation, or unknown corroboration type, but it must not turn a
 label such as `external` or `trusted` into a stronger independence claim.
 
+The public helper enforces this boundary for helper-generated verification
+events:
+
+- `verify_observation()` defaults to `unknown` corroboration when the caller
+  does not provide a corroboration type.
+- `verify_observation(..., corroboration_type=INDEPENDENT_OBSERVER)` requires
+  an `ObserverAttestationDeclaration`, `subject_action_type`, and
+  `subject_resource_type`.
+- The declaration must match the observer identity, be current, cover the
+  subject action and resource type, declare `independent_live_telemetry`, list
+  all required independence boundaries as independent, and avoid shared
+  dependencies.
+- Missing, stale, expired, shared, incomplete, mismatched, or out-of-scope
+  declarations fail closed with `ObserverAttestationError`.
+
+Fixture and readback observers should use `fixture_oracle` or
+`post_action_readback` unless a reviewed declaration specifically supports a
+stronger claim.
+
 Cryptographic remote attestation, signed sensor statements, WORM retention, or
 managed evidence storage can strengthen a future declaration, but none of those
 mechanisms alone proves semantic independence from the subject action.
@@ -102,7 +121,8 @@ mechanisms alone proves semantic independence from the subject action.
 payloads:
 
 - Observed evidence becomes `side_effect.verified` when corroborated by an
-  independent observer, post-action readback, or fixture oracle.
+  attested independent observer, post-action readback, fixture oracle, or
+  another explicitly named evidence source with stated limitations.
 - Missing or unavailable evidence remains `side_effect.unverified`.
 - Ambiguous evidence remains `side_effect.unverified` until a unique
   corroborating record can be identified.

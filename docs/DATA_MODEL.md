@@ -173,6 +173,14 @@ independence requires a reviewed declaration of producer identity, collection
 method, boundaries, shared dependencies, blind spots, failure behavior,
 redaction scope, policy version, owner, and review date.
 
+The `verify_observation()` helper defaults to `unknown` corroboration. Callers
+that request `independent_observer` through the helper must provide an
+`ObserverAttestationDeclaration` that is current, matches the observer, covers
+the subject action/resource scope, declares all required independence
+boundaries as independent, and has no shared dependencies. Missing, stale,
+shared, incomplete, or out-of-scope declarations fail closed before an
+independent-observer evidence link is produced.
+
 Supported verification statuses:
 
 - `unknown`

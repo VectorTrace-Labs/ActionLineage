@@ -26,6 +26,8 @@ already delivered.
   counterexamples, and robustness scorecards.
 - Optional MCP, policy, OpenTelemetry, SIEM/export, service, tenant, cloud
   fixture, Kubernetes fixture, and external sensor feed boundaries.
+- Observer attestation declarations and verification-helper gating for
+  independent-observer claims.
 - Security hardening scripts, release checklist, issue templates, privacy model,
   and vulnerability disclosure policy.
 
@@ -33,8 +35,8 @@ already delivered.
 
 1. Fresh-clone release validation on macOS and Linux.
 2. More public fixture packs for common agent and tool patterns.
-3. Additional observer adapters with clear trust labels, limitation labels, and
-   ADR-0012-style attestation declarations.
+3. Additional live observer adapters with clear trust labels, limitation
+   labels, and ADR-0012-style attestation declarations.
 4. Expanded detection rule corpus and benign/adversarial replay sets.
 5. Better service-mode deployment examples and operational runbooks.
 6. Static console polish driven by real analyst workflows.

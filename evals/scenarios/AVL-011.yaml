@@ -79,7 +79,7 @@ spec:
         verificationEventType: side_effect.verified
         relationship: corroborates
         verificationStatus: verified
-        corroborationTypes: [independent_observer]
+        corroborationTypes: [fixture_oracle]
     contracts: [AVL-011-contract]
     detections: []
     failureClass: product_failure

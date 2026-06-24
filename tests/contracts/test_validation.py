@@ -87,7 +87,11 @@ def evidence_contract(*, hash_chain_required: bool = True) -> LineageContract:
                 evidence_event_type="side_effect.observed",
                 relationship="corroborates",
                 verification_status="verified",
-                corroboration_types=("independent_observer", "fixture_oracle"),
+                corroboration_types=(
+                    "independent_observer",
+                    "fixture_oracle",
+                    "post_action_readback",
+                ),
             ),
         ),
         latency_requirements=(

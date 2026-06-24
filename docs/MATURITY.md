@@ -41,6 +41,9 @@ evidence and limitations.
   overwrite.
 - HTTP fixture observers keep multiple plausible records unverified and expose
   `ambiguous_candidate_count` rather than selecting one match without evidence.
+- Observer attestation declarations and `verify_observation()` gating keep
+  helper-generated `independent_observer` claims behind current, in-scope,
+  no-shared-dependency declarations.
 - Built-in sequence detections and Lineage Lab replay/mutation/minimization.
 - Agent Validation Lab scenario validation, no-model replay, provenance, and
   artifact audits as a development-only evaluation surface; the current
@@ -77,7 +80,7 @@ evidence and limitations.
 - GHCR container-image publication from version-tagged release workflow runs.
 - Optional Postgres projection schema and verifier.
 - Cloud, Kubernetes, and external sensor observers backed by local fixtures.
-- Observer attestation policy for future independent-observer declarations.
+- Live independent-observer declarations for production sensors.
 - Desktop bundle export for future native shells.
 
 ## Planned Or External Validation

@@ -3,15 +3,22 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from datetime import date
 
 from actionlineage.domain import (
     CorroborationType,
     EventType,
     EvidenceLink,
     EvidenceRelationship,
+    ResourceType,
     VerificationStatus,
 )
 from actionlineage.domain.events import JsonObject
+from actionlineage.observers.attestation import (
+    DEFAULT_ATTESTATION_MAX_AGE_DAYS,
+    ObserverAttestationDeclaration,
+    require_independent_observer_attestation,
+)
 from actionlineage.observers.local import ObservationOutcome, ObserverOutcome
 
 
@@ -33,9 +40,24 @@ def verify_observation(
     evidence_event_id: str,
     observation: ObservationOutcome,
     confidence: float,
-    corroboration_type: CorroborationType = CorroborationType.INDEPENDENT_OBSERVER,
+    corroboration_type: CorroborationType = CorroborationType.UNKNOWN,
+    attestation: ObserverAttestationDeclaration | None = None,
+    subject_action_type: str | None = None,
+    subject_resource_type: ResourceType | None = None,
+    attestation_reference_date: date | None = None,
+    max_attestation_age_days: int = DEFAULT_ATTESTATION_MAX_AGE_DAYS,
 ) -> VerificationDecision:
     """Create a verification decision from an observer outcome."""
+
+    if corroboration_type == CorroborationType.INDEPENDENT_OBSERVER:
+        require_independent_observer_attestation(
+            attestation=attestation,
+            observation=observation,
+            subject_action_type=subject_action_type,
+            subject_resource_type=subject_resource_type,
+            reference_date=attestation_reference_date,
+            max_review_age_days=max_attestation_age_days,
+        )
 
     status = _verification_status_for_observation(observation)
     relationship = (

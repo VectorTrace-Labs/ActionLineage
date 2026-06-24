@@ -69,7 +69,11 @@ into core.
           "subjectEventType": "tool.execution.acknowledged",
           "evidenceEventType": "side_effect.observed",
           "verificationStatus": "verified",
-          "corroborationTypes": ["independent_observer", "fixture_oracle"]
+          "corroborationTypes": [
+            "independent_observer",
+            "fixture_oracle",
+            "post_action_readback"
+          ]
         }
       ],
       "latency": [
