@@ -9,6 +9,7 @@ from actionlineage.domain import (
     IntegrityMetadata,
     RedactionPolicy,
     event_from_json,
+    require_supported_persisted_event_canonicalization,
     serialize_event,
     serialize_event_for_persistence,
 )
@@ -48,6 +49,7 @@ def prepare_event_for_append(
 ) -> tuple[EventEnvelope, bytes]:
     """Return the redacted event and canonical bytes to append to the journal."""
 
+    require_supported_persisted_event_canonicalization(event.integrity.canonicalization)
     event_for_hash = event_with_integrity(
         event,
         previous_event_hash=previous_event_hash,
@@ -69,6 +71,7 @@ def prepare_event_for_append(
 def compute_event_hash(event: EventEnvelope) -> str:
     """Compute the event hash over canonical bytes with `event_hash` unset."""
 
+    require_supported_persisted_event_canonicalization(event.integrity.canonicalization)
     hash_event = event_with_integrity(
         event,
         previous_event_hash=event.integrity.previous_event_hash,

@@ -177,23 +177,27 @@ def test_canonicalization_v1_boundary_is_tracked() -> None:
     maturity = (PROJECT_ROOT / "docs/MATURITY.md").read_text(encoding="utf-8")
     followups = (PROJECT_ROOT / "docs/SECURITY_ASSESSMENT_FOLLOWUPS.md").read_text(encoding="utf-8")
 
-    assert "- Status: Proposed" in adr
+    assert "- Status: Accepted" in adr
     assert "Do not replace `actionlineage.dev/json-deterministic-v0`" in adr
     assert "json-canonicalization-v1" in adr
     assert "conformance vectors" in adr
+    assert "tests/fixtures/canonicalization/json-canonicalization-v1-vectors.json" in adr
     assert "expected bytes and" in adr
     assert "SHA-256 digests" in adr
     assert "migration ADR" in adr
+    assert "runtime migration policy" in adr
     assert "active public-alpha journal" in data_model
     assert "serialization boundary" in data_model
-    assert "not yet a claim of portable" in data_model
-    assert "cross-language canonical JSON" in data_model
+    assert "v1 is still rejected for persisted evidence hashes" in data_model
     assert "does not claim RFC 8785/JCS conformance" in journal_integrity
+    assert "current verifier rejects v1 labels" in journal_integrity
     assert "Adopting `actionlineage.dev/json-canonicalization-v1`" in compatibility
     assert "Portable canonicalization v1 is not yet a persisted hash format" in scorecard
-    assert "Portable canonicalization v1 with conformance vectors" in maturity
-    assert "ADR-0013 now proposes the" in followups
-    assert "before stronger portability claims" in followups
+    assert "tests/domain/test_canonicalization.py" in scorecard
+    assert "Canonicalization v1 conformance vectors and migration guardrails" in maturity
+    assert "Portable canonicalization v1 as an active persisted hash format" in maturity
+    assert "ADR-0013 now accepts the" in followups
+    assert "Runtime policy rejects v1 for persisted event hashes" in followups
 
 
 def test_local_release_planning_docs_are_ignored_and_not_linked_publicly() -> None:

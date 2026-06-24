@@ -41,8 +41,8 @@ already delivered.
 5. Better service-mode deployment examples and operational runbooks.
 6. Static console polish driven by real analyst workflows.
 7. Compatibility fixtures for future `v1alpha1` payload evolution.
-8. Canonicalization v1 conformance vectors and migration rules before portable
-   cross-language hash claims.
+8. Canonicalization v1 adoption as an active persisted hash format after a
+   migration ADR; conformance vectors and migration guardrails are checked in.
 
 ## Optional / Ecosystem Tracks
 

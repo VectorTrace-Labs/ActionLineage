@@ -50,8 +50,9 @@ Every persisted record uses the same strict envelope and a typed or documented p
 `actionlineage.dev/json-deterministic-v0` is the active public-alpha journal
 serialization boundary. ADR-0013 reserves
 `actionlineage.dev/json-canonicalization-v1` as a future portable
-canonicalization boundary that requires conformance vectors and migration rules
-before it can be used for persisted evidence hashes.
+canonicalization boundary. Checked-in conformance vectors and runtime migration
+guardrails now exist, but v1 is still rejected for persisted evidence hashes
+until a future migration ADR explicitly adopts it.
 
 ## Principal types
 

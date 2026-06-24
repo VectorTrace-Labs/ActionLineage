@@ -17,8 +17,9 @@ from pydantic import (
     model_validator,
 )
 
+from actionlineage.domain.canonicalization import CANONICALIZATION_VERSION
+
 SPEC_VERSION: Literal["actionlineage.dev/v1alpha1"] = "actionlineage.dev/v1alpha1"
-CANONICALIZATION_VERSION = "actionlineage.dev/json-deterministic-v0"
 DEFAULT_JSON_MAX_DEPTH = 64
 DEFAULT_JSON_MAX_OBJECT_MEMBERS = 4096
 DEFAULT_JSON_MAX_ARRAY_LENGTH = 4096

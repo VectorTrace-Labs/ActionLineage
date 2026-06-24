@@ -70,6 +70,9 @@ evidence and limitations.
   publication decisions without performing owner-gated actions. Generated
   manifests and review indexes are local navigation and hash-verification aids,
   not hosted releases or external validation.
+- Canonicalization v1 conformance vectors and migration guardrails are
+  checked in and executable, while persisted journal hashes remain on
+  `actionlineage.dev/json-deterministic-v0`.
 
 ## Preview Surface
 
@@ -93,7 +96,7 @@ evidence and limitations.
   owner-approved release publishes updated metadata.
 - Homebrew tap and formula publication.
 - conda-forge recipe publication.
-- Portable canonicalization v1 with conformance vectors and migration rules.
+- Portable canonicalization v1 as an active persisted hash format.
 - Branch protection and GitHub security-control status.
 - Independent security review, outside user evaluation, production operating
   history, and public feedback.

@@ -11,6 +11,11 @@ explicitly needed.
 - `Classification`, `Sensitivity`, `TrustLevel`
 - `EvidenceLink`, `EvidenceRelationship`, `VerificationStatus`
 - `parse_event`, `serialize_event`, `event_to_dict`
+- `CANONICALIZATION_VERSION`, `PLANNED_CANONICALIZATION_VERSION`
+- `SUPPORTED_PERSISTED_EVENT_CANONICALIZATIONS`,
+  `persisted_event_canonicalization_policy`
+- `is_supported_persisted_event_canonicalization`,
+  `require_supported_persisted_event_canonicalization`
 
 ## Ingestion and Normalization
 

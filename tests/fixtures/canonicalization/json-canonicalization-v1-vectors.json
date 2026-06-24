@@ -1,0 +1,123 @@
+{
+  "schema_version": "actionlineage.dev/canonicalization-conformance-vectors-v1",
+  "canonicalization": "actionlineage.dev/json-canonicalization-v1",
+  "status": "planned_not_persisted",
+  "migration_policy": {
+    "active_persisted_event_hash": "actionlineage.dev/json-deterministic-v0",
+    "v1_persisted_event_hash_status": "migration_adr_required",
+    "mixed_canonicalization_journals": "rejected_until_migration_adr",
+    "old_json_deterministic_v0_journals_remain_readable": true,
+    "projection_anchor_manifest_descriptor_digest_policy": "algorithm_label_required_for_each_digest",
+    "unsupported_numeric_values": "fail_closed_before_hash_input"
+  },
+  "valid_vectors": [
+    {
+      "id": "object-member-ordering-nested",
+      "category": "object_member_ordering",
+      "input_json": "{\"b\":1,\"a\":{\"z\":0,\"escaped\\nkey\":\"line\\nvalue\"},\"á\":\"accent\"}",
+      "canonical_json": "{\"a\":{\"escaped\\nkey\":\"line\\nvalue\",\"z\":0},\"b\":1,\"á\":\"accent\"}",
+      "sha256": "sha256:1509ee907b3e8eddd71d343384c7585ad2284b3bc01ed57bea1eb7548b4bfca3",
+      "notes": "Nested object members and escaped member names are sorted deterministically."
+    },
+    {
+      "id": "unicode-control-string",
+      "category": "unicode_escaping",
+      "input_json": "{\"unicode\":\"snowman ☃ and café\",\"escaped\":\"line\\nquote\\\"backslash\\\\\",\"control\":\"\\u0001\"}",
+      "canonical_json": "{\"control\":\"\\u0001\",\"escaped\":\"line\\nquote\\\"backslash\\\\\",\"unicode\":\"snowman ☃ and café\"}",
+      "sha256": "sha256:902b0d52e9951fecc4d5c5f9923605f38a804bf27d1bb2fa043222049c3d4752",
+      "notes": "UTF-8 strings are preserved while required control escapes remain escaped."
+    },
+    {
+      "id": "number-rendering",
+      "category": "number_rendering",
+      "input_json": "{\"zero\":0,\"negative_zero\":-0,\"negative\":-12,\"decimal\":1.5,\"exponent\":1e3,\"unsafe_integer\":\"9007199254740993\"}",
+      "canonical_json": "{\"decimal\":1.5,\"exponent\":1000,\"negative\":-12,\"negative_zero\":0,\"unsafe_integer\":\"9007199254740993\",\"zero\":0}",
+      "sha256": "sha256:04377ac0f7988f705483e09ca6c2052bbd7455e7ff05fadf9be0b7e4527a39c1",
+      "notes": "The vector records finite number rendering, negative-zero normalization, exponent normalization, and the unsafe-integer-as-string escape hatch."
+    },
+    {
+      "id": "boolean-null-array",
+      "category": "boolean_null_array",
+      "input_json": "{\"items\":[true,false,null,{\"b\":[2,3],\"a\":1}]}",
+      "canonical_json": "{\"items\":[true,false,null,{\"a\":1,\"b\":[2,3]}]}",
+      "sha256": "sha256:1389239faba24d980e87708e68c92b0918667c43e1303620d2f605c53e4b6659",
+      "notes": "Array order is preserved while nested object members are ordered."
+    },
+    {
+      "id": "utc-timestamp",
+      "category": "utc_timestamp",
+      "input_json": "{\"occurred_at\":\"2026-06-21T18:42:12.123456Z\"}",
+      "canonical_json": "{\"occurred_at\":\"2026-06-21T18:42:12.123456Z\"}",
+      "sha256": "sha256:f9449d5ac8a50ff6bea64c34c4f79b1b69583803220f440617dd81434f230233",
+      "notes": "Event timestamps stay in UTC RFC 3339 form with a trailing Z."
+    },
+    {
+      "id": "golden-event",
+      "category": "golden_event",
+      "input_json": "{\"event_type\":\"agent.run.started\",\"event_id\":\"evt_v1_root\",\"spec_version\":\"actionlineage.dev/v1alpha1\",\"occurred_at\":\"2026-06-21T18:42:12.123456Z\",\"observed_at\":\"2026-06-21T18:42:12.123456Z\",\"source\":{\"version\":\"0\",\"component\":\"canonicalization-vector\",\"instance_id\":\"fixture_01\"},\"correlation\":{\"trace_id\":\"trace_v1\",\"run_id\":\"run_v1\",\"span_id\":null,\"session_id\":null},\"causality\":{\"sequence\":0,\"root_event_id\":\"evt_v1_root\",\"parent_event_id\":null},\"principal\":{\"principal_id\":\"agent_v1\",\"principal_type\":\"agent\",\"on_behalf_of\":\"user_v1\",\"model_id\":null,\"credential_id\":null},\"classification\":{\"trust\":\"trusted\",\"sensitivity\":\"internal\"},\"payload\":{\"goal\":\"canonicalization v1 conformance vector\"},\"integrity\":{\"canonicalization\":\"actionlineage.dev/json-canonicalization-v1\",\"previous_event_hash\":null,\"event_hash\":null}}",
+      "canonical_json": "{\"causality\":{\"parent_event_id\":null,\"root_event_id\":\"evt_v1_root\",\"sequence\":0},\"classification\":{\"sensitivity\":\"internal\",\"trust\":\"trusted\"},\"correlation\":{\"run_id\":\"run_v1\",\"session_id\":null,\"span_id\":null,\"trace_id\":\"trace_v1\"},\"event_id\":\"evt_v1_root\",\"event_type\":\"agent.run.started\",\"integrity\":{\"canonicalization\":\"actionlineage.dev/json-canonicalization-v1\",\"event_hash\":null,\"previous_event_hash\":null},\"observed_at\":\"2026-06-21T18:42:12.123456Z\",\"occurred_at\":\"2026-06-21T18:42:12.123456Z\",\"payload\":{\"goal\":\"canonicalization v1 conformance vector\"},\"principal\":{\"credential_id\":null,\"model_id\":null,\"on_behalf_of\":\"user_v1\",\"principal_id\":\"agent_v1\",\"principal_type\":\"agent\"},\"source\":{\"component\":\"canonicalization-vector\",\"instance_id\":\"fixture_01\",\"version\":\"0\"},\"spec_version\":\"actionlineage.dev/v1alpha1\"}",
+      "sha256": "sha256:7c045618e92b8cb273355850f78623094338d4fe5edae01d100586a38cd3b312",
+      "notes": "Golden event bytes are a conformance target only; v1 is not enabled for persisted event hashes."
+    },
+    {
+      "id": "golden-descriptor",
+      "category": "golden_descriptor",
+      "input_json": "{\"descriptor_version\":\"v1\",\"adapter\":\"mcp\",\"descriptor\":{\"name\":\"safe_http.send\",\"description\":\"Send HTTP request\",\"input_schema\":{\"type\":\"object\",\"required\":[\"url\"],\"properties\":{\"url\":{\"type\":\"string\",\"format\":\"uri\"},\"body\":{\"type\":\"string\"}}}}}",
+      "canonical_json": "{\"adapter\":\"mcp\",\"descriptor\":{\"description\":\"Send HTTP request\",\"input_schema\":{\"properties\":{\"body\":{\"type\":\"string\"},\"url\":{\"format\":\"uri\",\"type\":\"string\"}},\"required\":[\"url\"],\"type\":\"object\"},\"name\":\"safe_http.send\"},\"descriptor_version\":\"v1\"}",
+      "sha256": "sha256:64218a4fed50037fe2db10f1a2aa85129a83df0d96f73e303fce71c00e4ec165",
+      "notes": "Descriptor-hash producers need the same explicit canonicalization label."
+    },
+    {
+      "id": "golden-evidence-link",
+      "category": "golden_evidence_link",
+      "input_json": "{\"subject_event_id\":\"evt_tool_ack\",\"relationship\":\"corroborates\",\"evidence_event_id\":\"evt_observed\",\"corroboration_type\":\"fixture_oracle\",\"observer_identity\":\"receiver_fixture\",\"confidence\":0.95,\"verification_status\":\"verified\",\"limitations\":[\"fixture only\"]}",
+      "canonical_json": "{\"confidence\":0.95,\"corroboration_type\":\"fixture_oracle\",\"evidence_event_id\":\"evt_observed\",\"limitations\":[\"fixture only\"],\"observer_identity\":\"receiver_fixture\",\"relationship\":\"corroborates\",\"subject_event_id\":\"evt_tool_ack\",\"verification_status\":\"verified\"}",
+      "sha256": "sha256:d0b290e7caa61c098d3254c843112175b31dadca60e8d9e964c7e1b7f132aeec",
+      "notes": "Evidence-link bytes stay explicitly covered before envelope-level schema changes."
+    }
+  ],
+  "invalid_vectors": [
+    {
+      "id": "duplicate-key-top-level",
+      "category": "duplicate_object_key_rejection",
+      "input_json": "{\"a\":1,\"a\":2}",
+      "reason": "Duplicate object keys must fail before canonicalization."
+    },
+    {
+      "id": "duplicate-key-nested",
+      "category": "duplicate_object_key_rejection",
+      "input_json": "{\"outer\":{\"a\":1,\"a\":2}}",
+      "reason": "Nested duplicate object keys must fail before canonicalization."
+    },
+    {
+      "id": "nan-token",
+      "category": "non_finite_number_rejection",
+      "input_json": "{\"n\":NaN}",
+      "reason": "NaN must fail before persistence or hash input."
+    },
+    {
+      "id": "infinity-token",
+      "category": "non_finite_number_rejection",
+      "input_json": "{\"n\":Infinity}",
+      "reason": "Infinity must fail before persistence or hash input."
+    },
+    {
+      "id": "negative-infinity-token",
+      "category": "non_finite_number_rejection",
+      "input_json": "{\"n\":-Infinity}",
+      "reason": "-Infinity must fail before persistence or hash input."
+    },
+    {
+      "id": "leading-zero-number",
+      "category": "number_rendering",
+      "input_json": "{\"n\":01}",
+      "reason": "Leading-zero numeric tokens are invalid and must not be normalized silently."
+    },
+    {
+      "id": "unsafe-integer-number",
+      "category": "number_rendering",
+      "input_json": "{\"n\":9007199254740993}",
+      "reason": "Unsafe integer-range policy must be explicit before cross-language v1 adoption."
+    }
+  ]
+}

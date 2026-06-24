@@ -1,6 +1,6 @@
 # ADR-0013: Canonicalization V1 Conformance Boundary
 
-- Status: Proposed
+- Status: Accepted
 - Date: 2026-06-24
 - Owners: Marq Mercado
 
@@ -21,7 +21,7 @@ is adequate for the current public-alpha writer and verifier, but it is not a
 formal cross-language canonical JSON standard. Stronger claims about portable
 hash input, descriptor hashes, signed records, external witnesses, or
 multi-language producers require a versioned canonicalization contract with
-conformance vectors.
+checked-in conformance vectors and explicit migration behavior.
 
 ## Decision drivers
 
@@ -94,14 +94,17 @@ Cons:
 Do not replace `actionlineage.dev/json-deterministic-v0` in this slice.
 
 Define `actionlineage.dev/json-canonicalization-v1` as a planned
-canonicalization boundary that may be adopted only after executable conformance
-vectors and migration rules exist. The v1 implementation must either conform to
-a reviewed standard such as RFC 8785/JCS or document every intentional
-difference in a follow-up ADR.
+canonicalization boundary. The repository now includes executable conformance
+vectors at
+`tests/fixtures/canonicalization/json-canonicalization-v1-vectors.json` and a
+runtime migration policy that rejects the v1 label for persisted event hashes
+until a future migration ADR explicitly adopts it. The v1 implementation must
+either conform to a reviewed standard such as RFC 8785/JCS or document every
+intentional difference in a follow-up ADR before it is used as hash input.
 
 Before any event, descriptor, checkpoint, release-evidence, or signature path
-uses the v1 label, the repository must include conformance vectors covering at
-least:
+uses the v1 label as active hash input, the checked-in conformance vectors must
+cover at least:
 
 - Object member ordering, including nested objects and escaped member names.
 - Duplicate object-key rejection before canonicalization.
@@ -118,19 +121,22 @@ least:
 - Golden event, descriptor, and evidence-link examples with expected bytes and
   SHA-256 digests.
 
-Adopting v1 for persisted events requires a migration ADR that answers:
+Adopting v1 for persisted events still requires a migration ADR that answers:
 
 - Whether the event schema changes from `v1alpha1`.
 - Whether old `json-deterministic-v0` journals remain readable and verifiable.
-- Whether mixed-canonicalization journals are allowed or rejected.
+- Whether mixed-canonicalization journals are allowed or rejected. The current
+  runtime policy rejects mixed labels for persisted event hashes until that ADR
+  changes the rule.
 - How projections, anchors, archive manifests, external attestation sidecars,
   release evidence, descriptor hashes, and compatibility fixtures identify the
   algorithm used for each digest.
 - How failed conformance or unsupported numeric values fail closed.
 
-Until that work is complete, public wording may say local journals are
-byte-canonical under `json-deterministic-v0`. It must not claim portable
-cross-language canonical JSON, RFC 8785/JCS conformance, or stable
+Until that future adoption work is complete, public wording may say local
+journals are byte-canonical under `json-deterministic-v0`, and that v1 has
+checked-in conformance vectors and migration guardrails. It must not claim
+portable cross-language canonical JSON, RFC 8785/JCS conformance, or stable
 multi-language hash equivalence.
 
 ## Consequences
@@ -138,8 +144,8 @@ multi-language hash equivalence.
 - Current public-alpha journal bytes and golden fixtures remain unchanged.
 - Existing tests remain evidence for local deterministic verification, not for
   portable canonical JSON.
-- Future canonicalization work starts with vectors and migration behavior before
-  code changes to hash inputs.
+- Future canonicalization work starts from the checked-in vectors and migration
+  behavior before code changes to hash inputs.
 - Any new dependency for canonicalization must go through the dependency policy
   with license, maintenance, security, and trusted-computing-base review.
 - Descriptor hash and journal hash documentation must name which
@@ -151,6 +157,11 @@ multi-language hash equivalence.
   `json-deterministic-v0` and planned v1 claims distinct.
 - Existing journal tests continue to prove byte-canonical local verification for
   `json-deterministic-v0` records.
-- Future v1 implementation tests must load checked-in conformance vectors and
-  verify exact canonical bytes plus SHA-256 digests before v1 is used for
-  persisted evidence.
+- `tests/domain/test_canonicalization.py` loads checked-in v1 vectors and
+  verifies exact canonical bytes plus SHA-256 digests for object ordering,
+  Unicode and control escaping, finite numbers, booleans/null, arrays,
+  timestamps, golden event bytes, descriptor bytes, and evidence-link bytes.
+- `tests/domain/test_canonicalization.py` and
+  `tests/journal/test_local_journal.py` verify that
+  `actionlineage.dev/json-canonicalization-v1` is rejected for persisted event
+  hashes and journal verification until a migration ADR adopts it.

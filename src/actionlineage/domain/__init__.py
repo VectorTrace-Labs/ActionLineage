@@ -1,7 +1,15 @@
 """Domain primitives for ActionLineage evidence."""
 
-from actionlineage.domain.events import (
+from actionlineage.domain.canonicalization import (
     CANONICALIZATION_VERSION,
+    PLANNED_CANONICALIZATION_VERSION,
+    SUPPORTED_PERSISTED_EVENT_CANONICALIZATIONS,
+    CanonicalizationError,
+    is_supported_persisted_event_canonicalization,
+    persisted_event_canonicalization_policy,
+    require_supported_persisted_event_canonicalization,
+)
+from actionlineage.domain.events import (
     DEFAULT_JSON_MAX_ARRAY_LENGTH,
     DEFAULT_JSON_MAX_DEPTH,
     DEFAULT_JSON_MAX_OBJECT_MEMBERS,
@@ -46,7 +54,10 @@ __all__ = [
     "DEFAULT_JSON_MAX_ARRAY_LENGTH",
     "DEFAULT_JSON_MAX_DEPTH",
     "DEFAULT_JSON_MAX_OBJECT_MEMBERS",
+    "PLANNED_CANONICALIZATION_VERSION",
     "SPEC_VERSION",
+    "SUPPORTED_PERSISTED_EVENT_CANONICALIZATIONS",
+    "CanonicalizationError",
     "CaptureMetadata",
     "Causality",
     "Classification",
@@ -77,7 +88,10 @@ __all__ = [
     "deterministic_json_bytes",
     "event_from_json",
     "event_to_dict",
+    "is_supported_persisted_event_canonicalization",
     "parse_event",
+    "persisted_event_canonicalization_policy",
+    "require_supported_persisted_event_canonicalization",
     "serialize_event",
     "serialize_event_for_persistence",
 ]

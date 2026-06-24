@@ -16,6 +16,7 @@ from pathlib import Path
 from typing import Protocol
 
 from actionlineage.domain import (
+    CanonicalizationError,
     EventEnvelope,
     deterministic_json_bytes,
     parse_event,
@@ -443,7 +444,23 @@ def verified_journal_snapshot(
                         )
                         break
 
-                    computed_hash = compute_event_hash(event)
+                    try:
+                        computed_hash = compute_event_hash(event)
+                    except CanonicalizationError:
+                        issues.append(
+                            VerificationIssue(
+                                record_number=record_number,
+                                event_id=event.event_id,
+                                code="unsupported_canonicalization",
+                                message=(
+                                    "event canonicalization label is not supported for "
+                                    "persisted journal hash verification"
+                                ),
+                                expected="supported_persisted_event_canonicalization",
+                                actual=event.integrity.canonicalization,
+                            )
+                        )
+                        break
                     if event.integrity.event_hash != computed_hash:
                         issues.append(
                             VerificationIssue(

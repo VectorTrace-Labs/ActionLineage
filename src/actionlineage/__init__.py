@@ -57,7 +57,11 @@ from actionlineage.detection import (
     sequence_rule_to_dict,
 )
 from actionlineage.domain import (
+    CANONICALIZATION_VERSION,
+    PLANNED_CANONICALIZATION_VERSION,
     SPEC_VERSION,
+    SUPPORTED_PERSISTED_EVENT_CANONICALIZATIONS,
+    CanonicalizationError,
     Causality,
     Classification,
     Correlation,
@@ -81,7 +85,10 @@ from actionlineage.domain import (
     TrustLevel,
     VerificationStatus,
     event_to_dict,
+    is_supported_persisted_event_canonicalization,
     parse_event,
+    persisted_event_canonicalization_policy,
+    require_supported_persisted_event_canonicalization,
     serialize_event,
 )
 from actionlineage.errors import ActionLineageError, ActionLineageValidationError, EventParseError
@@ -274,6 +281,7 @@ from actionlineage.service import (
 __version__ = "0.1.0a6"
 
 __all__ = [
+    "CANONICALIZATION_VERSION",
     "COMPATIBILITY_POLICY_VERSION",
     "CONTRACT_SCHEMA_VERSION",
     "DEFAULT_DATABASE_PATH",
@@ -282,12 +290,14 @@ __all__ = [
     "EXTERNAL_ANCHOR_ATTESTATION_VERSION",
     "KNOWN_EVENT_TYPES",
     "PACK_MANIFEST_SCHEMA_VERSION",
+    "PLANNED_CANONICALIZATION_VERSION",
     "POSTGRES_DEFAULT_TABLE",
     "POSTGRES_PROJECTION_SCHEMA_VERSION",
     "READABLE_EVENT_SPEC_VERSIONS",
     "SPEC_VERSION",
     "SUPPORTED_EVENT_SPEC_VERSIONS",
     "SUPPORTED_PACK_ARTIFACT_KINDS",
+    "SUPPORTED_PERSISTED_EVENT_CANONICALIZATIONS",
     "ActionLineageError",
     "ActionLineageValidationError",
     "AnchorLogVerificationResult",
@@ -297,6 +307,7 @@ __all__ = [
     "AwsCloudTrailObserver",
     "AzureActivityObserver",
     "BatchImportResult",
+    "CanonicalizationError",
     "CaseBundleExport",
     "Causality",
     "Classification",
@@ -466,6 +477,7 @@ __all__ = [
     "independent_claim_rejection_reasons",
     "investigation_graph_from_incident",
     "is_known_event_type",
+    "is_supported_persisted_event_canonicalization",
     "is_supported_spec_version",
     "load_console_context",
     "load_contract",
@@ -486,6 +498,7 @@ __all__ = [
     "pack_manifest_from_dict",
     "pack_manifest_to_dict",
     "parse_event",
+    "persisted_event_canonicalization_policy",
     "postgres_insert_statement",
     "postgres_schema_statements",
     "query_filtered_timeline",
@@ -494,6 +507,7 @@ __all__ = [
     "render_console_html",
     "require_capability",
     "require_independent_observer_attestation",
+    "require_supported_persisted_event_canonicalization",
     "require_tenant_role",
     "score_detection_robustness",
     "self_reported_verification",

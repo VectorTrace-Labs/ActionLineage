@@ -52,8 +52,8 @@ Require a new ADR and, when applicable, a new schema version:
 - Changing the meaning of existing envelope fields.
 - Changing canonical serialization or journal hash input.
 - Adopting `actionlineage.dev/json-canonicalization-v1` for persisted event
-  hashes, because ADR-0013 requires conformance vectors and migration rules
-  before any replacement for `json-deterministic-v0`.
+  hashes, because ADR-0013 keeps checked-in conformance vectors and migration
+  guardrails separate from any replacement for `json-deterministic-v0`.
 - Moving evidence links from payloads to envelope-level fields.
 - Requiring previously optional payload fields for supported event streams.
 - Reclassifying unknown event types as safe or policy-approved behavior.

@@ -30,7 +30,9 @@ supported, local-proof, preview, planned, and external-validation labels.
 - Journal records are byte-canonical under
   `actionlineage.dev/json-deterministic-v0`, but portable
   `json-canonicalization-v1` and RFC 8785/JCS-style claims remain planned until
-  conformance vectors and migration rules exist.
+  a future migration ADR adopts v1 as an active persisted hash format. Checked-in
+  v1 conformance vectors and migration guardrails exist, and the current
+  verifier rejects v1 labels for persisted event hashes.
 
 ## Runtime And Integration Scope
 

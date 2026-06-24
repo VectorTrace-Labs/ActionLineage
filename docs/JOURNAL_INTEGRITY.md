@@ -23,9 +23,10 @@ can become verified evidence.
 The active public-alpha canonicalization label is
 `actionlineage.dev/json-deterministic-v0`. ADR-0013 keeps portable
 `json-canonicalization-v1` adoption behind checked-in conformance vectors,
-migration rules, and explicit handling for existing journals. Until that work
-lands, ActionLineage does not claim RFC 8785/JCS conformance or stable
-multi-language canonical JSON equivalence.
+runtime migration guardrails, and explicit handling for existing journals. The
+current verifier rejects v1 labels for persisted event hashes. ActionLineage
+does not claim RFC 8785/JCS conformance or stable multi-language canonical JSON
+equivalence until a future migration ADR adopts v1 as hash input.
 
 This is tamper-evident relative to the journal bytes and any trusted anchor. It
 is not tamper-proof, forensically complete, or resistant to an attacker who can

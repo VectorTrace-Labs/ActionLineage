@@ -12,7 +12,14 @@ from typer.testing import CliRunner
 
 import actionlineage.journal.local as local_journal_module
 from actionlineage.cli import app
-from actionlineage.domain import EventEnvelope, EventType, RedactionPolicy, serialize_event
+from actionlineage.domain import (
+    PLANNED_CANONICALIZATION_VERSION,
+    EventEnvelope,
+    EventType,
+    IntegrityMetadata,
+    RedactionPolicy,
+    serialize_event,
+)
 from actionlineage.journal import (
     JournalAppendError,
     JournalLockError,
@@ -107,6 +114,24 @@ def test_valid_journal_records_are_exact_canonical_lines(tmp_path: Path) -> None
 
     assert snapshot.journal_sha256 == f"sha256:{hashlib.sha256(path.read_bytes()).hexdigest()}"
     assert journal_raw_lines(path) == [serialize_event(event) + b"\n" for event in snapshot.events]
+
+
+def test_append_rejects_planned_v1_canonicalization_label(tmp_path: Path) -> None:
+    path = tmp_path / "events.jsonl"
+    event = make_event(0).model_copy(
+        update={
+            "integrity": IntegrityMetadata(
+                canonicalization=PLANNED_CANONICALIZATION_VERSION,
+                previous_event_hash=None,
+                event_hash=None,
+            )
+        }
+    )
+
+    with pytest.raises(ValueError, match="unsupported persisted event canonicalization"):
+        LocalJournal(path).append(event)
+
+    assert not path.exists()
 
 
 def test_append_creates_private_storage_under_default_umask(tmp_path: Path) -> None:
@@ -227,6 +252,27 @@ def test_duplicate_json_keys_fail_journal_parsing(
     replace_journal_lines(path, lines)
 
     assert_failed_at("parse_error", path, record_number=1)
+
+
+def test_planned_v1_canonicalization_label_fails_journal_verification(
+    tmp_path: Path,
+) -> None:
+    path = tmp_path / "events.jsonl"
+    write_valid_journal(path, event_count=1)
+    lines = journal_lines(path)
+    lines[0] = lines[0].replace(
+        b"actionlineage.dev/json-deterministic-v0",
+        b"actionlineage.dev/json-canonicalization-v1",
+    )
+    replace_journal_lines(path, lines)
+
+    result = verify_journal(path)
+
+    assert not result.ok
+    assert result.records_verified == 0
+    assert result.issues[0].record_number == 1
+    assert result.issues[0].code == "unsupported_canonicalization"
+    assert result.issues[0].actual == PLANNED_CANONICALIZATION_VERSION
 
 
 @pytest.mark.parametrize(
