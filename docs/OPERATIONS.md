@@ -204,6 +204,23 @@ for writes with an actionable error rather than silently chmodding parent
 directories the application did not create. Windows and filesystems that do not
 enforce POSIX mode bits require equivalent administrator controls.
 
+## Local Journal Benchmarks
+
+Before proposing segmented journals, append indexes, or checkpoint changes, run
+the synthetic local journal benchmark outside the release-critical path:
+
+```bash
+uv run python scripts/benchmark_journal_ingest.py \
+  --counts 10000,100000 \
+  --repetitions 3 \
+  --output-dir /tmp/actionlineage-journal-bench
+```
+
+The benchmark emits JSON with setup time, verified snapshot timing, and duplicate
+idempotency-scan timing. Results are local performance evidence only; they are
+not production throughput guarantees and should not be committed unless a
+release or design review explicitly asks for the artifact.
+
 ## PostgreSQL Projection
 
 SQLite remains the default local projection. For service deployments that need a

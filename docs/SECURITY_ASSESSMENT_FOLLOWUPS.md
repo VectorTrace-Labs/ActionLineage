@@ -74,6 +74,11 @@ and does not expand ActionLineage into a generic tracing platform.
   rebuildable caches rather than trusted evidence, and requires authenticated
   checkpoints to use anchor-style sidecars unless a future ADR changes the
   boundary.
+- **Journal ingest benchmark tooling**: `scripts/benchmark_journal_ingest.py`
+  generates synthetic journals and emits JSON timings for verified snapshots and
+  duplicate idempotency scans. Tiny-count regression coverage keeps the script
+  executable; 10k/100k benchmark artifacts are still local release/design-review
+  work.
 - **Capture digest scope**: local regression and property tests cover scoped
   capture digests for truncated text and byte values. Capture metadata now
   records `actionlineage.capture.v1/redaction-boundary` so bounded-content
@@ -93,9 +98,11 @@ and does not expand ActionLineage into a generic tracing platform.
 
 - **Journal scalability and append integrity**: partially confirmed. Appends
   verify the existing journal before write, preserving local integrity but
-  requiring performance benchmarks before segmented checkpoint or append-index
-  implementation. ADR-0011 requires future append indexes to remain rebuildable
-  caches bound to verified journal state rather than trusted evidence.
+  requiring captured benchmark results before segmented checkpoint or
+  append-index implementation. ADR-0011 requires future append indexes to remain
+  rebuildable caches bound to verified journal state rather than trusted
+  evidence; benchmark tooling now exists for verified snapshots and duplicate
+  idempotency scans.
 - **Observer independence**: partially confirmed. Observer records carry trust
   labels and limitations, but independence is not yet the result of a structured
   attestation policy. This requires an ADR and versioned model work.
@@ -160,11 +167,11 @@ and does not expand ActionLineage into a generic tracing platform.
 
 1. Add projection-state checks to any future non-SQLite read APIs before those
    APIs are exposed.
-2. Benchmark append verification at 10k, 100k, and feasible larger journals
-   before proposing segmented journals or checkpoint indexes.
+2. Run `scripts/benchmark_journal_ingest.py` at 10k, 100k, and feasible larger
+   journals before proposing segmented journals or checkpoint indexes.
 3. Draft ADRs for observer attestation policy, canonicalization v1, causal edge
    evolution, and external checkpoint trust roots.
-4. Benchmark append verification and idempotency scans before implementing any
-   ADR-0011 append-index cache.
+4. Capture benchmark artifacts before implementing any ADR-0011 append-index
+   cache.
 5. Audit attachment-count limits and redaction digest behavior across journal,
    projection, export, logs, exceptions, and test snapshots.
