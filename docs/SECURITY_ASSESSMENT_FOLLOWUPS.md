@@ -83,6 +83,10 @@ and does not expand ActionLineage into a generic tracing platform.
   capture digests for truncated text and byte values. Capture metadata now
   records `actionlineage.capture.v1/redaction-boundary` so bounded-content
   digests are not confused with plain external content hashes or signatures.
+- **Aggregate capture limits**: local regression tests cover events that try to
+  produce too many bounded capture markers or exceed the aggregate encoded
+  captured-content budget. Redaction now fails closed before persistence when
+  either limit is crossed.
 - **Observer digest scope**: local observer regressions cover body, expected
   body, and webhook signature digest scope fields. HTTP fixture observers now
   preserve digest strings for correlation while labeling them as observer
@@ -135,8 +139,9 @@ and does not expand ActionLineage into a generic tracing platform.
   default redaction policy covers common token, cookie, cloud-session, database
   URL, signed URL, webhook, and proxy-authorization field aliases, plus common
   inline assignment, signed URL parameter, and credential-bearing database URL
-  forms. Attachment-count limits and broader digest-correlation review across
-  non-observer sinks remain open.
+  forms. Bounded capture now enforces per-event capture-count and aggregate
+  captured-content ceilings. Broader digest-correlation review across
+  non-observer sinks remains open.
 - **Container and deployment defaults**: partially confirmed. Runtime hardening
   should remain preview/local-ops scoped until container and Kubernetes defaults
   have executable validation.
@@ -176,5 +181,5 @@ and does not expand ActionLineage into a generic tracing platform.
    evolution, and external checkpoint trust roots.
 4. Capture benchmark artifacts before implementing any ADR-0011 append-index
    cache.
-5. Audit attachment-count limits and redaction digest behavior across journal,
-   projection, export, logs, exceptions, and test snapshots.
+5. Audit redaction digest behavior across journal, projection, export, logs,
+   exceptions, and test snapshots.

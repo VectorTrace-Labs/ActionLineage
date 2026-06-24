@@ -147,6 +147,38 @@ def test_oversized_payload_is_truncated_with_metadata_and_digest() -> None:
     assert captured["digest_scope"] == CAPTURE_DIGEST_SCOPE
 
 
+def test_redaction_rejects_too_many_captured_values_before_persistence() -> None:
+    raw_value = "attachment-content-123456789"
+    event = build_event(payload={"items": [raw_value, raw_value, raw_value]})
+    policy = RedactionPolicy(max_string_length=8, max_capture_count=2)
+
+    with pytest.raises(
+        RedactionError, match="redaction failed before event serialization"
+    ) as exc_info:
+        serialize_event_for_persistence(event, redaction_policy=policy)
+
+    assert raw_value not in str(exc_info.value)
+
+
+def test_redaction_rejects_aggregate_captured_bytes_before_persistence() -> None:
+    first_raw = "first-attachment-content-123456789"
+    second_raw = "second-attachment-content-123456789"
+    event = build_event(payload={"items": [first_raw, second_raw]})
+    policy = RedactionPolicy(
+        max_string_length=8,
+        max_capture_count=4,
+        max_capture_bytes=12,
+    )
+
+    with pytest.raises(
+        RedactionError, match="redaction failed before event serialization"
+    ) as exc_info:
+        serialize_event_for_persistence(event, redaction_policy=policy)
+
+    assert first_raw not in str(exc_info.value)
+    assert second_raw not in str(exc_info.value)
+
+
 def test_bytes_capture_is_bounded_and_json_compatible() -> None:
     captured = capture_bytes(b"abcdef", max_length=3)
 

@@ -25,6 +25,8 @@ REDACTED_VALUE = "[REDACTED:sensitive]"
 CAPTURE_DIGEST_SCOPE: CaptureDigestScope = "actionlineage.capture.v1/redaction-boundary"
 DEFAULT_MAX_STRING_LENGTH = 4096
 DEFAULT_MAX_BYTES_LENGTH = 4096
+DEFAULT_MAX_CAPTURE_COUNT = 128
+DEFAULT_MAX_CAPTURE_BYTES = 65536
 DEFAULT_SENSITIVE_FIELD_NAMES = frozenset(
     {
         "access_token",
@@ -128,6 +130,8 @@ class RedactionPolicy:
     sensitive_field_names: frozenset[str] = DEFAULT_SENSITIVE_FIELD_NAMES
     max_string_length: int = DEFAULT_MAX_STRING_LENGTH
     max_bytes_length: int = DEFAULT_MAX_BYTES_LENGTH
+    max_capture_count: int = DEFAULT_MAX_CAPTURE_COUNT
+    max_capture_bytes: int = DEFAULT_MAX_CAPTURE_BYTES
     max_json_depth: int = DEFAULT_JSON_MAX_DEPTH
     max_object_members: int = DEFAULT_JSON_MAX_OBJECT_MEMBERS
     max_array_length: int = DEFAULT_JSON_MAX_ARRAY_LENGTH
@@ -140,6 +144,8 @@ class RedactionPolicy:
         *,
         max_string_length: int = DEFAULT_MAX_STRING_LENGTH,
         max_bytes_length: int = DEFAULT_MAX_BYTES_LENGTH,
+        max_capture_count: int = DEFAULT_MAX_CAPTURE_COUNT,
+        max_capture_bytes: int = DEFAULT_MAX_CAPTURE_BYTES,
         max_json_depth: int = DEFAULT_JSON_MAX_DEPTH,
         max_object_members: int = DEFAULT_JSON_MAX_OBJECT_MEMBERS,
         max_array_length: int = DEFAULT_JSON_MAX_ARRAY_LENGTH,
@@ -148,6 +154,8 @@ class RedactionPolicy:
             sensitive_paths=frozenset(normalize_path(path) for path in paths),
             max_string_length=max_string_length,
             max_bytes_length=max_bytes_length,
+            max_capture_count=max_capture_count,
+            max_capture_bytes=max_capture_bytes,
             max_json_depth=max_json_depth,
             max_object_members=max_object_members,
             max_array_length=max_array_length,
@@ -155,9 +163,42 @@ class RedactionPolicy:
 
     def apply(self, value: object) -> JsonValue:
         try:
-            return redact_value(value, path=(), policy=self)
+            return redact_value(value, path=(), policy=self, _capture_budget=capture_budget(self))
         except Exception as exc:
             raise RedactionError("redaction failed before persistence") from exc
+
+
+@dataclass(slots=True)
+class _CaptureBudget:
+    """Aggregate capture budget for one redaction pass."""
+
+    max_count: int
+    max_bytes: int
+    count: int = 0
+    captured_bytes: int = 0
+
+    def record(self, captured_bytes: int) -> None:
+        if captured_bytes < 0:
+            raise RedactionError("captured byte count cannot be negative")
+        next_count = self.count + 1
+        if next_count > self.max_count:
+            raise RedactionError(f"captured value count exceeds {self.max_count}")
+        next_bytes = self.captured_bytes + captured_bytes
+        if next_bytes > self.max_bytes:
+            raise RedactionError(f"captured bytes exceed {self.max_bytes}")
+        self.count = next_count
+        self.captured_bytes = next_bytes
+
+
+def capture_budget(policy: RedactionPolicy) -> _CaptureBudget:
+    if policy.max_capture_count < 0:
+        raise RedactionError("max_capture_count must be non-negative")
+    if policy.max_capture_bytes < 0:
+        raise RedactionError("max_capture_bytes must be non-negative")
+    return _CaptureBudget(
+        max_count=policy.max_capture_count,
+        max_bytes=policy.max_capture_bytes,
+    )
 
 
 def normalize_path(path: str | Sequence[str]) -> Path:
@@ -178,6 +219,7 @@ def redact_value(
     path: Path,
     policy: RedactionPolicy,
     _depth: int = 0,
+    _capture_budget: _CaptureBudget | None = None,
 ) -> JsonValue:
     """Redact an arbitrary value into a JSON-compatible value."""
 
@@ -188,10 +230,14 @@ def redact_value(
         raise RedactionError(f"JSON depth exceeds {policy.max_json_depth}")
 
     if isinstance(value, str):
-        return capture_string(redact_text(value, policy), max_length=policy.max_string_length)
+        captured = capture_string(redact_text(value, policy), max_length=policy.max_string_length)
+        record_capture(captured, _capture_budget)
+        return captured
 
     if isinstance(value, bytes):
-        return capture_bytes(value, max_length=policy.max_bytes_length)
+        captured = capture_bytes(value, max_length=policy.max_bytes_length)
+        record_capture(captured, _capture_budget)
+        return captured
 
     if isinstance(value, float) and not math.isfinite(value):
         raise RedactionError("JSON numbers must be finite")
@@ -211,15 +257,43 @@ def redact_value(
                 path=(*path, raw_key.lower()),
                 policy=policy,
                 _depth=_depth + 1,
+                _capture_budget=_capture_budget,
             )
         return redacted
 
     if isinstance(value, Sequence) and not isinstance(value, str | bytes | bytearray):
         if len(value) > policy.max_array_length:
             raise RedactionError(f"JSON array exceeds {policy.max_array_length} items")
-        return [redact_value(child, path=path, policy=policy, _depth=_depth + 1) for child in value]
+        return [
+            redact_value(
+                child,
+                path=path,
+                policy=policy,
+                _depth=_depth + 1,
+                _capture_budget=_capture_budget,
+            )
+            for child in value
+        ]
 
     raise RedactionError(f"unsupported value type for redaction: {type(value).__name__}")
+
+
+def record_capture(value: JsonValue, budget: _CaptureBudget | None) -> None:
+    if budget is None or not isinstance(value, dict):
+        return
+    if value.get("marker") != "actionlineage.capture.v1":
+        return
+    captured = value.get("value")
+    if not isinstance(captured, str):
+        raise RedactionError("capture metadata value must be a string")
+    encoding = value.get("encoding")
+    if encoding == "text":
+        budget.record(len(captured.encode("utf-8")))
+        return
+    if encoding == "base64":
+        budget.record(len(captured))
+        return
+    raise RedactionError("capture metadata encoding is invalid")
 
 
 def redact_text(value: str, policy: RedactionPolicy) -> str:

@@ -61,6 +61,8 @@ Default local bounds:
 | --- | --- | --- |
 | String capture | 4096 characters | `RedactionPolicy.max_string_length` |
 | Bytes capture | 4096 bytes | `RedactionPolicy.max_bytes_length` |
+| Capture count | 128 bounded values per redaction pass | `RedactionPolicy.max_capture_count` |
+| Aggregate captured content | 65536 encoded bytes per redaction pass | `RedactionPolicy.max_capture_bytes` |
 | Capture digest | scoped SHA-256 over redaction-boundary content | `actionlineage.capture.v1/redaction-boundary` digest scope |
 | Sensitive field aliases | common token, cookie, cloud session, database URL, signed URL, webhook secret, and proxy authorization field names | `RedactionPolicy.sensitive_field_names` |
 | Credential-bearing text | bearer tokens, key-value secret assignments, signed URL parameters, and common credential-bearing database URLs | `RedactionPolicy.patterns` |
