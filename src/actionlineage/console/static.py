@@ -533,7 +533,10 @@ def _redacted_context_text(value: str, policy: RedactionPolicy) -> str:
 def _capture_limit_note(metadata: Mapping[str, object]) -> str:
     original_length = metadata.get("original_length", "unknown")
     digest = metadata.get("digest", "unknown")
-    return f"[TRUNCATED original_length={original_length} digest={digest}]"
+    digest_scope = metadata.get("digest_scope", "unknown")
+    return (
+        f"[TRUNCATED original_length={original_length} digest={digest} digest_scope={digest_scope}]"
+    )
 
 
 def _sanitize_note(note: ConsoleNote, policy: RedactionPolicy) -> ConsoleNote:

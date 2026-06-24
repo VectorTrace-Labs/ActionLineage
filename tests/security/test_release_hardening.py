@@ -14,6 +14,7 @@ from hypothesis import strategies as st
 
 from actionlineage.demo import run_demo
 from actionlineage.domain import RedactionPolicy, capture_string, serialize_event_for_persistence
+from actionlineage.domain.redaction import CAPTURE_DIGEST_SCOPE
 from tests.domain.test_events import build_event
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
@@ -881,6 +882,7 @@ def test_capture_string_respects_configured_bound(value: str) -> None:
         assert captured["captured_length"] <= 16
         assert len(str(captured["value"])) <= 16
         assert captured["digest"].startswith("sha256:")
+        assert captured["digest_scope"] == CAPTURE_DIGEST_SCOPE
     else:
         assert len(captured) <= 16
 

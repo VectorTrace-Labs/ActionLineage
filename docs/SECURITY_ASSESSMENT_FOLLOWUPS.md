@@ -57,6 +57,10 @@ and does not expand ActionLineage into a generic tracing platform.
   a journal append commits but projection rebuild fails. Retrying the same
   idempotency key now reports a duplicate and rebuilds the projection instead
   of leaving the query surface stale.
+- **Capture digest scope**: local regression and property tests cover scoped
+  capture digests for truncated text and byte values. Capture metadata now
+  records `actionlineage.capture.v1/redaction-boundary` so bounded-content
+  digests are not confused with plain external content hashes or signatures.
 
 ## Implemented before this slice
 
@@ -97,8 +101,9 @@ and does not expand ActionLineage into a generic tracing platform.
 - **Input limits and redaction**: partially confirmed. Non-finite JSON numbers
   are rejected at the event and redaction boundaries. Event validation,
   normalization, and redaction now enforce default JSON nesting-depth,
-  object-member, and array-length limits. Attachment-count limits and
-  digest-correlation review across all sinks remain open.
+  object-member, and array-length limits. Bounded capture metadata uses scoped
+  digests at the redaction boundary. Attachment-count limits and broader
+  digest-correlation review for observer-supplied body digests remain open.
 - **Container and deployment defaults**: partially confirmed. Runtime hardening
   should remain preview/local-ops scoped until container and Kubernetes defaults
   have executable validation.

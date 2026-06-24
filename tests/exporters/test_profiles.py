@@ -161,6 +161,7 @@ def test_otel_attributes_are_redacted_and_bounded() -> None:
     assert attributes["actionlineage.event_id"] == event.event_id
     assert payload["body"]["marker"] == "actionlineage.capture.v1"
     assert payload["body"]["value"] == "x" * 12
+    assert payload["body"]["digest_scope"] == "actionlineage.capture.v1/redaction-boundary"
 
 
 def test_opentelemetry_semconv_proposal_matches_exporter_keys() -> None:

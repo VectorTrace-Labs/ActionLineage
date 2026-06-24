@@ -446,6 +446,7 @@ def test_console_context_marks_truncated_annotation_text() -> None:
     )
 
     assert notes[0].body.startswith("abcd [TRUNCATED original_length=11 digest=sha256:")
+    assert "digest_scope=actionlineage.capture.v1/redaction-boundary" in notes[0].body
     assert "efghijk" not in notes[0].body
 
 

@@ -19,8 +19,10 @@ from actionlineage.domain.events import (
 
 type Path = tuple[str, ...]
 type CaptureMarker = Literal["actionlineage.capture.v1"]
+type CaptureDigestScope = Literal["actionlineage.capture.v1/redaction-boundary"]
 
 REDACTED_VALUE = "[REDACTED:sensitive]"
+CAPTURE_DIGEST_SCOPE: CaptureDigestScope = "actionlineage.capture.v1/redaction-boundary"
 DEFAULT_MAX_STRING_LENGTH = 4096
 DEFAULT_MAX_BYTES_LENGTH = 4096
 DEFAULT_SENSITIVE_FIELD_NAMES = frozenset(
@@ -62,6 +64,7 @@ class CaptureMetadata:
     captured_length: int
     truncated: bool
     digest: str
+    digest_scope: CaptureDigestScope = CAPTURE_DIGEST_SCOPE
 
     def as_json(self) -> dict[str, JsonValue]:
         return {
@@ -72,6 +75,7 @@ class CaptureMetadata:
             "captured_length": self.captured_length,
             "truncated": self.truncated,
             "digest": self.digest,
+            "digest_scope": self.digest_scope,
         }
 
 
@@ -228,7 +232,8 @@ def capture_string(value: str, *, max_length: int = DEFAULT_MAX_STRING_LENGTH) -
         original_length=len(value),
         captured_length=len(captured),
         truncated=True,
-        digest=sha256_text(value),
+        digest=sha256_capture_text(value),
+        digest_scope=CAPTURE_DIGEST_SCOPE,
     ).as_json()
 
 
@@ -247,8 +252,23 @@ def capture_bytes(
         original_length=len(value),
         captured_length=len(captured),
         truncated=len(value) > max_length,
-        digest=sha256_bytes(value),
+        digest=sha256_capture_bytes(value),
+        digest_scope=CAPTURE_DIGEST_SCOPE,
     ).as_json()
+
+
+def sha256_capture_text(value: str) -> str:
+    return sha256_scoped_capture_bytes("text", value.encode("utf-8"))
+
+
+def sha256_capture_bytes(value: bytes) -> str:
+    return sha256_scoped_capture_bytes("base64", value)
+
+
+def sha256_scoped_capture_bytes(encoding: Literal["text", "base64"], value: bytes) -> str:
+    scope = CAPTURE_DIGEST_SCOPE.encode("ascii")
+    preimage = b"\x00".join((scope, encoding.encode("ascii"), value))
+    return sha256_bytes(preimage)
 
 
 def sha256_text(value: str) -> str:

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 import json
 import logging
 from typing import Any
@@ -13,6 +14,11 @@ from actionlineage.domain import (
     serialize_event_for_persistence,
 )
 from actionlineage.domain.events import JsonValue
+from actionlineage.domain.redaction import (
+    CAPTURE_DIGEST_SCOPE,
+    sha256_capture_bytes,
+    sha256_capture_text,
+)
 from actionlineage.domain.serialization import normalize_json
 from tests.domain.test_events import build_event
 
@@ -79,7 +85,9 @@ def test_oversized_payload_is_truncated_with_metadata_and_digest() -> None:
     assert captured["original_length"] == 80
     assert captured["captured_length"] == 12
     assert captured["truncated"] is True
-    assert captured["digest"].startswith("sha256:")
+    assert captured["digest"] == sha256_capture_text(oversized_value)
+    assert captured["digest"] != f"sha256:{hashlib.sha256(oversized_value.encode()).hexdigest()}"
+    assert captured["digest_scope"] == CAPTURE_DIGEST_SCOPE
 
 
 def test_bytes_capture_is_bounded_and_json_compatible() -> None:
@@ -91,7 +99,13 @@ def test_bytes_capture_is_bounded_and_json_compatible() -> None:
     assert captured["original_length"] == 6
     assert captured["captured_length"] == 3
     assert captured["truncated"] is True
-    assert str(captured["digest"]).startswith("sha256:")
+    assert captured["digest"] == sha256_capture_bytes(b"abcdef")
+    assert captured["digest"] != f"sha256:{hashlib.sha256(b'abcdef').hexdigest()}"
+    assert captured["digest_scope"] == CAPTURE_DIGEST_SCOPE
+
+
+def test_capture_digest_scope_separates_text_and_bytes() -> None:
+    assert sha256_capture_text("abcdef") != sha256_capture_bytes(b"abcdef")
 
 
 def test_redaction_failure_cannot_silently_serialize_original_value() -> None:
