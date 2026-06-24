@@ -163,6 +163,36 @@ def test_observer_attestation_policy_boundary_is_tracked() -> None:
     assert "policy for future independent-observer declarations" in followups
 
 
+def test_canonicalization_v1_boundary_is_tracked() -> None:
+    adr = (PROJECT_ROOT / "docs/ADR/0013-canonicalization-v1-conformance.md").read_text(
+        encoding="utf-8"
+    )
+    data_model = (PROJECT_ROOT / "docs/DATA_MODEL.md").read_text(encoding="utf-8")
+    journal_integrity = (PROJECT_ROOT / "docs/JOURNAL_INTEGRITY.md").read_text(encoding="utf-8")
+    compatibility = (PROJECT_ROOT / "docs/COMPATIBILITY.md").read_text(encoding="utf-8")
+    scorecard = (PROJECT_ROOT / "docs/QUALITY_SCORECARD.md").read_text(encoding="utf-8")
+    maturity = (PROJECT_ROOT / "docs/MATURITY.md").read_text(encoding="utf-8")
+    followups = (PROJECT_ROOT / "docs/SECURITY_ASSESSMENT_FOLLOWUPS.md").read_text(encoding="utf-8")
+
+    assert "- Status: Proposed" in adr
+    assert "Do not replace `actionlineage.dev/json-deterministic-v0`" in adr
+    assert "json-canonicalization-v1" in adr
+    assert "conformance vectors" in adr
+    assert "expected bytes and" in adr
+    assert "SHA-256 digests" in adr
+    assert "migration ADR" in adr
+    assert "active public-alpha journal" in data_model
+    assert "serialization boundary" in data_model
+    assert "not yet a claim of portable" in data_model
+    assert "cross-language canonical JSON" in data_model
+    assert "does not claim RFC 8785/JCS conformance" in journal_integrity
+    assert "Adopting `actionlineage.dev/json-canonicalization-v1`" in compatibility
+    assert "Portable canonicalization v1 is not yet a persisted hash format" in scorecard
+    assert "Portable canonicalization v1 with conformance vectors" in maturity
+    assert "ADR-0013 now proposes the" in followups
+    assert "before stronger portability claims" in followups
+
+
 def test_local_release_planning_docs_are_ignored_and_not_linked_publicly() -> None:
     gitignore = (PROJECT_ROOT / ".gitignore").read_text(encoding="utf-8")
     ignore_patterns = tuple(

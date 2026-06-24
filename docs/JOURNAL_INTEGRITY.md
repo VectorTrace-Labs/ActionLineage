@@ -20,6 +20,13 @@ bytes, or multiple JSON values on one line fail verification as
 UTF-8, and non-finite numeric tokens are rejected during parsing before a record
 can become verified evidence.
 
+The active public-alpha canonicalization label is
+`actionlineage.dev/json-deterministic-v0`. ADR-0013 keeps portable
+`json-canonicalization-v1` adoption behind checked-in conformance vectors,
+migration rules, and explicit handling for existing journals. Until that work
+lands, ActionLineage does not claim RFC 8785/JCS conformance or stable
+multi-language canonical JSON equivalence.
+
 This is tamper-evident relative to the journal bytes and any trusted anchor. It
 is not tamper-proof, forensically complete, or resistant to an attacker who can
 rewrite both the journal and all trusted anchors.

@@ -1,6 +1,6 @@
 # Known Limitations
 
-Last reviewed: 2026-06-23.
+Last reviewed: 2026-06-24.
 
 This page collects public-alpha limitations that reviewers should keep in view.
 The maturity model in `docs/MATURITY.md` remains the source of truth for
@@ -27,6 +27,10 @@ supported, local-proof, preview, planned, and external-validation labels.
   be rebuilt from supported journals when in doubt.
 - Hardware-backed signing, remote attestation, and managed evidence storage are
   not part of the public alpha.
+- Journal records are byte-canonical under
+  `actionlineage.dev/json-deterministic-v0`, but portable
+  `json-canonicalization-v1` and RFC 8785/JCS-style claims remain planned until
+  conformance vectors and migration rules exist.
 
 ## Runtime And Integration Scope
 

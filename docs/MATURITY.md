@@ -90,6 +90,7 @@ evidence and limitations.
   owner-approved release publishes updated metadata.
 - Homebrew tap and formula publication.
 - conda-forge recipe publication.
+- Portable canonicalization v1 with conformance vectors and migration rules.
 - Branch protection and GitHub security-control status.
 - Independent security review, outside user evaluation, production operating
   history, and public feedback.

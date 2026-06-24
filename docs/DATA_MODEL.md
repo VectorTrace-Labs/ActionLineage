@@ -47,6 +47,12 @@ Every persisted record uses the same strict envelope and a typed or documented p
 }
 ```
 
+`actionlineage.dev/json-deterministic-v0` is the active public-alpha journal
+serialization boundary. ADR-0013 reserves
+`actionlineage.dev/json-canonicalization-v1` as a future portable
+canonicalization boundary that requires conformance vectors and migration rules
+before it can be used for persisted evidence hashes.
+
 ## Principal types
 
 - `human`
@@ -233,6 +239,10 @@ event records the previous persisted event hash in
 `integrity.event_hash`. A record is considered complete only after its newline
 terminator has been written; verification reports `truncated_record` for a
 final record missing that terminator and stops at the prior verified prefix.
+
+This is local byte-canonical verification under
+`actionlineage.dev/json-deterministic-v0`. It is not yet a claim of portable
+cross-language canonical JSON or RFC 8785/JCS conformance.
 
 The hash input is the redacted persisted event with `integrity.event_hash` set to `null`. This avoids recursive hashing while binding every other event field, including `previous_event_hash`, into the digest.
 

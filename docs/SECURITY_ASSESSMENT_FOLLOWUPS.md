@@ -175,10 +175,11 @@ and does not expand ActionLineage into a generic tracing platform.
   or externally anchored checkpoint identity.
 - **Canonicalization v1**: partially confirmed. Local journal records are now
   byte-canonical under the current deterministic serializer, but that serializer
-  remains an interim `json-deterministic-v0` boundary. A cross-language
-  canonicalization standard such as RFC 8785/JCS still requires conformance
-  vectors for Unicode, numbers, timestamps, escaping, duplicate keys, and schema
-  versions before stronger portability claims.
+  remains an interim `json-deterministic-v0` boundary. ADR-0013 now proposes the
+  conformance and migration boundary for future `json-canonicalization-v1`.
+  Checked-in vectors for Unicode, numbers, timestamps, escaping, duplicate
+  keys, expected bytes, SHA-256 digests, and schema versions remain required
+  before stronger portability claims.
 - **Causality model evolution**: confirmed as schema-evolution work. Current
   sequence handling still couples source sequence and journal order. Multi-parent
   causal edges require a versioned schema change or migration path.
@@ -235,7 +236,7 @@ and does not expand ActionLineage into a generic tracing platform.
 
 1. Use the captured 10k/100k/250k benchmark evidence before proposing segmented
    journals, checkpoint indexes, or ADR-0011 append-index cache work.
-2. Resolve and implement ADR-0012 observer attestation policy, then draft ADRs
-   for canonicalization v1, causal edge evolution, and external checkpoint trust
-   roots.
+2. Resolve and implement ADR-0012 observer attestation policy and ADR-0013
+   canonicalization v1 conformance, then draft ADRs for causal edge evolution
+   and external checkpoint trust roots.
 3. Audit redaction digest behavior across any future structured log surfaces.
