@@ -13,6 +13,9 @@ from pathlib import Path
 from actionlineage.domain import EventType, ResourceType, TrustLevel, VerificationStatus
 from actionlineage.domain.events import JsonObject, JsonValue
 
+OBSERVER_BODY_DIGEST_SCOPE = "actionlineage.observer.body-digest.v1"
+OBSERVER_SIGNATURE_DIGEST_SCOPE = "actionlineage.observer.signature-digest.v1"
+
 
 class ObserverOutcome(StrEnum):
     """Observer outcome vocabulary."""
@@ -158,7 +161,9 @@ class MockHttpReceiverObserver:
     receipts: list[JsonObject] = field(default_factory=list)
 
     def record_receipt(self, *, destination: str, body_digest: str) -> None:
-        self.receipts.append({"destination": destination, "body_digest": body_digest})
+        receipt: JsonObject = {"destination": destination}
+        _set_body_digest(receipt, body_digest)
+        self.receipts.append(receipt)
 
     def observe_receipt(
         self,
@@ -182,7 +187,7 @@ class MockHttpReceiverObserver:
                     observed_state={
                         "ambiguous_candidate_count": len(exact_matches),
                         "destination": destination,
-                        "expected_body_digest": expected_body_digest,
+                        **_expected_body_digest_state(expected_body_digest),
                     },
                 )
             if len(exact_matches) == 1:
@@ -204,7 +209,7 @@ class MockHttpReceiverObserver:
                     outcome=ObserverOutcome.CONFLICTING,
                     observed_state={
                         "candidate_count": len(candidates),
-                        "expected_body_digest": expected_body_digest,
+                        **_expected_body_digest_state(expected_body_digest),
                         "receipt": candidates[0],
                     },
                     limitations=("receiver observed a conflicting body digest",),
@@ -268,7 +273,7 @@ class HttpServerLogObserver:
         if request_id is not None:
             entry["request_id"] = request_id
         if body_digest is not None:
-            entry["body_digest"] = body_digest
+            _set_body_digest(entry, body_digest)
         self.log_entries.append(entry)
 
     def observe_access(
@@ -301,6 +306,7 @@ class HttpServerLogObserver:
                 resource_identifier=url,
                 observed_state={
                     "ambiguous_candidate_count": len(exact_matches),
+                    **_expected_body_digest_state(expected_body_digest),
                     "method": method,
                     "url": url,
                 },
@@ -331,6 +337,7 @@ class HttpServerLogObserver:
                 observed_state={
                     "candidate_count": len(candidates),
                     "conflicts": conflicts,
+                    **_expected_body_digest_state(expected_body_digest),
                     "log_entry": entry,
                 },
                 limitations=("server log entry conflicted with expected request metadata",),
@@ -366,7 +373,7 @@ class HttpResponseReadbackObserver:
 
         response: JsonObject = {"status_code": status_code, "url": url}
         if body_digest is not None:
-            response["body_digest"] = body_digest
+            _set_body_digest(response, body_digest)
         if etag is not None:
             response["etag"] = etag
         self.responses.append(response)
@@ -398,6 +405,7 @@ class HttpResponseReadbackObserver:
                 resource_identifier=url,
                 observed_state={
                     "ambiguous_candidate_count": len(exact_matches),
+                    **_expected_body_digest_state(expected_body_digest),
                     "url": url,
                 },
             )
@@ -428,6 +436,7 @@ class HttpResponseReadbackObserver:
                 observed_state={
                     "candidate_count": len(candidates),
                     "conflicts": conflicts,
+                    **_expected_body_digest_state(expected_body_digest),
                     "response": response,
                 },
                 limitations=("response readback conflicted with expected metadata",),
@@ -463,14 +472,14 @@ class WebhookReceiptObserver:
         """Record a fixture webhook delivery without raw body or header values."""
 
         receipt: JsonObject = {
-            "body_digest": body_digest,
             "callback_url": callback_url,
             "delivery_id": delivery_id,
         }
+        _set_body_digest(receipt, body_digest)
         if status_code is not None:
             receipt["status_code"] = status_code
         if signature_digest is not None:
-            receipt["signature_digest"] = signature_digest
+            _set_signature_digest(receipt, signature_digest)
         self.receipts.append(receipt)
 
     def observe_delivery(
@@ -506,6 +515,7 @@ class WebhookReceiptObserver:
                     "ambiguous_candidate_count": len(exact_matches),
                     "callback_url": callback_url,
                     "delivery_id": delivery_id,
+                    **_expected_body_digest_state(expected_body_digest),
                 },
             )
         if len(exact_matches) == 1:
@@ -534,6 +544,7 @@ class WebhookReceiptObserver:
                 observed_state={
                     "candidate_count": len(candidates),
                     "conflicts": conflicts,
+                    **_expected_body_digest_state(expected_body_digest),
                     "receipt": receipt,
                 },
                 limitations=("webhook receipt conflicted with expected delivery metadata",),
@@ -701,6 +712,25 @@ def _ambiguous_http_observation(
         limitations=("multiple plausible observer records matched; correlation remains ambiguous",),
         trust=TrustLevel.LOCAL,
     )
+
+
+def _set_body_digest(target: JsonObject, body_digest: str) -> None:
+    target["body_digest"] = body_digest
+    target["body_digest_scope"] = OBSERVER_BODY_DIGEST_SCOPE
+
+
+def _set_signature_digest(target: JsonObject, signature_digest: str) -> None:
+    target["signature_digest"] = signature_digest
+    target["signature_digest_scope"] = OBSERVER_SIGNATURE_DIGEST_SCOPE
+
+
+def _expected_body_digest_state(expected_body_digest: str | None) -> JsonObject:
+    if expected_body_digest is None:
+        return {}
+    return {
+        "expected_body_digest": expected_body_digest,
+        "expected_body_digest_scope": OBSERVER_BODY_DIGEST_SCOPE,
+    }
 
 
 def _webhook_receipt_conflicts(

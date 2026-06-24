@@ -47,6 +47,13 @@ HTTP response readbacks are fixture observations of a post-action response.
 They record URL, status code, optional ETag, and optional body digest. They do
 not store raw response bodies.
 
+Fixture HTTP receiver, server-log, response-readback, and webhook observers
+preserve caller-supplied digest strings for local correlation and add explicit
+scope fields such as `body_digest_scope`,
+`expected_body_digest_scope`, and `signature_digest_scope`. These scopes
+identify the digest as observer fixture metadata, not a raw body, signature
+verification result, or external trust root.
+
 When HTTP receiver, server-log, response-readback, or webhook observers find
 multiple equally plausible fixture records, they return `unverified` with an
 `ambiguous_candidate_count` and a limitation that the correlation remains

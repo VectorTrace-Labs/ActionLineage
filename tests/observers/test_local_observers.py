@@ -12,6 +12,8 @@ from actionlineage.domain import (
     VerificationStatus,
 )
 from actionlineage.observers import (
+    OBSERVER_BODY_DIGEST_SCOPE,
+    OBSERVER_SIGNATURE_DIGEST_SCOPE,
     FilesystemObserver,
     HttpResponseReadbackObserver,
     HttpServerLogObserver,
@@ -108,7 +110,14 @@ def test_http_receiver_observer_reports_verified_and_conflicting_receipts() -> N
 
     assert observed.outcome == ObserverOutcome.OBSERVED
     assert observed.trust == TrustLevel.LOCAL
+    assert (
+        observed.as_payload()["observed_state"]["receipt"]["body_digest_scope"]
+        == OBSERVER_BODY_DIGEST_SCOPE
+    )
     assert conflicting.outcome == ObserverOutcome.CONFLICTING
+    assert conflicting.as_payload()["observed_state"]["expected_body_digest_scope"] == (
+        OBSERVER_BODY_DIGEST_SCOPE
+    )
 
 
 def test_http_receiver_observer_keeps_ambiguous_receipts_unverified() -> None:
@@ -161,7 +170,13 @@ def test_http_server_log_observer_reports_observed_conflicting_and_unverified() 
 
     assert observed.outcome == ObserverOutcome.OBSERVED
     assert observed.as_payload()["observed_state"]["log_entry"]["request_id"] == "req-1"
+    assert observed.as_payload()["observed_state"]["log_entry"]["body_digest_scope"] == (
+        OBSERVER_BODY_DIGEST_SCOPE
+    )
     assert conflicting.outcome == ObserverOutcome.CONFLICTING
+    assert conflicting.as_payload()["observed_state"]["expected_body_digest_scope"] == (
+        OBSERVER_BODY_DIGEST_SCOPE
+    )
     assert conflicting.as_payload()["observed_state"]["conflicts"] == [
         "body_digest",
         "status_code",
@@ -218,7 +233,13 @@ def test_http_response_readback_observer_reports_observed_conflicting_and_unveri
 
     assert observed.outcome == ObserverOutcome.OBSERVED
     assert observed.as_payload()["observed_state"]["response"]["etag"] == "etag-1"
+    assert observed.as_payload()["observed_state"]["response"]["body_digest_scope"] == (
+        OBSERVER_BODY_DIGEST_SCOPE
+    )
     assert conflicting.outcome == ObserverOutcome.CONFLICTING
+    assert conflicting.as_payload()["observed_state"]["expected_body_digest_scope"] == (
+        OBSERVER_BODY_DIGEST_SCOPE
+    )
     assert conflicting.as_payload()["observed_state"]["conflicts"] == [
         "body_digest",
         "etag",
@@ -280,7 +301,16 @@ def test_webhook_receipt_observer_reports_observed_conflicting_and_unverified() 
     assert observed.as_payload()["observed_state"]["receipt"]["signature_digest"] == (
         "sha256:signature"
     )
+    assert observed.as_payload()["observed_state"]["receipt"]["body_digest_scope"] == (
+        OBSERVER_BODY_DIGEST_SCOPE
+    )
+    assert observed.as_payload()["observed_state"]["receipt"]["signature_digest_scope"] == (
+        OBSERVER_SIGNATURE_DIGEST_SCOPE
+    )
     assert conflicting.outcome == ObserverOutcome.CONFLICTING
+    assert conflicting.as_payload()["observed_state"]["expected_body_digest_scope"] == (
+        OBSERVER_BODY_DIGEST_SCOPE
+    )
     assert conflicting.as_payload()["observed_state"]["conflicts"] == [
         "body_digest",
         "status_code",

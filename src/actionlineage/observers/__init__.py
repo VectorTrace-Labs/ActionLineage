@@ -15,6 +15,8 @@ from actionlineage.observers.external import (
     external_sensor_observation_from_dict,
 )
 from actionlineage.observers.local import (
+    OBSERVER_BODY_DIGEST_SCOPE,
+    OBSERVER_SIGNATURE_DIGEST_SCOPE,
     FilesystemObserver,
     HttpResponseReadbackObserver,
     HttpServerLogObserver,
@@ -32,6 +34,8 @@ from actionlineage.observers.verification import (
 )
 
 __all__ = [
+    "OBSERVER_BODY_DIGEST_SCOPE",
+    "OBSERVER_SIGNATURE_DIGEST_SCOPE",
     "AwsCloudTrailObserver",
     "AzureActivityObserver",
     "ExternalSensorDeclaration",

@@ -61,6 +61,10 @@ and does not expand ActionLineage into a generic tracing platform.
   capture digests for truncated text and byte values. Capture metadata now
   records `actionlineage.capture.v1/redaction-boundary` so bounded-content
   digests are not confused with plain external content hashes or signatures.
+- **Observer digest scope**: local observer regressions cover body, expected
+  body, and webhook signature digest scope fields. HTTP fixture observers now
+  preserve digest strings for correlation while labeling them as observer
+  metadata rather than raw bodies, signatures, or external trust roots.
 
 ## Implemented before this slice
 
@@ -102,8 +106,10 @@ and does not expand ActionLineage into a generic tracing platform.
   are rejected at the event and redaction boundaries. Event validation,
   normalization, and redaction now enforce default JSON nesting-depth,
   object-member, and array-length limits. Bounded capture metadata uses scoped
-  digests at the redaction boundary. Attachment-count limits and broader
-  digest-correlation review for observer-supplied body digests remain open.
+  digests at the redaction boundary. HTTP fixture observers label
+  observer-supplied body and signature digests with explicit scope metadata.
+  Attachment-count limits and broader digest-correlation review across
+  non-observer sinks remain open.
 - **Container and deployment defaults**: partially confirmed. Runtime hardening
   should remain preview/local-ops scoped until container and Kubernetes defaults
   have executable validation.
