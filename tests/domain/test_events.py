@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import math
 from datetime import UTC, datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any
@@ -182,3 +183,73 @@ def test_event_payload_is_recursively_immutable_and_serializes_stably() -> None:
         "metadata": {"reviewed": True},
         "evidence": [{"id": "ev_1", "tags": ["observed", "verified"]}],
     }
+
+
+def test_event_payload_blocks_base_class_descriptor_mutation_bypasses() -> None:
+    event = build_event(payload={"items": [{"id": "ev_1"}], "metadata": {"reviewed": True}})
+    original = serialize_event(event)
+    items = event.payload["items"]
+    first_item = items[0]
+
+    with pytest.raises(TypeError):
+        dict.__setitem__(event.payload, "tampered", True)  # type: ignore[arg-type]
+    with pytest.raises(TypeError):
+        dict.update(event.payload, {"tampered": True})  # type: ignore[arg-type]
+    with pytest.raises(TypeError):
+        list.append(items, {"id": "ev_2"})  # type: ignore[arg-type]
+    with pytest.raises(TypeError):
+        list.__setitem__(items, 0, {"id": "ev_tampered"})  # type: ignore[arg-type]
+    with pytest.raises(TypeError):
+        dict.__setitem__(first_item, "id", "ev_tampered")  # type: ignore[arg-type]
+
+    assert serialize_event(event) == original
+
+
+def test_event_payload_is_not_mutated_by_source_aliases() -> None:
+    source: dict[str, Any] = {"nested": []}
+    event = build_event(payload=source)
+    original = serialize_event(event)
+
+    source["nested"].append("changed")
+    source["added"] = True
+
+    assert serialize_event(event) == original
+    assert event_to_dict(event)["payload"] == {"nested": []}
+
+
+def test_event_model_copy_update_revalidates_payload_immutability() -> None:
+    event = build_event(payload={"items": []})
+
+    copied = event.model_copy(update={"payload": {"items": []}})
+    original = serialize_event(copied)
+
+    with pytest.raises(TypeError):
+        copied.payload["items"].append("changed")  # type: ignore[union-attr]
+    with pytest.raises(TypeError):
+        list.append(copied.payload["items"], "changed")  # type: ignore[arg-type]
+
+    assert serialize_event(copied) == original
+
+
+def test_event_model_construct_revalidates_payload_immutability() -> None:
+    event_data = event_to_dict(build_event(payload={"items": []}))
+    event_data["payload"] = {"items": []}
+
+    constructed = EventEnvelope.model_construct(**event_data)
+    original = serialize_event(constructed)
+
+    with pytest.raises(TypeError):
+        constructed.payload["items"].append("changed")  # type: ignore[union-attr]
+    with pytest.raises(TypeError):
+        list.append(constructed.payload["items"], "changed")  # type: ignore[arg-type]
+
+    assert serialize_event(constructed) == original
+
+
+@pytest.mark.parametrize("value", [math.nan, math.inf, -math.inf])
+def test_non_finite_payload_numbers_are_rejected(value: float) -> None:
+    with pytest.raises(ValidationError, match="non-finite"):
+        build_event(payload={"number": value})
+
+    with pytest.raises(ValidationError, match="non-finite"):
+        build_event(payload={"nested": [value]})

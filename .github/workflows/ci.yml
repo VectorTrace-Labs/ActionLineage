@@ -135,6 +135,7 @@ jobs:
           docker run --rm \
             -v "$PWD/build/docker-ci:/artifacts" \
             actionlineage:ci projection timeline /artifacts/demo/projection.sqlite \
+              --journal-path /artifacts/demo/evidence.jsonl \
               --trace-id trace_demo_evidence_plane
           docker run --rm \
             -v "$PWD/build/docker-ci:/artifacts" \

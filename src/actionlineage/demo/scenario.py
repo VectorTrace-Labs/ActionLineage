@@ -83,15 +83,16 @@ class DemoResult:
                 ),
                 "timeline": (
                     f"uv run actionlineage projection timeline {self.database_path} "
-                    f"--trace-id {self.trace_id}"
+                    f"--journal-path {self.journal_path} --trace-id {self.trace_id}"
                 ),
                 "incident": (
                     f"uv run actionlineage projection export-incident {self.database_path} "
-                    f"--trace-id {self.trace_id}"
+                    f"--journal-path {self.journal_path} --trace-id {self.trace_id}"
                 ),
                 "console": (
                     f"uv run actionlineage projection export-console {self.database_path} "
-                    f"{self.output_dir / 'console.html'} --trace-id {self.trace_id}"
+                    f"{self.output_dir / 'console.html'} --journal-path {self.journal_path} "
+                    f"--trace-id {self.trace_id}"
                 ),
             },
         }
@@ -116,7 +117,7 @@ def run_demo(output_dir: Path) -> DemoResult:
 
     verification = journal.verify(expected_record_count=len(events))
     projection = rebuild_projection(journal_path, database_path)
-    incident = export_incident(database_path, trace_id=DEMO_TRACE_ID)
+    incident = export_incident(database_path, journal_path=journal_path, trace_id=DEMO_TRACE_ID)
 
     _write_private_bytes(
         timeline_path,

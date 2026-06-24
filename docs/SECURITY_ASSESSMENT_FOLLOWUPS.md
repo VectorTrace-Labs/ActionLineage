@@ -4,17 +4,30 @@ This note tracks the current hardening assessment from the public-alpha
 security review. It is intentionally scoped to actionable repository follow-up
 and does not expand ActionLineage into a generic tracing platform.
 
-## Implemented in this hardening slice
+## Adversarially verified in this hardening slice
 
-- **Deep immutability of verified state**: confirmed. `EventEnvelope.payload`
-  previously froze the top-level Pydantic model but left nested dictionaries
-  and lists mutable. Payloads are now recursively frozen at validation time and
-  thawed only for deterministic JSON serialization.
-- **Projection-to-journal binding**: confirmed. SQLite query and export paths
-  could read a projection without proving it still matched the canonical
-  verified journal. Projection-backed reads now verify source journal identity,
-  verified record count, terminal hash, row count, event hashes, and canonical
-  event JSON before returning evidence.
+- **Immutable verified event payload views**: local regression tests cover
+  ordinary mutation, `dict.__setitem__`, `dict.update`, `list.append`,
+  `list.__setitem__`, caller alias mutation, and Pydantic
+  `model_copy(update=...)`/`model_construct(...)` paths. `EventEnvelope.payload`
+  now uses immutable `Mapping`/sequence containers that do not subclass mutable
+  built-ins, and returns mutable JSON only through explicit serialization
+  boundaries as defensive copies.
+- **SQLite projection binding for verified reads**: local regression tests cover
+  every projected column that can influence selection, ordering, interpretation,
+  or output, including selector fields, timestamps, sequence, parent IDs,
+  verification status, evidence-link IDs, event JSON, hashes, record numbers,
+  and unexpected SQLite runtime types. Projection-backed reads now use an
+  explicit caller-supplied journal path, a read-only SQLite connection,
+  `PRAGMA query_only`, one read transaction for verification and query, complete
+  row verification from the same deterministic derivation used for insertion,
+  and a terminal journal-state recheck before returning current results.
+- **Read-only projection verification and health**: local regression tests cover
+  missing and incomplete projection databases and assert verification does not
+  create files, tables, metadata, or migrations on read paths.
+
+## Implemented before this slice
+
 - **Ordinal service RBAC**: confirmed. ADR-0007 and implementation used a role
   rank ladder. Roles are now compatibility bundles of explicit capabilities,
   with no inheritance between `read`, `write`, and `export`.
@@ -32,15 +45,21 @@ and does not expand ActionLineage into a generic tracing platform.
 - **External trust root**: confirmed as future work. Local hash chains and local
   anchors remain local tamper evidence only. Remote witness, KMS/HSM signing,
   transparency log, or WORM storage support needs a checkpoint ADR before code.
+- **Stable journal identity**: partially confirmed. Verified projection reads
+  now require an independently configured journal path and mandatory projection
+  source identity metadata, with relative and symlink aliases normalized. This
+  remains a path-based local-alpha identity, not a cryptographic journal UUID or
+  externally anchored checkpoint identity.
 - **Canonicalization v1**: partially confirmed. The current deterministic JSON
   boundary is documented as interim. A cross-language canonicalization standard
   or byte-level specification requires conformance vectors and migration notes.
 - **Causality model evolution**: confirmed as schema-evolution work. Current
   sequence handling still couples source sequence and journal order. Multi-parent
   causal edges require a versioned schema change or migration path.
-- **Input limits and redaction**: partially confirmed. Existing redaction and
-  size controls need structural-depth, collection-count, attachment-count, and
-  digest-correlation review across all sinks.
+- **Input limits and redaction**: partially confirmed. Non-finite JSON numbers
+  are rejected at the event and redaction boundaries. Existing redaction and
+  size controls still need structural-depth, collection-count, attachment-count,
+  and digest-correlation review across all sinks.
 - **Container and deployment defaults**: partially confirmed. Runtime hardening
   should remain preview/local-ops scoped until container and Kubernetes defaults
   have executable validation.
@@ -61,13 +80,15 @@ and does not expand ActionLineage into a generic tracing platform.
 
 ## Next implementation order
 
-1. Add projection-state checks to any future non-SQLite read APIs before those
+1. Draft an ADR for stable journal identity beyond local path strings, including
+   journal UUID/checkpoint behavior and migration semantics.
+2. Add projection-state checks to any future non-SQLite read APIs before those
    APIs are exposed.
-2. Benchmark append verification at 10k, 100k, and feasible larger journals
+3. Benchmark append verification at 10k, 100k, and feasible larger journals
    before proposing segmented journals or checkpoint indexes.
-3. Draft ADRs for observer attestation policy, canonicalization v1, causal edge
+4. Draft ADRs for observer attestation policy, canonicalization v1, causal edge
    evolution, and external checkpoint trust roots.
-4. Expand service ingestion tests for concurrency, idempotency conflicts,
+5. Expand service ingestion tests for concurrency, idempotency conflicts,
    projection rebuild failure after append, and partial batch responses.
-5. Audit input structural limits and redaction digest behavior across journal,
+6. Audit input structural limits and redaction digest behavior across journal,
    projection, export, logs, exceptions, and test snapshots.

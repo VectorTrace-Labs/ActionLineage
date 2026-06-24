@@ -30,7 +30,9 @@ renders deterministic projection timelines with:
 Expose it through both Python APIs and a CLI command:
 
 ```bash
-uv run actionlineage projection export-console projection.sqlite console.html --trace-id trace_123
+uv run actionlineage projection export-console projection.sqlite console.html \
+  --journal-path evidence.jsonl \
+  --trace-id trace_123
 ```
 
 Optional case context is accepted as a JSON file containing notes and saved

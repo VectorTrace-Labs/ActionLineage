@@ -94,9 +94,11 @@ uv run --all-extras pytest
 uv run actionlineage demo run --output-dir build/actionlineage-demo
 uv run actionlineage journal verify build/actionlineage-demo/evidence.jsonl
 uv run actionlineage projection timeline build/actionlineage-demo/projection.sqlite \
+  --journal-path build/actionlineage-demo/evidence.jsonl \
   --trace-id trace_demo_evidence_plane
 uv run actionlineage projection export-console build/actionlineage-demo/projection.sqlite \
   build/actionlineage-demo/console.html \
+  --journal-path build/actionlineage-demo/evidence.jsonl \
   --trace-id trace_demo_evidence_plane
 ```
 
@@ -115,6 +117,7 @@ docker run --rm -v "$PWD/build/docker-ci:/artifacts" \
   actionlineage:ci journal verify /artifacts/demo/evidence.jsonl
 docker run --rm -v "$PWD/build/docker-ci:/artifacts" \
   actionlineage:ci projection timeline /artifacts/demo/projection.sqlite \
+  --journal-path /artifacts/demo/evidence.jsonl \
   --trace-id trace_demo_evidence_plane
 docker run --rm -v "$PWD/build/docker-ci:/artifacts" \
   actionlineage:ci contract validate \

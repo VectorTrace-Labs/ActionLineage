@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from collections.abc import Iterable, Iterator
+from collections.abc import Iterable, Iterator, Mapping
 from dataclasses import dataclass
 from enum import StrEnum
 from typing import Protocol
@@ -418,7 +418,7 @@ def _existing_idempotency_keys(
 
 def _event_idempotency_key(event: EventEnvelope) -> str | None:
     ingest = event.payload.get("ingest")
-    if not isinstance(ingest, dict):
+    if not isinstance(ingest, Mapping):
         return None
     key = ingest.get("idempotency_key")
     if isinstance(key, str) and key:

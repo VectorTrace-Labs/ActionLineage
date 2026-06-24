@@ -157,7 +157,7 @@ down environments, use a local relative directory instead:
 
 ```bash
 actionlineage demo run --output-dir actionlineage-demo
-actionlineage projection export-console actionlineage-demo/projection.sqlite actionlineage-demo/console.html --trace-id trace_demo_evidence_plane
+actionlineage projection export-console actionlineage-demo/projection.sqlite actionlineage-demo/console.html --journal-path actionlineage-demo/evidence.jsonl --trace-id trace_demo_evidence_plane
 ```
 
 The static console is an HTML file. If double-clicking does not open it, open

@@ -17,6 +17,7 @@ uv run actionlineage demo run --output-dir build/actionlineage-demo
 uv run actionlineage projection export-console \
   build/actionlineage-demo/projection.sqlite \
   build/actionlineage-demo/console.html \
+  --journal-path build/actionlineage-demo/evidence.jsonl \
   --trace-id trace_demo_evidence_plane
 ```
 
@@ -52,6 +53,7 @@ To include analyst annotations and saved view hints, provide a JSON context file
 uv run actionlineage projection export-console \
   build/actionlineage-demo/projection.sqlite \
   build/actionlineage-demo/console.html \
+  --journal-path build/actionlineage-demo/evidence.jsonl \
   --trace-id trace_demo_evidence_plane \
   --case-context console-context.json
 ```
@@ -64,6 +66,7 @@ For optional native desktop shells, export a deterministic bundle:
 uv run actionlineage projection export-desktop-bundle \
   build/actionlineage-demo/projection.sqlite \
   build/actionlineage-demo/desktop \
+  --journal-path build/actionlineage-demo/evidence.jsonl \
   --trace-id trace_demo_evidence_plane
 ```
 

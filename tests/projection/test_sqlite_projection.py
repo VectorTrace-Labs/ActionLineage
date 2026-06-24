@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 import json
 import sqlite3
 from contextlib import closing
@@ -8,6 +9,7 @@ from pathlib import Path
 import pytest
 from typer.testing import CliRunner
 
+import actionlineage.projection.sqlite as sqlite_projection
 from actionlineage.cli import app
 from actionlineage.domain import (
     CorroborationType,
@@ -109,6 +111,41 @@ def replace_journal_lines(path: Path, lines: list[bytes]) -> None:
     path.write_bytes(b"\n".join(lines) + b"\n")
 
 
+def database_fingerprint(path: Path) -> dict[str, object]:
+    if not path.exists():
+        return {"exists": False}
+    stat = path.stat()
+    digest = hashlib.sha256(path.read_bytes()).hexdigest()
+    user_version: int | None = None
+    schema_objects: list[tuple[object, ...]] | None = None
+    metadata: list[tuple[object, ...]] | None = None
+    try:
+        with closing(sqlite3.connect(f"{path.resolve().as_uri()}?mode=ro", uri=True)) as connection:
+            user_version = connection.execute("PRAGMA user_version").fetchone()[0]
+            schema_objects = connection.execute(
+                """
+                SELECT type, name, sql
+                FROM sqlite_master
+                ORDER BY type, name
+                """
+            ).fetchall()
+            if any(row[1] == "projection_metadata" for row in schema_objects):
+                metadata = connection.execute(
+                    "SELECT key, value FROM projection_metadata ORDER BY key"
+                ).fetchall()
+    except sqlite3.Error:
+        schema_objects = None
+    return {
+        "exists": True,
+        "size": stat.st_size,
+        "mtime_ns": stat.st_mtime_ns,
+        "digest": digest,
+        "user_version": user_version,
+        "schema_objects": schema_objects,
+        "metadata": metadata,
+    }
+
+
 def test_projection_rebuild_is_repeatable_and_rebuilds_after_delete(tmp_path: Path) -> None:
     journal_path = tmp_path / "events.jsonl"
     database_path = tmp_path / "projection.sqlite"
@@ -118,7 +155,7 @@ def test_projection_rebuild_is_repeatable_and_rebuilds_after_delete(tmp_path: Pa
     second = rebuild_projection(journal_path, database_path)
     database_path.unlink()
     rebuilt = rebuild_projection(journal_path, database_path)
-    timeline = query_timeline(database_path, trace_id="trace_01")
+    timeline = query_timeline(database_path, journal_path=journal_path, trace_id="trace_01")
 
     assert first.records_indexed == 5
     assert second.records_indexed == 5
@@ -146,6 +183,38 @@ def test_projection_state_verifies_against_journal_snapshot(tmp_path: Path) -> N
     assert projection.terminal_hash == journal.verify().last_event_hash
 
 
+def test_projection_verification_does_not_create_missing_database(tmp_path: Path) -> None:
+    journal_path = tmp_path / "events.jsonl"
+    database_path = tmp_path / "missing.sqlite"
+    write_journal(journal_path, complete_timeline_events())
+
+    before = database_fingerprint(database_path)
+    with pytest.raises(ProjectionStateError) as exc_info:
+        verify_projection_state(database_path, journal_path=journal_path)
+    after = database_fingerprint(database_path)
+
+    assert exc_info.value.code == ProjectionStateCode.PROJECTION_MISSING
+    assert after == before
+
+
+def test_projection_verification_does_not_mutate_incomplete_schema(tmp_path: Path) -> None:
+    journal_path = tmp_path / "events.jsonl"
+    database_path = tmp_path / "incomplete.sqlite"
+    write_journal(journal_path, complete_timeline_events())
+    database_path.write_bytes(b"")
+
+    before = database_fingerprint(database_path)
+    with pytest.raises(ProjectionStateError) as exc_info:
+        verify_projection_state(database_path, journal_path=journal_path)
+    after = database_fingerprint(database_path)
+
+    assert exc_info.value.code in {
+        ProjectionStateCode.PROJECTION_REBUILD_REQUIRED,
+        ProjectionStateCode.PROJECTION_UNAVAILABLE,
+    }
+    assert after == before
+
+
 def test_timeline_query_fails_closed_when_journal_advances_after_rebuild(
     tmp_path: Path,
 ) -> None:
@@ -163,7 +232,7 @@ def test_timeline_query_fails_closed_when_journal_advances_after_rebuild(
     )
 
     with pytest.raises(ProjectionStateError) as exc_info:
-        query_timeline(database_path, trace_id="trace_01")
+        query_timeline(database_path, journal_path=journal_path, trace_id="trace_01")
 
     assert exc_info.value.code == ProjectionStateCode.PROJECTION_STALE
 
@@ -179,7 +248,7 @@ def test_projection_verification_detects_missing_extra_and_tampered_rows(
     with closing(sqlite3.connect(database_path)) as connection, connection:
         connection.execute("DELETE FROM events WHERE journal_record_number = 5")
     with pytest.raises(ProjectionStateError) as missing:
-        query_timeline(database_path, trace_id="trace_01")
+        query_timeline(database_path, journal_path=journal_path, trace_id="trace_01")
     assert missing.value.code == ProjectionStateCode.PROJECTION_STALE
 
     rebuild_projection(journal_path, database_path)
@@ -232,7 +301,7 @@ def test_projection_verification_detects_missing_extra_and_tampered_rows(
             """
         )
     with pytest.raises(ProjectionStateError) as extra:
-        query_timeline(database_path, trace_id="trace_01")
+        query_timeline(database_path, journal_path=journal_path, trace_id="trace_01")
     assert extra.value.code == ProjectionStateCode.PROJECTION_MISMATCH
 
     rebuild_projection(journal_path, database_path)
@@ -242,8 +311,78 @@ def test_projection_verification_detects_missing_extra_and_tampered_rows(
             "WHERE journal_record_number = 1"
         )
     with pytest.raises(ProjectionStateError) as tampered:
-        query_timeline(database_path, trace_id="trace_01")
+        query_timeline(database_path, journal_path=journal_path, trace_id="trace_01")
     assert tampered.value.code == ProjectionStateCode.PROJECTION_MISMATCH
+
+
+@pytest.mark.parametrize(
+    ("column", "tampered_value"),
+    [
+        ("event_id", "evt_tampered"),
+        ("spec_version", "actionlineage.dev/tampered"),
+        ("event_type", "tampered.event"),
+        ("occurred_at", "1900-01-01T00:00:00Z"),
+        ("observed_at", "1900-01-01T00:00:00Z"),
+        ("trace_id", "other-trace"),
+        ("run_id", "other-run"),
+        ("span_id", "other-span"),
+        ("session_id", "other-session"),
+        ("root_event_id", "evt_other_root"),
+        ("parent_event_id", "evt_other_parent"),
+        ("sequence", 999999),
+        ("event_hash", "sha256:tampered"),
+        ("previous_event_hash", "sha256:tampered_previous"),
+        ("verification_status", "verified"),
+        ("evidence_subject_event_id", "evt_subject_tampered"),
+        ("evidence_event_id", "evt_evidence_tampered"),
+        ("journal_record_number", 999999),
+        ("event_json", '{"tampered":true}'),
+    ],
+)
+def test_projection_verification_detects_single_projected_column_tamper(
+    tmp_path: Path,
+    column: str,
+    tampered_value: object,
+) -> None:
+    journal_path = tmp_path / "events.jsonl"
+    database_path = tmp_path / "projection.sqlite"
+    write_journal(journal_path, complete_timeline_events())
+    rebuild_projection(journal_path, database_path)
+
+    with closing(sqlite3.connect(database_path)) as connection, connection:
+        connection.execute(
+            f"UPDATE events SET {column} = ? WHERE journal_record_number = 1",
+            (tampered_value,),
+        )
+
+    with pytest.raises(ProjectionStateError) as exc_info:
+        query_timeline(database_path, journal_path=journal_path, trace_id="trace_01")
+
+    assert exc_info.value.code in {
+        ProjectionStateCode.PROJECTION_MISMATCH,
+        ProjectionStateCode.PROJECTION_STALE,
+    }
+
+
+def test_projection_verification_detects_unexpected_sqlite_runtime_types(
+    tmp_path: Path,
+) -> None:
+    journal_path = tmp_path / "events.jsonl"
+    database_path = tmp_path / "projection.sqlite"
+    write_journal(journal_path, complete_timeline_events())
+    rebuild_projection(journal_path, database_path)
+
+    with closing(sqlite3.connect(database_path)) as connection, connection:
+        connection.execute(
+            "UPDATE events SET event_hash = ? WHERE journal_record_number = 1",
+            (sqlite3.Binary(b"not-text"),),
+        )
+
+    with pytest.raises(ProjectionStateError) as exc_info:
+        query_timeline(database_path, journal_path=journal_path, trace_id="trace_01")
+
+    assert exc_info.value.code == ProjectionStateCode.PROJECTION_MISMATCH
+    assert exc_info.value.details["type_mismatched_columns"] == ["event_hash"]
 
 
 def test_projection_source_identity_mismatch_fails_closed(tmp_path: Path) -> None:
@@ -258,6 +397,70 @@ def test_projection_source_identity_mismatch_fails_closed(tmp_path: Path) -> Non
         query_timeline(database_path, journal_path=other_journal_path, trace_id="trace_01")
 
     assert exc_info.value.code == ProjectionStateCode.PROJECTION_MISMATCH
+
+
+def test_projection_missing_source_identity_requires_rebuild(tmp_path: Path) -> None:
+    journal_path = tmp_path / "events.jsonl"
+    database_path = tmp_path / "projection.sqlite"
+    write_journal(journal_path, complete_timeline_events())
+    rebuild_projection(journal_path, database_path)
+
+    with closing(sqlite3.connect(database_path)) as connection, connection:
+        connection.execute("DELETE FROM projection_metadata WHERE key = 'source_journal_identity'")
+
+    with pytest.raises(ProjectionStateError) as exc_info:
+        query_timeline(database_path, journal_path=journal_path, trace_id="trace_01")
+
+    assert exc_info.value.code == ProjectionStateCode.PROJECTION_REBUILD_REQUIRED
+
+
+def test_projection_mismatched_source_identity_fails_closed(tmp_path: Path) -> None:
+    journal_path = tmp_path / "events.jsonl"
+    database_path = tmp_path / "projection.sqlite"
+    write_journal(journal_path, complete_timeline_events())
+    rebuild_projection(journal_path, database_path)
+
+    with closing(sqlite3.connect(database_path)) as connection, connection:
+        connection.execute(
+            """
+            UPDATE projection_metadata
+            SET value = 'local-file:/tmp/actionlineage-other-journal.jsonl'
+            WHERE key = 'source_journal_identity'
+            """
+        )
+
+    with pytest.raises(ProjectionStateError) as exc_info:
+        query_timeline(database_path, journal_path=journal_path, trace_id="trace_01")
+
+    assert exc_info.value.code == ProjectionStateCode.PROJECTION_MISMATCH
+
+
+def test_projection_journal_path_aliases_are_normalized(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    journal_path = tmp_path / "events.jsonl"
+    database_path = tmp_path / "projection.sqlite"
+    write_journal(journal_path, complete_timeline_events())
+    monkeypatch.chdir(tmp_path)
+
+    rebuild_projection(Path("events.jsonl"), Path("projection.sqlite"))
+    timeline = query_timeline(database_path, journal_path=journal_path, trace_id="trace_01")
+
+    assert timeline.as_dict()["event_count"] == 5
+
+
+def test_projection_journal_symlink_alias_is_normalized(tmp_path: Path) -> None:
+    journal_path = tmp_path / "events.jsonl"
+    journal_alias = tmp_path / "journal-alias.jsonl"
+    database_path = tmp_path / "projection.sqlite"
+    write_journal(journal_path, complete_timeline_events())
+    journal_alias.symlink_to(journal_path)
+
+    rebuild_projection(journal_alias, database_path)
+    timeline = query_timeline(database_path, journal_path=journal_path, trace_id="trace_01")
+
+    assert timeline.as_dict()["event_count"] == 5
 
 
 def test_incident_export_is_blocked_when_projection_is_stale(tmp_path: Path) -> None:
@@ -275,7 +478,7 @@ def test_incident_export_is_blocked_when_projection_is_stale(tmp_path: Path) -> 
     )
 
     with pytest.raises(ProjectionStateError) as exc_info:
-        export_incident(database_path, trace_id="trace_01")
+        export_incident(database_path, journal_path=journal_path, trace_id="trace_01")
 
     assert exc_info.value.code == ProjectionStateCode.PROJECTION_STALE
 
@@ -286,11 +489,61 @@ def test_timeline_selector_values_are_bound_as_data(tmp_path: Path) -> None:
     write_journal(journal_path, complete_timeline_events())
     rebuild_projection(journal_path, database_path)
 
-    injection_shaped = query_timeline(database_path, trace_id="trace_01' OR 1=1 --")
-    normal = query_timeline(database_path, trace_id="trace_01")
+    injection_shaped = query_timeline(
+        database_path, journal_path=journal_path, trace_id="trace_01' OR 1=1 --"
+    )
+    normal = query_timeline(database_path, journal_path=journal_path, trace_id="trace_01")
 
     assert injection_shaped.events == ()
     assert normal.as_dict()["event_count"] == 5
+
+
+def test_verified_projection_reader_uses_one_sqlite_snapshot(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    journal_path = tmp_path / "events.jsonl"
+    database_path = tmp_path / "projection.sqlite"
+    write_journal(journal_path, complete_timeline_events())
+    rebuild_projection(journal_path, database_path)
+    with closing(sqlite3.connect(database_path)) as connection:
+        connection.execute("PRAGMA journal_mode = WAL")
+
+    original_verify = sqlite_projection._verify_projection_state_on_connection
+    tampered = False
+
+    def tamper_after_verification(
+        connection: sqlite3.Connection,
+        *,
+        database_path: Path,
+        journal_path: Path,
+    ) -> sqlite_projection.VerifiedProjectionSnapshot:
+        nonlocal tampered
+        verification = original_verify(
+            connection,
+            database_path=database_path,
+            journal_path=journal_path,
+        )
+        with closing(sqlite3.connect(database_path)) as writer, writer:
+            writer.execute("UPDATE events SET trace_id = 'other-trace' WHERE event_id = 'evt_0'")
+            tampered = True
+        return verification
+
+    monkeypatch.setattr(
+        sqlite_projection,
+        "_verify_projection_state_on_connection",
+        tamper_after_verification,
+    )
+
+    timeline = query_timeline(database_path, journal_path=journal_path, trace_id="trace_01")
+
+    assert tampered is True
+    assert timeline.as_dict()["event_count"] == 5
+    with closing(sqlite3.connect(database_path)) as connection:
+        changed_trace_id = connection.execute(
+            "SELECT trace_id FROM events WHERE event_id = 'evt_0'"
+        ).fetchone()[0]
+    assert changed_trace_id == "other-trace"
 
 
 def test_event_indexing_is_idempotent_for_the_same_projected_event(tmp_path: Path) -> None:
@@ -364,7 +617,7 @@ def test_corrupt_journal_is_rejected_without_replacing_existing_projection(tmp_p
 
     assert exc_info.value.verification.ok is False
     with pytest.raises(ProjectionStateError) as query_error:
-        query_timeline(database_path, run_id="run_01")
+        query_timeline(database_path, journal_path=journal_path, run_id="run_01")
     assert query_error.value.code == ProjectionStateCode.JOURNAL_INVALID
 
 
@@ -386,12 +639,42 @@ def test_unknown_event_type_is_preserved_in_projected_timeline(tmp_path: Path) -
     )
 
     rebuild_projection(journal_path, database_path)
-    timeline = query_timeline(database_path, trace_id="trace_01")
-    incident = export_incident(database_path, trace_id="trace_01")
+    timeline = query_timeline(database_path, journal_path=journal_path, trace_id="trace_01")
+    incident = export_incident(database_path, journal_path=journal_path, trace_id="trace_01")
 
     assert timeline.events[1].event_type == unknown_event_type
     assert timeline.events[1].event["event_type"] == unknown_event_type
     assert incident.as_dict()["events"][1]["event_type"] == unknown_event_type
+
+
+def test_projection_result_as_dict_returns_defensive_json_copies(tmp_path: Path) -> None:
+    journal_path = tmp_path / "events.jsonl"
+    database_path = tmp_path / "projection.sqlite"
+    write_journal(journal_path, complete_timeline_events())
+    rebuild_projection(journal_path, database_path)
+
+    timeline = query_timeline(database_path, journal_path=journal_path, trace_id="trace_01")
+    exported = timeline.as_dict()
+    events = exported["events"]
+    assert isinstance(events, list)
+    first_event = events[0]
+    assert isinstance(first_event, dict)
+    event_object = first_event["event"]
+    assert isinstance(event_object, dict)
+    payload = event_object["payload"]
+    assert isinstance(payload, dict)
+    payload["phase"] = "tampered"
+
+    fresh = timeline.as_dict()
+    fresh_events = fresh["events"]
+    assert isinstance(fresh_events, list)
+    fresh_first_event = fresh_events[0]
+    assert isinstance(fresh_first_event, dict)
+    fresh_event_object = fresh_first_event["event"]
+    assert isinstance(fresh_event_object, dict)
+    fresh_payload = fresh_event_object["payload"]
+    assert isinstance(fresh_payload, dict)
+    assert fresh_payload["phase"] == "started"
 
 
 def test_projection_indexes_verification_status_and_evidence_links(tmp_path: Path) -> None:
@@ -438,7 +721,7 @@ def test_projection_indexes_verification_status_and_evidence_links(tmp_path: Pat
     )
 
     rebuild_projection(journal_path, database_path)
-    timeline = query_timeline(database_path, trace_id="trace_01")
+    timeline = query_timeline(database_path, journal_path=journal_path, trace_id="trace_01")
     verified_event = timeline.events[3]
 
     assert verified_event.verification_status == "verified"
@@ -470,9 +753,15 @@ def test_filtered_timeline_supports_investigation_fields(tmp_path: Path) -> None
     )
     rebuild_projection(journal_path, database_path)
 
-    by_tool = query_filtered_timeline(database_path, tool_name="safe_http.send")
-    by_descriptor = query_filtered_timeline(database_path, descriptor_hash="sha256:demo")
-    by_resource = query_filtered_timeline(database_path, resource="http://127.0.0.1/receiver")
+    by_tool = query_filtered_timeline(
+        database_path, journal_path=journal_path, tool_name="safe_http.send"
+    )
+    by_descriptor = query_filtered_timeline(
+        database_path, journal_path=journal_path, descriptor_hash="sha256:demo"
+    )
+    by_resource = query_filtered_timeline(
+        database_path, journal_path=journal_path, resource="http://127.0.0.1/receiver"
+    )
 
     assert [event.event_id for event in by_tool.events] == ["evt_1"]
     assert [event.event_id for event in by_descriptor.events] == ["evt_1"]
@@ -504,13 +793,18 @@ def test_projection_api_closes_sqlite_connections(
     monkeypatch.setattr(sqlite3, "connect", tracking_connect)
 
     rebuild_projection(journal_path, database_path)
-    query_timeline(database_path, trace_id="trace_01")
-    query_filtered_timeline(database_path, event_type="policy.decision")
-    export_incident(database_path, run_id="run_01")
-    summarize_incident(database_path, trace_id="trace_01")
-    export_investigation_graph(database_path, trace_id="trace_01")
-    explain_event(database_path, event_id="evt_2")
-    export_case_bundle(database_path, case_dir, trace_id="trace_01")
+    query_timeline(database_path, journal_path=journal_path, trace_id="trace_01")
+    query_filtered_timeline(database_path, journal_path=journal_path, event_type="policy.decision")
+    export_incident(database_path, journal_path=journal_path, run_id="run_01")
+    summarize_incident(database_path, journal_path=journal_path, trace_id="trace_01")
+    export_investigation_graph(database_path, journal_path=journal_path, trace_id="trace_01")
+    explain_event(database_path, journal_path=journal_path, event_id="evt_2")
+    export_case_bundle(
+        database_path,
+        case_dir,
+        journal_path=journal_path,
+        trace_id="trace_01",
+    )
 
     assert connections
     assert {id(connection) for connection in connections} == closed_connection_ids
@@ -563,7 +857,9 @@ def test_incident_export_includes_investigation_summary(tmp_path: Path) -> None:
     )
     rebuild_projection(journal_path, database_path)
 
-    incident = export_incident(database_path, trace_id="trace_01").as_dict()
+    incident = export_incident(
+        database_path, journal_path=journal_path, trace_id="trace_01"
+    ).as_dict()
     summary = incident["summary"]
 
     assert summary["principals"] == ["agent_demo"]
@@ -580,7 +876,9 @@ def test_grounded_summary_is_derived_from_incident_evidence(tmp_path: Path) -> N
     write_journal(journal_path, complete_timeline_events())
     rebuild_projection(journal_path, database_path)
 
-    summary = summarize_incident(database_path, trace_id="trace_01").as_dict()
+    summary = summarize_incident(
+        database_path, journal_path=journal_path, trace_id="trace_01"
+    ).as_dict()
 
     assert summary["summary_version"] == "actionlineage.dev/grounded-summary-v0"
     assert summary["model_provider"] is None
@@ -627,7 +925,9 @@ def test_investigation_graph_export_links_events_and_evidence(tmp_path: Path) ->
     )
     rebuild_projection(journal_path, database_path)
 
-    graph = export_investigation_graph(database_path, trace_id="trace_01").as_dict()
+    graph = export_investigation_graph(
+        database_path, journal_path=journal_path, trace_id="trace_01"
+    ).as_dict()
     nodes = {node["id"]: node for node in graph["nodes"]}
     edges = {
         (edge["source"], edge["target"], edge["relationship"]): edge for edge in graph["edges"]
@@ -674,7 +974,9 @@ def test_event_explanation_links_causality_and_evidence(tmp_path: Path) -> None:
     )
     rebuild_projection(journal_path, database_path)
 
-    explanation = explain_event(database_path, event_id="evt_1").as_dict()
+    explanation = explain_event(
+        database_path, journal_path=journal_path, event_id="evt_1"
+    ).as_dict()
 
     assert explanation["parent_event_id"] == "evt_0"
     assert explanation["child_event_ids"] == ["evt_2"]
@@ -690,7 +992,12 @@ def test_case_bundle_export_writes_redacted_reports_without_absence_overclaim(
     write_journal(journal_path, complete_timeline_events())
     rebuild_projection(journal_path, database_path)
 
-    result = export_case_bundle(database_path, bundle_dir, trace_id="trace_01")
+    result = export_case_bundle(
+        database_path,
+        bundle_dir,
+        journal_path=journal_path,
+        trace_id="trace_01",
+    )
     markdown = result.markdown_path.read_text(encoding="utf-8")
     case_data = json.loads(result.json_path.read_text(encoding="utf-8"))
     ndjson_lines = result.ndjson_path.read_text(encoding="utf-8").splitlines()
@@ -713,7 +1020,12 @@ def test_case_bundle_export_refuses_existing_artifacts(tmp_path: Path) -> None:
     existing.write_text("existing\n", encoding="utf-8")
 
     with pytest.raises(ProjectionQueryError, match="already exists"):
-        export_case_bundle(database_path, bundle_dir, trace_id="trace_01")
+        export_case_bundle(
+            database_path,
+            bundle_dir,
+            journal_path=journal_path,
+            trace_id="trace_01",
+        )
 
     assert existing.read_text(encoding="utf-8") == "existing\n"
 
@@ -729,11 +1041,27 @@ def test_projection_cli_rebuild_timeline_and_incident_export(tmp_path: Path) -> 
     )
     timeline_result = runner.invoke(
         app,
-        ["projection", "timeline", str(database_path), "--trace-id", "trace_01"],
+        [
+            "projection",
+            "timeline",
+            str(database_path),
+            "--journal-path",
+            str(journal_path),
+            "--trace-id",
+            "trace_01",
+        ],
     )
     export_result = runner.invoke(
         app,
-        ["projection", "export-incident", str(database_path), "--run-id", "run_01"],
+        [
+            "projection",
+            "export-incident",
+            str(database_path),
+            "--journal-path",
+            str(journal_path),
+            "--run-id",
+            "run_01",
+        ],
     )
 
     rebuild_data = json.loads(rebuild_result.stdout)
@@ -773,15 +1101,39 @@ def test_projection_cli_filter_explain_and_case_export(tmp_path: Path) -> None:
 
     filter_result = runner.invoke(
         app,
-        ["projection", "filter", str(database_path), "--event-type", "policy.decision"],
+        [
+            "projection",
+            "filter",
+            str(database_path),
+            "--journal-path",
+            str(journal_path),
+            "--event-type",
+            "policy.decision",
+        ],
     )
     explain_result = runner.invoke(
         app,
-        ["projection", "explain-event", str(database_path), "evt_2"],
+        [
+            "projection",
+            "explain-event",
+            str(database_path),
+            "evt_2",
+            "--journal-path",
+            str(journal_path),
+        ],
     )
     case_result = runner.invoke(
         app,
-        ["projection", "export-case", str(database_path), str(case_dir), "--trace-id", "trace_01"],
+        [
+            "projection",
+            "export-case",
+            str(database_path),
+            str(case_dir),
+            "--journal-path",
+            str(journal_path),
+            "--trace-id",
+            "trace_01",
+        ],
     )
 
     filter_data = json.loads(filter_result.stdout)
@@ -805,7 +1157,15 @@ def test_projection_cli_summarize(tmp_path: Path) -> None:
 
     result = runner.invoke(
         app,
-        ["projection", "summarize", str(database_path), "--trace-id", "trace_01"],
+        [
+            "projection",
+            "summarize",
+            str(database_path),
+            "--journal-path",
+            str(journal_path),
+            "--trace-id",
+            "trace_01",
+        ],
     )
     data = json.loads(result.stdout)
 
@@ -823,7 +1183,15 @@ def test_projection_cli_export_graph(tmp_path: Path) -> None:
 
     result = runner.invoke(
         app,
-        ["projection", "export-graph", str(database_path), "--trace-id", "trace_01"],
+        [
+            "projection",
+            "export-graph",
+            str(database_path),
+            "--journal-path",
+            str(journal_path),
+            "--trace-id",
+            "trace_01",
+        ],
     )
     data = json.loads(result.stdout)
 

@@ -146,6 +146,7 @@ def write_console(
     database_path: Path,
     output_path: Path,
     *,
+    journal_path: Path,
     trace_id: str | None = None,
     run_id: str | None = None,
     notes: tuple[ConsoleNote, ...] = (),
@@ -154,7 +155,12 @@ def write_console(
 ) -> ConsoleExport:
     """Write a static HTML investigation console from the projection."""
 
-    timeline = query_timeline(database_path, trace_id=trace_id, run_id=run_id)
+    timeline = query_timeline(
+        database_path,
+        journal_path=journal_path,
+        trace_id=trace_id,
+        run_id=run_id,
+    )
     output_path = Path(output_path)
     output_path.parent.mkdir(parents=True, exist_ok=True)
     output_path.write_text(
@@ -178,6 +184,7 @@ def write_desktop_bundle(
     database_path: Path,
     output_dir: Path,
     *,
+    journal_path: Path,
     trace_id: str | None = None,
     run_id: str | None = None,
     notes: tuple[ConsoleNote, ...] = (),
@@ -193,6 +200,7 @@ def write_desktop_bundle(
     console = write_console(
         database_path,
         console_path,
+        journal_path=journal_path,
         trace_id=trace_id,
         run_id=run_id,
         notes=notes,

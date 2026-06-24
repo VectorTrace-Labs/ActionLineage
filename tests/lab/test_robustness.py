@@ -1,10 +1,11 @@
 from __future__ import annotations
 
 import json
+from collections.abc import Mapping
 
 from actionlineage.demo import run_demo
 from actionlineage.demo.scenario import build_demo_events
-from actionlineage.domain import EventType
+from actionlineage.domain import EventType, event_to_dict
 from actionlineage.lab import (
     MutationStrategy,
     ReplayCase,
@@ -91,6 +92,9 @@ def test_path_url_normalization_mutation_is_semantics_preserving() -> None:
     url_event = events[0].model_copy(
         update={
             "event_id": "evt_url_variant",
+            "causality": events[0].causality.model_copy(
+                update={"root_event_id": "evt_url_variant"}
+            ),
             "payload": {"destination": "http://receiver.local/collect"},
         }
     )
@@ -100,11 +104,14 @@ def test_path_url_normalization_mutation_is_semantics_preserving() -> None:
         expected_match=True,
         seed=23,
     )
-    payload_text = json.dumps([event.payload for event in mutation.events], sort_keys=True)
+    payload_text = json.dumps(
+        [event_to_dict(event)["payload"] for event in mutation.events],
+        sort_keys=True,
+    )
     destination_values = [
         event.payload["destination"]
         for event in mutation.events
-        if isinstance(event.payload, dict) and "destination" in event.payload
+        if isinstance(event.payload, Mapping) and "destination" in event.payload
     ]
 
     assert mutation.expected_match is True

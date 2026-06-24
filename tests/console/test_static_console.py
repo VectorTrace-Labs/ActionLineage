@@ -28,7 +28,12 @@ def test_write_console_renders_demo_timeline_and_verification_matrix(tmp_path: P
     demo = run_demo(tmp_path / "demo")
     output_path = tmp_path / "console" / "index.html"
 
-    export = write_console(demo.database_path, output_path, trace_id=demo.trace_id)
+    export = write_console(
+        demo.database_path,
+        output_path,
+        journal_path=demo.journal_path,
+        trace_id=demo.trace_id,
+    )
     html = output_path.read_text(encoding="utf-8")
 
     assert export.output_path == output_path
@@ -62,6 +67,8 @@ def test_console_cli_exports_static_html(tmp_path: Path) -> None:
             "export-console",
             str(demo.database_path),
             str(output_path),
+            "--journal-path",
+            str(demo.journal_path),
             "--trace-id",
             demo.trace_id,
         ],
@@ -85,6 +92,8 @@ def test_console_cli_exports_static_html_by_run_id(tmp_path: Path) -> None:
             "export-console",
             str(demo.database_path),
             str(output_path),
+            "--journal-path",
+            str(demo.journal_path),
             "--run-id",
             demo.run_id,
         ],
@@ -119,6 +128,8 @@ def test_console_cli_rejects_ambiguous_selectors_without_writing_html(
             "export-console",
             str(demo.database_path),
             str(output_path),
+            "--journal-path",
+            str(demo.journal_path),
             "--trace-id",
             demo.trace_id,
             "--run-id",
@@ -145,6 +156,8 @@ def test_console_cli_exports_empty_selector_html_without_absence_claims(
             "export-console",
             str(demo.database_path),
             str(output_path),
+            "--journal-path",
+            str(demo.journal_path),
             "--trace-id",
             "trace_not_present",
         ],
@@ -172,7 +185,12 @@ def test_write_desktop_bundle_creates_manifest_and_console(tmp_path: Path) -> No
     demo = run_demo(tmp_path / "demo")
     output_dir = tmp_path / "desktop"
 
-    export = write_desktop_bundle(demo.database_path, output_dir, trace_id=demo.trace_id)
+    export = write_desktop_bundle(
+        demo.database_path,
+        output_dir,
+        journal_path=demo.journal_path,
+        trace_id=demo.trace_id,
+    )
     manifest = json.loads(export.manifest_path.read_text(encoding="utf-8"))
     html = export.console_path.read_text(encoding="utf-8")
 
@@ -197,6 +215,8 @@ def test_desktop_bundle_cli_exports_manifest_and_console(tmp_path: Path) -> None
             "export-desktop-bundle",
             str(demo.database_path),
             str(output_dir),
+            "--journal-path",
+            str(demo.journal_path),
             "--trace-id",
             demo.trace_id,
         ],
@@ -228,6 +248,7 @@ def test_write_console_renders_sanitized_notes_and_saved_views(tmp_path: Path) -
     export = write_console(
         demo.database_path,
         output_path,
+        journal_path=demo.journal_path,
         trace_id=demo.trace_id,
         notes=(note,),
         saved_views=(saved_view,),
@@ -269,6 +290,7 @@ def test_write_console_escapes_hostile_context_fields_and_redacts_canaries(
     export = write_console(
         demo.database_path,
         output_path,
+        journal_path=demo.journal_path,
         trace_id=demo.trace_id,
         notes=(note,),
         saved_views=(saved_view,),
@@ -346,6 +368,8 @@ def test_console_cli_loads_case_context_file(tmp_path: Path) -> None:
             "export-console",
             str(demo.database_path),
             str(output_path),
+            "--journal-path",
+            str(demo.journal_path),
             "--trace-id",
             demo.trace_id,
             "--case-context",

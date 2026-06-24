@@ -53,28 +53,29 @@ uv run actionlineage --help
 
 - `actionlineage projection rebuild evidence.jsonl projection.sqlite`: rebuild
   the query projection from a verified journal.
-- `actionlineage projection timeline projection.sqlite --trace-id trace_123`:
-  query a timeline.
-- `actionlineage projection filter projection.sqlite --tool-name safe_http.send`:
+- `actionlineage projection timeline projection.sqlite --journal-path evidence.jsonl --trace-id trace_123`:
+  query a timeline after verifying the projection against an independently
+  configured journal.
+- `actionlineage projection filter projection.sqlite --journal-path evidence.jsonl --tool-name safe_http.send`:
   query filtered timeline slices.
-- `actionlineage projection explain-event projection.sqlite evt_123`: explain
-  causal and evidence-link context for one event.
-- `actionlineage projection export-incident projection.sqlite --trace-id trace_123`:
+- `actionlineage projection explain-event projection.sqlite evt_123 --journal-path evidence.jsonl`:
+  explain causal and evidence-link context for one event.
+- `actionlineage projection export-incident projection.sqlite --journal-path evidence.jsonl --trace-id trace_123`:
   write incident JSON to stdout.
-- `actionlineage projection summarize projection.sqlite --trace-id trace_123`:
+- `actionlineage projection summarize projection.sqlite --journal-path evidence.jsonl --trace-id trace_123`:
   write a deterministic evidence-grounded investigation summary to stdout.
-- `actionlineage projection export-graph projection.sqlite --trace-id trace_123`:
+- `actionlineage projection export-graph projection.sqlite --journal-path evidence.jsonl --trace-id trace_123`:
   write dependency-free investigation graph JSON to stdout.
-- `actionlineage projection export-case projection.sqlite ./case --trace-id trace_123`:
+- `actionlineage projection export-case projection.sqlite ./case --journal-path evidence.jsonl --trace-id trace_123`:
   write JSON, NDJSON, and Markdown case artifacts. Existing bundle files are
   not overwritten.
-- `actionlineage projection export-console projection.sqlite console.html --trace-id trace_123`:
+- `actionlineage projection export-console projection.sqlite console.html --journal-path evidence.jsonl --trace-id trace_123`:
   render the static investigation console.
-- `actionlineage projection export-console projection.sqlite console.html --run-id run_123`:
+- `actionlineage projection export-console projection.sqlite console.html --journal-path evidence.jsonl --run-id run_123`:
   render the static investigation console by run ID.
-- `actionlineage projection export-console projection.sqlite console.html --trace-id trace_123 --case-context context.json`:
+- `actionlineage projection export-console projection.sqlite console.html --journal-path evidence.jsonl --trace-id trace_123 --case-context context.json`:
   render the console with redacted analyst notes and saved view hints.
-- `actionlineage projection export-desktop-bundle projection.sqlite ./desktop --trace-id trace_123`:
+- `actionlineage projection export-desktop-bundle projection.sqlite ./desktop --journal-path evidence.jsonl --trace-id trace_123`:
   render `index.html` and `actionlineage-desktop.json` for optional native desktop shells.
 
 ## Contracts

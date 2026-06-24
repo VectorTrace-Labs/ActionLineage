@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+from collections.abc import Mapping
 from itertools import pairwise
 from pathlib import Path
 
@@ -340,7 +341,11 @@ def score_run_isolation(paths: RunPaths, events: tuple[EventEnvelope, ...]) -> S
     for run_id in child_run_ids:
         try:
             projection_event_counts[run_id] = len(
-                query_timeline(paths.projection_path, run_id=run_id).events
+                query_timeline(
+                    paths.projection_path,
+                    journal_path=paths.journal_path,
+                    run_id=run_id,
+                ).events
             )
         except Exception as exc:
             projection_errors[run_id] = f"{type(exc).__name__}: {exc}"
@@ -635,7 +640,7 @@ def write_scorecard(path: Path, result: JsonMap) -> None:
 def _verification_status(event: EventEnvelope) -> str | None:
     payload = event.payload
     evidence_link = payload.get("evidence_link")
-    if isinstance(evidence_link, dict):
+    if isinstance(evidence_link, Mapping):
         status = evidence_link.get("verification_status")
         if isinstance(status, str):
             return status
@@ -649,7 +654,7 @@ def _is_concurrent_child_run_started(event: EventEnvelope) -> bool:
     if event_type_value(event.event_type) != "agent.run.started":
         return False
     run = event.payload.get("run")
-    return isinstance(run, dict) and run.get("concurrent_child") is True
+    return isinstance(run, Mapping) and run.get("concurrent_child") is True
 
 
 def _cross_run_evidence_links(
@@ -663,7 +668,7 @@ def _cross_run_evidence_links(
         if event.correlation.run_id not in child_run_id_set:
             continue
         evidence_link = event.payload.get("evidence_link")
-        if not isinstance(evidence_link, dict):
+        if not isinstance(evidence_link, Mapping):
             continue
         subject_event_id = evidence_link.get("subject_event_id")
         evidence_event_id = evidence_link.get("evidence_event_id")

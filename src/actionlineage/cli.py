@@ -874,6 +874,10 @@ def timeline_command(
         Path,
         typer.Argument(exists=True, dir_okay=False, path_type=Path),
     ],
+    journal_path: Annotated[
+        Path,
+        typer.Option("--journal-path", exists=True, dir_okay=False, path_type=Path),
+    ],
     trace_id: Annotated[
         str | None,
         typer.Option("--trace-id", help="Trace ID to query."),
@@ -886,7 +890,12 @@ def timeline_command(
     """Query a projected lineage timeline by trace or run."""
 
     try:
-        result = query_timeline(database_path, trace_id=trace_id, run_id=run_id)
+        result = query_timeline(
+            database_path,
+            journal_path=journal_path,
+            trace_id=trace_id,
+            run_id=run_id,
+        )
     except ProjectionError as exc:
         typer.echo(json.dumps({"ok": False, "error": str(exc)}, sort_keys=True))
         raise typer.Exit(1) from None
@@ -899,6 +908,10 @@ def filter_timeline_command(
     database_path: Annotated[
         Path,
         typer.Argument(exists=True, dir_okay=False, path_type=Path),
+    ],
+    journal_path: Annotated[
+        Path,
+        typer.Option("--journal-path", exists=True, dir_okay=False, path_type=Path),
     ],
     trace_id: Annotated[str | None, typer.Option("--trace-id")] = None,
     run_id: Annotated[str | None, typer.Option("--run-id")] = None,
@@ -916,6 +929,7 @@ def filter_timeline_command(
     try:
         result = query_filtered_timeline(
             database_path,
+            journal_path=journal_path,
             trace_id=trace_id,
             run_id=run_id,
             event_type=event_type,
@@ -941,11 +955,15 @@ def explain_event_command(
         typer.Argument(exists=True, dir_okay=False, path_type=Path),
     ],
     event_id: Annotated[str, typer.Argument()],
+    journal_path: Annotated[
+        Path,
+        typer.Option("--journal-path", exists=True, dir_okay=False, path_type=Path),
+    ],
 ) -> None:
     """Explain causal and evidence-link context for one event."""
 
     try:
-        result = explain_event(database_path, event_id=event_id)
+        result = explain_event(database_path, event_id=event_id, journal_path=journal_path)
     except ProjectionError as exc:
         typer.echo(json.dumps({"ok": False, "error": str(exc)}, sort_keys=True))
         raise typer.Exit(1) from None
@@ -959,6 +977,10 @@ def export_incident_command(
         Path,
         typer.Argument(exists=True, dir_okay=False, path_type=Path),
     ],
+    journal_path: Annotated[
+        Path,
+        typer.Option("--journal-path", exists=True, dir_okay=False, path_type=Path),
+    ],
     trace_id: Annotated[
         str | None,
         typer.Option("--trace-id", help="Trace ID to export."),
@@ -971,7 +993,12 @@ def export_incident_command(
     """Export a projected lineage timeline as incident JSON."""
 
     try:
-        result = export_incident(database_path, trace_id=trace_id, run_id=run_id)
+        result = export_incident(
+            database_path,
+            journal_path=journal_path,
+            trace_id=trace_id,
+            run_id=run_id,
+        )
     except ProjectionError as exc:
         typer.echo(json.dumps({"ok": False, "error": str(exc)}, sort_keys=True))
         raise typer.Exit(1) from None
@@ -985,13 +1012,22 @@ def summarize_incident_command(
         Path,
         typer.Argument(exists=True, dir_okay=False, path_type=Path),
     ],
+    journal_path: Annotated[
+        Path,
+        typer.Option("--journal-path", exists=True, dir_okay=False, path_type=Path),
+    ],
     trace_id: Annotated[str | None, typer.Option("--trace-id")] = None,
     run_id: Annotated[str | None, typer.Option("--run-id")] = None,
 ) -> None:
     """Generate a deterministic evidence-grounded investigation summary."""
 
     try:
-        result = summarize_incident(database_path, trace_id=trace_id, run_id=run_id)
+        result = summarize_incident(
+            database_path,
+            journal_path=journal_path,
+            trace_id=trace_id,
+            run_id=run_id,
+        )
     except ProjectionError as exc:
         typer.echo(json.dumps({"ok": False, "error": str(exc)}, sort_keys=True))
         raise typer.Exit(1) from None
@@ -1005,13 +1041,22 @@ def export_graph_command(
         Path,
         typer.Argument(exists=True, dir_okay=False, path_type=Path),
     ],
+    journal_path: Annotated[
+        Path,
+        typer.Option("--journal-path", exists=True, dir_okay=False, path_type=Path),
+    ],
     trace_id: Annotated[str | None, typer.Option("--trace-id")] = None,
     run_id: Annotated[str | None, typer.Option("--run-id")] = None,
 ) -> None:
     """Export a dependency-free investigation graph."""
 
     try:
-        result = export_investigation_graph(database_path, trace_id=trace_id, run_id=run_id)
+        result = export_investigation_graph(
+            database_path,
+            journal_path=journal_path,
+            trace_id=trace_id,
+            run_id=run_id,
+        )
     except ProjectionError as exc:
         typer.echo(json.dumps({"ok": False, "error": str(exc)}, sort_keys=True))
         raise typer.Exit(1) from None
@@ -1029,6 +1074,10 @@ def export_case_command(
         Path,
         typer.Argument(exists=False, dir_okay=True, file_okay=False, path_type=Path),
     ],
+    journal_path: Annotated[
+        Path,
+        typer.Option("--journal-path", exists=True, dir_okay=False, path_type=Path),
+    ],
     trace_id: Annotated[
         str | None,
         typer.Option("--trace-id", help="Trace ID to export."),
@@ -1041,7 +1090,13 @@ def export_case_command(
     """Export a redacted investigation case bundle."""
 
     try:
-        result = export_case_bundle(database_path, output_dir, trace_id=trace_id, run_id=run_id)
+        result = export_case_bundle(
+            database_path,
+            output_dir,
+            journal_path=journal_path,
+            trace_id=trace_id,
+            run_id=run_id,
+        )
     except ProjectionError as exc:
         typer.echo(json.dumps({"ok": False, "error": str(exc)}, sort_keys=True))
         raise typer.Exit(1) from None
@@ -1058,6 +1113,10 @@ def export_console_command(
     output_path: Annotated[
         Path,
         typer.Argument(exists=False, dir_okay=False, path_type=Path),
+    ],
+    journal_path: Annotated[
+        Path,
+        typer.Option("--journal-path", exists=True, dir_okay=False, path_type=Path),
     ],
     trace_id: Annotated[
         str | None,
@@ -1087,6 +1146,7 @@ def export_console_command(
         result = write_console(
             database_path,
             output_path,
+            journal_path=journal_path,
             trace_id=trace_id,
             run_id=run_id,
             notes=notes,
@@ -1111,6 +1171,10 @@ def export_desktop_bundle_command(
     output_dir: Annotated[
         Path,
         typer.Argument(exists=False, dir_okay=True, file_okay=False, path_type=Path),
+    ],
+    journal_path: Annotated[
+        Path,
+        typer.Option("--journal-path", exists=True, dir_okay=False, path_type=Path),
     ],
     trace_id: Annotated[
         str | None,
@@ -1140,6 +1204,7 @@ def export_desktop_bundle_command(
         result = write_desktop_bundle(
             database_path,
             output_dir,
+            journal_path=journal_path,
             trace_id=trace_id,
             run_id=run_id,
             notes=notes,

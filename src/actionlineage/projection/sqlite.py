@@ -6,7 +6,8 @@ import json
 import os
 import sqlite3
 from collections.abc import Iterable, Iterator
-from contextlib import contextmanager
+from contextlib import contextmanager, suppress
+from copy import deepcopy
 from dataclasses import dataclass
 from enum import StrEnum
 from pathlib import Path
@@ -32,6 +33,42 @@ GROUNDED_SUMMARY_VERSION = "actionlineage.dev/grounded-summary-v0"
 INVESTIGATION_GRAPH_VERSION = "actionlineage.dev/investigation-graph-v0"
 TIMELINE_ORDER_DESCRIPTION = "occurred_at, causality.sequence, journal_record_number, event_id"
 CASE_BUNDLE_FILENAMES = ("case.json", "events.ndjson", "report.md")
+PROJECTED_EVENT_COLUMNS = (
+    "event_id",
+    "spec_version",
+    "event_type",
+    "occurred_at",
+    "observed_at",
+    "trace_id",
+    "run_id",
+    "span_id",
+    "session_id",
+    "root_event_id",
+    "parent_event_id",
+    "sequence",
+    "event_hash",
+    "previous_event_hash",
+    "verification_status",
+    "evidence_subject_event_id",
+    "evidence_event_id",
+    "journal_record_number",
+    "event_json",
+)
+TIMELINE_SELECT_COLUMNS = (
+    "journal_record_number",
+    "event_id",
+    "event_type",
+    "occurred_at",
+    "observed_at",
+    "trace_id",
+    "run_id",
+    "sequence",
+    "event_hash",
+    "verification_status",
+    "evidence_subject_event_id",
+    "evidence_event_id",
+    "event_json",
+)
 
 
 class ProjectionError(RuntimeError):
@@ -123,6 +160,8 @@ class VerifiedProjectionSnapshot:
     records_indexed: int
     last_event_hash: str | None
     source_journal_path: str
+    source_journal_identity: str
+    projection_identity: str
     schema_version: int = PROJECTION_SCHEMA_VERSION
     state: ProjectionStateCode = ProjectionStateCode.HEALTHY
 
@@ -147,6 +186,8 @@ class VerifiedProjectionSnapshot:
             "journal_path": str(self.journal_path),
             "database_path": str(self.database_path),
             "source_journal_path": self.source_journal_path,
+            "source_journal_identity": self.source_journal_identity,
+            "projection_identity": self.projection_identity,
             "records_indexed": self.records_indexed,
             "record_count": self.record_count,
             "last_event_hash": self.last_event_hash,
@@ -190,7 +231,7 @@ class TimelineEvent:
             "verification_status": self.verification_status,
             "evidence_subject_event_id": self.evidence_subject_event_id,
             "evidence_event_id": self.evidence_event_id,
-            "event": self.event,
+            "event": deepcopy(self.event),
         }
 
 
@@ -201,12 +242,13 @@ class TimelineResult:
     selector_type: str
     selector_value: str
     events: tuple[TimelineEvent, ...]
+    verification: VerifiedProjectionSnapshot | None = None
     order: str = TIMELINE_ORDER_DESCRIPTION
 
     def as_dict(self) -> dict[str, object]:
         """Return a JSON-compatible result object."""
 
-        return {
+        result: dict[str, object] = {
             "ok": True,
             "selector": {
                 "type": self.selector_type,
@@ -216,6 +258,9 @@ class TimelineResult:
             "order": self.order,
             "events": [event.as_dict() for event in self.events],
         }
+        if self.verification is not None:
+            result["verification"] = self.verification.as_dict()
+        return result
 
 
 @dataclass(frozen=True, slots=True)
@@ -228,8 +273,8 @@ class IncidentExport:
     def as_dict(self) -> dict[str, object]:
         """Return a JSON-compatible incident export object."""
 
-        events = [event.event for event in self.timeline.events]
-        return {
+        events = [deepcopy(event.event) for event in self.timeline.events]
+        result: dict[str, object] = {
             "export_version": self.export_version,
             "selector": {
                 "type": self.timeline.selector_type,
@@ -240,6 +285,9 @@ class IncidentExport:
             "timeline_order": self.timeline.order,
             "events": events,
         }
+        if self.timeline.verification is not None:
+            result["verification"] = self.timeline.verification.as_dict()
+        return result
 
 
 @dataclass(frozen=True, slots=True)
@@ -259,11 +307,11 @@ class EventExplanation:
         return {
             "ok": True,
             "event_id": self.event_id,
-            "event": self.event,
+            "event": deepcopy(self.event),
             "parent_event_id": self.parent_event_id,
             "child_event_ids": list(self.child_event_ids),
-            "evidence_links_as_subject": list(self.evidence_links_as_subject),
-            "evidence_links_as_evidence": list(self.evidence_links_as_evidence),
+            "evidence_links_as_subject": deepcopy(list(self.evidence_links_as_subject)),
+            "evidence_links_as_evidence": deepcopy(list(self.evidence_links_as_evidence)),
         }
 
 
@@ -310,7 +358,7 @@ class GroundedInvestigationSummary:
         return {
             "summary_version": self.summary_version,
             "model_provider": self.model_provider,
-            "selector": self.selector,
+            "selector": deepcopy(self.selector),
             "headline": self.headline,
             "key_findings": list(self.key_findings),
             "limitations": list(self.limitations),
@@ -335,7 +383,7 @@ class InvestigationGraphNode:
             "id": self.node_id,
             "kind": self.kind,
             "label": self.label,
-            "attributes": self.attributes,
+            "attributes": deepcopy(self.attributes),
         }
 
 
@@ -357,7 +405,7 @@ class InvestigationGraphEdge:
             "source": self.source,
             "target": self.target,
             "relationship": self.relationship,
-            "attributes": self.attributes,
+            "attributes": deepcopy(self.attributes),
         }
 
 
@@ -375,7 +423,7 @@ class InvestigationGraphExport:
 
         return {
             "graph_version": self.graph_version,
-            "selector": self.selector,
+            "selector": deepcopy(self.selector),
             "node_count": len(self.nodes),
             "edge_count": len(self.edges),
             "nodes": [node.as_dict() for node in self.nodes],
@@ -388,10 +436,16 @@ class InvestigationGraphExport:
         }
 
 
+@dataclass(frozen=True, slots=True)
+class _VerifiedProjectionReader:
+    connection: sqlite3.Connection
+    verification: VerifiedProjectionSnapshot
+
+
 def rebuild_projection(journal_path: Path, database_path: Path) -> RebuildResult:
     """Rebuild the SQLite projection from a verified local journal."""
 
-    journal_path = Path(journal_path)
+    journal_path = _normalize_journal_path(Path(journal_path))
     database_path = Path(database_path)
     snapshot = verified_journal_snapshot(journal_path)
     if not snapshot.ok:
@@ -419,6 +473,7 @@ def rebuild_projection(journal_path: Path, database_path: Path) -> RebuildResult
                     "schema_version": str(PROJECTION_SCHEMA_VERSION),
                     "source_journal_path": str(journal_path),
                     "source_journal_identity": _journal_identity(journal_path),
+                    "projection_identity": _projection_identity(database_path),
                     "records_indexed": str(indexed_count),
                     "last_event_hash": snapshot.terminal_hash or "",
                 },
@@ -437,7 +492,7 @@ def rebuild_projection(journal_path: Path, database_path: Path) -> RebuildResult
 def verify_projection_state(
     database_path: Path,
     *,
-    journal_path: Path | None = None,
+    journal_path: Path,
 ) -> VerifiedProjectionSnapshot:
     """Verify that a projection exactly matches a verified journal snapshot."""
 
@@ -448,86 +503,8 @@ def verify_projection_state(
             f"projection database does not exist: {database_path}",
         )
 
-    try:
-        with _connect(database_path) as connection:
-            ensure_schema(connection)
-            metadata = _get_metadata(connection)
-            resolved_journal_path = _projection_journal_path(
-                metadata,
-                explicit_journal_path=journal_path,
-            )
-            stored_identity = metadata.get("source_journal_identity")
-            expected_identity = _journal_identity(resolved_journal_path)
-            if stored_identity is not None and stored_identity != expected_identity:
-                raise ProjectionStateError(
-                    ProjectionStateCode.PROJECTION_MISMATCH,
-                    "projection source journal identity does not match the verified journal",
-                    details={
-                        "source_journal_identity": stored_identity,
-                        "expected_source_journal_identity": expected_identity,
-                    },
-                )
-            snapshot = verified_journal_snapshot(resolved_journal_path)
-            if not snapshot.ok:
-                raise ProjectionStateError(
-                    ProjectionStateCode.JOURNAL_INVALID,
-                    "source journal verification failed",
-                    details={"verification": snapshot.verification.as_dict()},
-                )
-
-            records_indexed = _metadata_int(metadata, "records_indexed")
-            last_event_hash = _metadata_hash(metadata, "last_event_hash")
-            projection_metadata_matches = (
-                records_indexed == snapshot.record_count
-                and last_event_hash == snapshot.terminal_hash
-            )
-            if not projection_metadata_matches:
-                code = (
-                    ProjectionStateCode.PROJECTION_STALE
-                    if records_indexed <= snapshot.record_count
-                    else ProjectionStateCode.PROJECTION_MISMATCH
-                )
-                raise ProjectionStateError(
-                    code,
-                    "projection metadata does not match the verified journal",
-                    details={
-                        "records_indexed": records_indexed,
-                        "record_count": snapshot.record_count,
-                        "last_event_hash": last_event_hash,
-                        "terminal_hash": snapshot.terminal_hash,
-                    },
-                )
-
-            _verify_projected_rows(connection, snapshot)
-    except ProjectionStateError:
-        raise
-    except sqlite3.Error as exc:
-        raise ProjectionStateError(
-            ProjectionStateCode.PROJECTION_UNAVAILABLE,
-            "sqlite projection could not be verified",
-            details={"error_type": type(exc).__name__},
-        ) from exc
-    except ProjectionSchemaError as exc:
-        raise ProjectionStateError(
-            ProjectionStateCode.PROJECTION_REBUILD_REQUIRED,
-            "projection schema is unsupported or incomplete",
-            details={"error": str(exc)},
-        ) from exc
-    except (OSError, ValueError) as exc:
-        raise ProjectionStateError(
-            ProjectionStateCode.PROJECTION_REBUILD_REQUIRED,
-            "projection metadata is incomplete or invalid",
-            details={"error": str(exc)},
-        ) from exc
-
-    return VerifiedProjectionSnapshot(
-        journal_path=resolved_journal_path,
-        database_path=database_path,
-        journal_snapshot=snapshot,
-        records_indexed=records_indexed,
-        last_event_hash=last_event_hash,
-        source_journal_path=metadata.get("source_journal_path", ""),
-    )
+    with _verified_projection_reader(database_path, journal_path=journal_path) as reader:
+        return reader.verification
 
 
 def index_event(
@@ -594,7 +571,7 @@ def index_event(
 def query_timeline(
     database_path: Path,
     *,
-    journal_path: Path | None = None,
+    journal_path: Path,
     trace_id: str | None = None,
     run_id: str | None = None,
 ) -> TimelineResult:
@@ -602,28 +579,16 @@ def query_timeline(
 
     selector_type, selector_value = _require_one_selector(trace_id=trace_id, run_id=run_id)
     database_path = Path(database_path)
-    verify_projection_state(database_path, journal_path=journal_path)
 
     try:
-        with _connect(database_path) as connection:
-            ensure_schema(connection)
+        with _verified_projection_reader(database_path, journal_path=journal_path) as reader:
             if selector_type == "trace_id":
-                rows = connection.execute(
+                rows = reader.connection.execute(
                     """
-                    SELECT
-                        journal_record_number,
-                        event_id,
-                        event_type,
-                        occurred_at,
-                        observed_at,
-                        trace_id,
-                        run_id,
-                        sequence,
-                        event_hash,
-                        verification_status,
-                        evidence_subject_event_id,
-                        evidence_event_id,
-                        event_json
+                    SELECT journal_record_number, event_id, event_type, occurred_at,
+                           observed_at, trace_id, run_id, sequence, event_hash,
+                           verification_status, evidence_subject_event_id,
+                           evidence_event_id, event_json
                     FROM events
                     WHERE trace_id = ?
                     ORDER BY occurred_at ASC,
@@ -634,22 +599,12 @@ def query_timeline(
                     (selector_value,),
                 ).fetchall()
             else:
-                rows = connection.execute(
+                rows = reader.connection.execute(
                     """
-                    SELECT
-                        journal_record_number,
-                        event_id,
-                        event_type,
-                        occurred_at,
-                        observed_at,
-                        trace_id,
-                        run_id,
-                        sequence,
-                        event_hash,
-                        verification_status,
-                        evidence_subject_event_id,
-                        evidence_event_id,
-                        event_json
+                    SELECT journal_record_number, event_id, event_type, occurred_at,
+                           observed_at, trace_id, run_id, sequence, event_hash,
+                           verification_status, evidence_subject_event_id,
+                           evidence_event_id, event_json
                     FROM events
                     WHERE run_id = ?
                     ORDER BY occurred_at ASC,
@@ -659,20 +614,22 @@ def query_timeline(
                     """,
                     (selector_value,),
                 ).fetchall()
+            events = tuple(_timeline_event_from_row(row) for row in rows)
     except sqlite3.Error as exc:
         raise ProjectionQueryError("sqlite projection query failed") from exc
 
     return TimelineResult(
         selector_type=selector_type,
         selector_value=selector_value,
-        events=tuple(_timeline_event_from_row(row) for row in rows),
+        events=events,
+        verification=reader.verification,
     )
 
 
 def query_filtered_timeline(
     database_path: Path,
     *,
-    journal_path: Path | None = None,
+    journal_path: Path,
     trace_id: str | None = None,
     run_id: str | None = None,
     event_type: str | None = None,
@@ -687,27 +644,15 @@ def query_filtered_timeline(
     """Query projected events with investigation filters."""
 
     database_path = Path(database_path)
-    verify_projection_state(database_path, journal_path=journal_path)
 
     try:
-        with _connect(database_path) as connection:
-            ensure_schema(connection)
-            rows = connection.execute(
+        with _verified_projection_reader(database_path, journal_path=journal_path) as reader:
+            rows = reader.connection.execute(
                 """
-                SELECT
-                    journal_record_number,
-                    event_id,
-                    event_type,
-                    occurred_at,
-                    observed_at,
-                    trace_id,
-                    run_id,
-                    sequence,
-                    event_hash,
-                    verification_status,
-                    evidence_subject_event_id,
-                    evidence_event_id,
-                    event_json
+                SELECT journal_record_number, event_id, event_type, occurred_at,
+                       observed_at, trace_id, run_id, sequence, event_hash,
+                       verification_status, evidence_subject_event_id,
+                       evidence_event_id, event_json
                 FROM events
                 ORDER BY occurred_at ASC,
                          sequence ASC,
@@ -715,6 +660,7 @@ def query_filtered_timeline(
                          event_id ASC
                 """
             ).fetchall()
+            verification = reader.verification
     except sqlite3.Error as exc:
         raise ProjectionQueryError("sqlite projection query failed") from exc
 
@@ -739,13 +685,18 @@ def query_filtered_timeline(
         {key: value for key, value in filters.items() if value is not None},
         sort_keys=True,
     )
-    return TimelineResult(selector_type="filters", selector_value=selector_value, events=events)
+    return TimelineResult(
+        selector_type="filters",
+        selector_value=selector_value,
+        events=events,
+        verification=verification,
+    )
 
 
 def export_incident(
     database_path: Path,
     *,
-    journal_path: Path | None = None,
+    journal_path: Path,
     trace_id: str | None = None,
     run_id: str | None = None,
 ) -> IncidentExport:
@@ -764,7 +715,7 @@ def export_incident(
 def summarize_incident(
     database_path: Path,
     *,
-    journal_path: Path | None = None,
+    journal_path: Path,
     trace_id: str | None = None,
     run_id: str | None = None,
 ) -> GroundedInvestigationSummary:
@@ -783,7 +734,7 @@ def summarize_incident(
 def export_investigation_graph(
     database_path: Path,
     *,
-    journal_path: Path | None = None,
+    journal_path: Path,
     trace_id: str | None = None,
     run_id: str | None = None,
 ) -> InvestigationGraphExport:
@@ -988,7 +939,7 @@ def explain_event(
     database_path: Path,
     *,
     event_id: str,
-    journal_path: Path | None = None,
+    journal_path: Path,
 ) -> EventExplanation:
     """Explain one event with causal and evidence-link context."""
 
@@ -1022,7 +973,7 @@ def export_case_bundle(
     database_path: Path,
     output_dir: Path,
     *,
-    journal_path: Path | None = None,
+    journal_path: Path,
     trace_id: str | None = None,
     run_id: str | None = None,
 ) -> CaseBundleExport:
@@ -1116,6 +1067,82 @@ def ensure_schema(connection: sqlite3.Connection) -> None:
         )
 
 
+def validate_schema(connection: sqlite3.Connection) -> None:
+    """Validate the projection schema without mutating database state."""
+
+    version = _user_version(connection)
+    if version == 0:
+        raise ProjectionSchemaError("projection schema is missing; rebuild required")
+    if version != PROJECTION_SCHEMA_VERSION:
+        raise ProjectionSchemaError(
+            f"unsupported projection schema version {version}; expected {PROJECTION_SCHEMA_VERSION}"
+        )
+
+    metadata_columns = {
+        cast(str, row[1]) for row in connection.execute("PRAGMA table_info(projection_metadata)")
+    }
+    if {"key", "value"} - metadata_columns:
+        raise ProjectionSchemaError("projection metadata table is missing required columns")
+
+    event_columns = {cast(str, row[1]) for row in connection.execute("PRAGMA table_info(events)")}
+    missing_event_columns = set(PROJECTED_EVENT_COLUMNS) - event_columns
+    if missing_event_columns:
+        missing = ", ".join(sorted(missing_event_columns))
+        raise ProjectionSchemaError(f"projection events table is missing columns: {missing}")
+
+
+@contextmanager
+def _verified_projection_reader(
+    database_path: Path,
+    *,
+    journal_path: Path,
+) -> Iterator[_VerifiedProjectionReader]:
+    database_path = Path(database_path)
+    if not database_path.exists():
+        raise ProjectionStateError(
+            ProjectionStateCode.PROJECTION_MISSING,
+            f"projection database does not exist: {database_path}",
+        )
+
+    normalized_journal_path = _normalize_journal_path(Path(journal_path))
+    with _connect_readonly(database_path) as connection:
+        try:
+            connection.execute("BEGIN")
+            verification = _verify_projection_state_on_connection(
+                connection,
+                database_path=database_path,
+                journal_path=normalized_journal_path,
+            )
+        except ProjectionStateError:
+            raise
+        except sqlite3.Error as exc:
+            raise ProjectionStateError(
+                ProjectionStateCode.PROJECTION_UNAVAILABLE,
+                "sqlite projection could not be verified",
+                details={"error_type": type(exc).__name__},
+            ) from exc
+        except ProjectionSchemaError as exc:
+            raise ProjectionStateError(
+                ProjectionStateCode.PROJECTION_REBUILD_REQUIRED,
+                "projection schema is unsupported or incomplete",
+                details={"error": str(exc)},
+            ) from exc
+        except (OSError, ValueError) as exc:
+            raise ProjectionStateError(
+                ProjectionStateCode.PROJECTION_REBUILD_REQUIRED,
+                "projection metadata is incomplete or invalid",
+                details={"error": str(exc)},
+            ) from exc
+
+        try:
+            yield _VerifiedProjectionReader(connection=connection, verification=verification)
+        finally:
+            with suppress(sqlite3.Error):
+                connection.execute("ROLLBACK")
+
+        _recheck_terminal_journal_state(normalized_journal_path, verification)
+
+
 @contextmanager
 def _connect(database_path: Path) -> Iterator[sqlite3.Connection]:
     connection = sqlite3.connect(database_path)
@@ -1123,6 +1150,18 @@ def _connect(database_path: Path) -> Iterator[sqlite3.Connection]:
         connection.execute("PRAGMA foreign_keys = ON")
         with connection:
             yield connection
+    finally:
+        connection.close()
+
+
+@contextmanager
+def _connect_readonly(database_path: Path) -> Iterator[sqlite3.Connection]:
+    uri = f"{Path(database_path).resolve(strict=False).as_uri()}?mode=ro"
+    connection = sqlite3.connect(uri, uri=True)
+    try:
+        connection.execute("PRAGMA foreign_keys = ON")
+        connection.execute("PRAGMA query_only = ON")
+        yield connection
     finally:
         connection.close()
 
@@ -1152,6 +1191,118 @@ def _prepare_projection_path(database_path: Path) -> None:
         os.close(fd)
 
 
+def _verify_projection_state_on_connection(
+    connection: sqlite3.Connection,
+    *,
+    database_path: Path,
+    journal_path: Path,
+) -> VerifiedProjectionSnapshot:
+    validate_schema(connection)
+    metadata = _get_metadata(connection)
+    resolved_journal_path = _projection_journal_path(
+        metadata,
+        explicit_journal_path=journal_path,
+    )
+    expected_identity = _journal_identity(resolved_journal_path)
+    stored_identity = metadata.get("source_journal_identity")
+    if not stored_identity:
+        raise ValueError("projection metadata is missing source_journal_identity")
+    if stored_identity != expected_identity:
+        raise ProjectionStateError(
+            ProjectionStateCode.PROJECTION_MISMATCH,
+            "projection source journal identity does not match the verified journal",
+            details={
+                "source_journal_identity": stored_identity,
+                "expected_source_journal_identity": expected_identity,
+            },
+        )
+
+    expected_projection_identity = _projection_identity(database_path)
+    stored_projection_identity = metadata.get("projection_identity")
+    if not stored_projection_identity:
+        raise ValueError("projection metadata is missing projection_identity")
+    if stored_projection_identity != expected_projection_identity:
+        raise ProjectionStateError(
+            ProjectionStateCode.PROJECTION_MISMATCH,
+            "projection identity metadata does not match the database being verified",
+            details={
+                "projection_identity": stored_projection_identity,
+                "expected_projection_identity": expected_projection_identity,
+            },
+        )
+
+    snapshot = verified_journal_snapshot(resolved_journal_path)
+    if not snapshot.ok:
+        raise ProjectionStateError(
+            ProjectionStateCode.JOURNAL_INVALID,
+            "source journal verification failed",
+            details={"verification": snapshot.verification.as_dict()},
+        )
+
+    records_indexed = _metadata_int(metadata, "records_indexed")
+    last_event_hash = _metadata_hash(metadata, "last_event_hash")
+    projection_metadata_matches = (
+        records_indexed == snapshot.record_count and last_event_hash == snapshot.terminal_hash
+    )
+    if not projection_metadata_matches:
+        code = (
+            ProjectionStateCode.PROJECTION_STALE
+            if records_indexed <= snapshot.record_count
+            else ProjectionStateCode.PROJECTION_MISMATCH
+        )
+        raise ProjectionStateError(
+            code,
+            "projection metadata does not match the verified journal",
+            details={
+                "records_indexed": records_indexed,
+                "record_count": snapshot.record_count,
+                "last_event_hash": last_event_hash,
+                "terminal_hash": snapshot.terminal_hash,
+            },
+        )
+
+    _verify_projected_rows(connection, snapshot)
+    return VerifiedProjectionSnapshot(
+        journal_path=resolved_journal_path,
+        database_path=database_path,
+        journal_snapshot=snapshot,
+        records_indexed=records_indexed,
+        last_event_hash=last_event_hash,
+        source_journal_path=metadata["source_journal_path"],
+        source_journal_identity=stored_identity,
+        projection_identity=stored_projection_identity,
+    )
+
+
+def _recheck_terminal_journal_state(
+    journal_path: Path,
+    verification: VerifiedProjectionSnapshot,
+) -> None:
+    snapshot = verified_journal_snapshot(
+        journal_path,
+        expected_record_count=verification.record_count,
+        expected_last_event_hash=verification.terminal_hash,
+    )
+    if snapshot.ok:
+        return
+    issue_codes = {issue.code for issue in snapshot.verification.issues}
+    expected_mismatch_codes = {
+        "expected_record_count_mismatch",
+        "expected_last_hash_mismatch",
+    }
+    if issue_codes and issue_codes <= expected_mismatch_codes:
+        raise ProjectionStateError(
+            ProjectionStateCode.PROJECTION_STALE,
+            "source journal changed while the projection read was in progress",
+            details={"verification": snapshot.verification.as_dict()},
+        )
+    raise ProjectionStateError(
+        ProjectionStateCode.JOURNAL_INVALID,
+        "source journal verification failed after projection read",
+        details={"verification": snapshot.verification.as_dict()},
+    )
+
+
 def _user_version(connection: sqlite3.Connection) -> int:
     row = connection.execute("PRAGMA user_version").fetchone()
     if row is None:
@@ -1178,24 +1329,24 @@ def _get_metadata(connection: sqlite3.Connection) -> dict[str, str]:
 def _projection_journal_path(
     metadata: dict[str, str],
     *,
-    explicit_journal_path: Path | None,
+    explicit_journal_path: Path,
 ) -> Path:
     stored_path = metadata.get("source_journal_path")
-    if explicit_journal_path is None:
-        if not stored_path:
-            raise ValueError("projection metadata is missing source_journal_path")
-        return Path(stored_path)
+    if not stored_path:
+        raise ValueError("projection metadata is missing source_journal_path")
 
-    if stored_path and stored_path != str(explicit_journal_path):
+    resolved_stored_path = _normalize_journal_path(Path(stored_path))
+    resolved_explicit_path = _normalize_journal_path(Path(explicit_journal_path))
+    if resolved_stored_path != resolved_explicit_path:
         raise ProjectionStateError(
             ProjectionStateCode.PROJECTION_MISMATCH,
             "projection source journal path does not match the requested journal",
             details={
-                "source_journal_path": stored_path,
-                "requested_journal_path": str(explicit_journal_path),
+                "source_journal_path": str(resolved_stored_path),
+                "requested_journal_path": str(resolved_explicit_path),
             },
         )
-    return Path(explicit_journal_path)
+    return resolved_explicit_path
 
 
 def _metadata_int(metadata: dict[str, str], key: str) -> int:
@@ -1222,9 +1373,11 @@ def _verify_projected_rows(
     connection: sqlite3.Connection,
     snapshot: VerifiedJournalSnapshot,
 ) -> None:
+    select_values = ", ".join(PROJECTED_EVENT_COLUMNS)
+    select_types = ", ".join(f"typeof({column})" for column in PROJECTED_EVENT_COLUMNS)
     rows = connection.execute(
-        """
-        SELECT journal_record_number, event_id, event_hash, event_json
+        f"""
+        SELECT {select_values}, {select_types}
         FROM events
         ORDER BY journal_record_number ASC
         """
@@ -1243,31 +1396,68 @@ def _verify_projected_rows(
 
     for record_number, event in enumerate(snapshot.events, start=1):
         row = rows[record_number - 1]
-        actual_record_number = cast(int, row[0])
-        actual_event_id = cast(str, row[1])
-        actual_event_hash = cast(str, row[2])
-        actual_event_json = cast(str, row[3])
-        expected_event_json = serialize_event(event).decode("utf-8")
-        if (
-            actual_record_number != record_number
-            or actual_event_id != event.event_id
-            or actual_event_hash != event.integrity.event_hash
-            or actual_event_json != expected_event_json
-        ):
+        actual_values = tuple(row[: len(PROJECTED_EVENT_COLUMNS)])
+        actual_types = tuple(cast(str, value) for value in row[len(PROJECTED_EVENT_COLUMNS) :])
+        expected_values = _event_projection_values(event, journal_record_number=record_number)
+        expected_types = tuple(_expected_sqlite_type(value) for value in expected_values)
+        if actual_values != expected_values or actual_types != expected_types:
+            mismatched_columns = [
+                column
+                for column, actual, expected in zip(
+                    PROJECTED_EVENT_COLUMNS,
+                    actual_values,
+                    expected_values,
+                    strict=True,
+                )
+                if actual != expected
+            ]
+            type_mismatched_columns = [
+                column
+                for column, actual, expected in zip(
+                    PROJECTED_EVENT_COLUMNS,
+                    actual_types,
+                    expected_types,
+                    strict=True,
+                )
+                if actual != expected
+            ]
             raise ProjectionStateError(
                 ProjectionStateCode.PROJECTION_MISMATCH,
                 "projection row content does not match the verified journal",
                 details={
                     "record_number": record_number,
-                    "actual_record_number": actual_record_number,
-                    "event_id": actual_event_id,
+                    "event_id": actual_values[0],
                     "expected_event_id": event.event_id,
+                    "mismatched_columns": mismatched_columns,
+                    "type_mismatched_columns": type_mismatched_columns,
                 },
             )
 
 
 def _journal_identity(journal_path: Path) -> str:
-    return f"local-file:{journal_path}"
+    return f"local-file:{_normalize_journal_path(journal_path)}"
+
+
+def _projection_identity(database_path: Path) -> str:
+    return f"sqlite-file:{Path(database_path).resolve(strict=False)}"
+
+
+def _normalize_journal_path(journal_path: Path) -> Path:
+    return Path(journal_path).resolve(strict=False)
+
+
+def _expected_sqlite_type(value: object) -> str:
+    if value is None:
+        return "null"
+    if isinstance(value, int) and not isinstance(value, bool):
+        return "integer"
+    if isinstance(value, str):
+        return "text"
+    raise ProjectionStateError(
+        ProjectionStateCode.PROJECTION_MISMATCH,
+        "projection expected value has unsupported SQLite type",
+        details={"value_type": type(value).__name__},
+    )
 
 
 def _migrate_v1_to_v2(connection: sqlite3.Connection) -> None:

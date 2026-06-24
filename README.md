@@ -90,20 +90,24 @@ uv run actionlineage journal verify build/actionlineage-demo/evidence.jsonl
 
 uv run actionlineage projection timeline \
   build/actionlineage-demo/projection.sqlite \
+  --journal-path build/actionlineage-demo/evidence.jsonl \
   --trace-id trace_demo_evidence_plane
 
 uv run actionlineage projection summarize \
   build/actionlineage-demo/projection.sqlite \
+  --journal-path build/actionlineage-demo/evidence.jsonl \
   --trace-id trace_demo_evidence_plane
 
 uv run actionlineage projection export-case \
   build/actionlineage-demo/projection.sqlite \
   build/actionlineage-demo/case \
+  --journal-path build/actionlineage-demo/evidence.jsonl \
   --trace-id trace_demo_evidence_plane
 
 uv run actionlineage projection export-console \
   build/actionlineage-demo/projection.sqlite \
   build/actionlineage-demo/console.html \
+  --journal-path build/actionlineage-demo/evidence.jsonl \
   --trace-id trace_demo_evidence_plane
 
 uv run python scripts/generate_demo_evidence_map.py \
@@ -296,11 +300,11 @@ imports and preview API boundaries.
 uv run actionlineage version
 uv run actionlineage demo run --output-dir build/actionlineage-demo
 uv run actionlineage journal verify build/actionlineage-demo/evidence.jsonl
-uv run actionlineage projection timeline build/actionlineage-demo/projection.sqlite --trace-id trace_demo_evidence_plane
-uv run actionlineage projection explain-event build/actionlineage-demo/projection.sqlite evt_demo_11
-uv run actionlineage projection export-incident build/actionlineage-demo/projection.sqlite --trace-id trace_demo_evidence_plane
-uv run actionlineage projection export-graph build/actionlineage-demo/projection.sqlite --trace-id trace_demo_evidence_plane
-uv run actionlineage projection export-desktop-bundle build/actionlineage-demo/projection.sqlite build/actionlineage-demo/desktop --trace-id trace_demo_evidence_plane
+uv run actionlineage projection timeline build/actionlineage-demo/projection.sqlite --journal-path build/actionlineage-demo/evidence.jsonl --trace-id trace_demo_evidence_plane
+uv run actionlineage projection explain-event build/actionlineage-demo/projection.sqlite evt_demo_11 --journal-path build/actionlineage-demo/evidence.jsonl
+uv run actionlineage projection export-incident build/actionlineage-demo/projection.sqlite --journal-path build/actionlineage-demo/evidence.jsonl --trace-id trace_demo_evidence_plane
+uv run actionlineage projection export-graph build/actionlineage-demo/projection.sqlite --journal-path build/actionlineage-demo/evidence.jsonl --trace-id trace_demo_evidence_plane
+uv run actionlineage projection export-desktop-bundle build/actionlineage-demo/projection.sqlite build/actionlineage-demo/desktop --journal-path build/actionlineage-demo/evidence.jsonl --trace-id trace_demo_evidence_plane
 uv run actionlineage contract validate contracts/examples/outbound-http.json build/actionlineage-demo/evidence.jsonl
 ```
 

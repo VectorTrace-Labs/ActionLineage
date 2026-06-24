@@ -18,6 +18,7 @@ Use `projection filter` for analyst-oriented slices:
 
 ```bash
 uv run actionlineage projection filter projection.sqlite \
+  --journal-path evidence.jsonl \
   --tool-name safe_http.send \
   --verification-status verified
 ```
@@ -28,7 +29,8 @@ identifier, verification status, sensitivity, trust, and descriptor hash.
 ## Explain an event
 
 ```bash
-uv run actionlineage projection explain-event projection.sqlite evt_123
+uv run actionlineage projection explain-event projection.sqlite evt_123 \
+  --journal-path evidence.jsonl
 ```
 
 The explanation includes the event, causal parent, child event IDs, and evidence
@@ -37,7 +39,9 @@ links where the event is either the subject or corroborating evidence.
 ## Export incident JSON
 
 ```bash
-uv run actionlineage projection export-incident projection.sqlite --trace-id trace_123
+uv run actionlineage projection export-incident projection.sqlite \
+  --journal-path evidence.jsonl \
+  --trace-id trace_123
 ```
 
 Incident export includes:
@@ -53,7 +57,9 @@ Incident export includes:
 ## Summarize an incident
 
 ```bash
-uv run actionlineage projection summarize projection.sqlite --trace-id trace_123
+uv run actionlineage projection summarize projection.sqlite \
+  --journal-path evidence.jsonl \
+  --trace-id trace_123
 ```
 
 The summary is deterministic and grounded only in projected evidence. It returns
@@ -64,7 +70,9 @@ claims against the append-only local journal.
 ## Export an investigation graph
 
 ```bash
-uv run actionlineage projection export-graph projection.sqlite --trace-id trace_123
+uv run actionlineage projection export-graph projection.sqlite \
+  --journal-path evidence.jsonl \
+  --trace-id trace_123
 ```
 
 The graph export is a dependency-free interchange format for analyst tools,
@@ -76,7 +84,9 @@ separate source of truth; the append-only local journal remains canonical.
 ## Export a case bundle
 
 ```bash
-uv run actionlineage projection export-case projection.sqlite ./case --trace-id trace_123
+uv run actionlineage projection export-case projection.sqlite ./case \
+  --journal-path evidence.jsonl \
+  --trace-id trace_123
 ```
 
 The bundle writes:
@@ -91,7 +101,9 @@ did not occur." They must not claim that missing evidence proves absence.
 ## Export a static console
 
 ```bash
-uv run actionlineage projection export-console projection.sqlite console.html --trace-id trace_123
+uv run actionlineage projection export-console projection.sqlite console.html \
+  --journal-path evidence.jsonl \
+  --trace-id trace_123
 ```
 
 The static console renders the timeline, event details, evidence-link direction,

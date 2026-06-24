@@ -34,6 +34,7 @@ uv run actionlineage journal verify build/actionlineage-demo/evidence.jsonl
 ```bash
 uv run actionlineage projection timeline \
   build/actionlineage-demo/projection.sqlite \
+  --journal-path build/actionlineage-demo/evidence.jsonl \
   --trace-id trace_demo_evidence_plane
 ```
 
@@ -47,6 +48,7 @@ independent receiver observation corroborates it.
 uv run actionlineage projection export-case \
   build/actionlineage-demo/projection.sqlite \
   build/actionlineage-demo/case \
+  --journal-path build/actionlineage-demo/evidence.jsonl \
   --trace-id trace_demo_evidence_plane
 ```
 
@@ -56,6 +58,7 @@ uv run actionlineage projection export-case \
 uv run actionlineage projection export-console \
   build/actionlineage-demo/projection.sqlite \
   build/actionlineage-demo/console.html \
+  --journal-path build/actionlineage-demo/evidence.jsonl \
   --trace-id trace_demo_evidence_plane
 ```
 

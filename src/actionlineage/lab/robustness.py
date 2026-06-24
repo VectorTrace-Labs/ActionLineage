@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import json
 import time
-from collections.abc import Mapping
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from datetime import timedelta
 from enum import StrEnum
@@ -409,7 +409,7 @@ def _path_url_normalization(
 def _normalize_path_url_value(value: object) -> object:
     if isinstance(value, str):
         return _normalize_path_url_string(value)
-    if isinstance(value, list | tuple):
+    if isinstance(value, Sequence) and not isinstance(value, str | bytes | bytearray):
         return [_normalize_path_url_value(item) for item in value]
     if isinstance(value, Mapping):
         return {str(key): _normalize_path_url_value(child) for key, child in value.items()}

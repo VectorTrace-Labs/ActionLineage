@@ -12,6 +12,7 @@ from actionlineage import (
     assess_event_compatibility,
     parse_event,
 )
+from actionlineage.domain import event_to_dict
 from actionlineage.journal import iter_events, verify_journal
 from actionlineage.projection import query_timeline, rebuild_projection
 
@@ -37,7 +38,11 @@ def test_golden_journals_remain_readable_and_projectable(
 
     projection_path = tmp_path / f"{fixture_name}.sqlite"
     rebuild = rebuild_projection(journal_path, projection_path)
-    timeline = query_timeline(projection_path, trace_id="trace_golden")
+    timeline = query_timeline(
+        projection_path,
+        journal_path=journal_path,
+        trace_id="trace_golden",
+    )
 
     assert rebuild.records_indexed == result.records_verified
     assert timeline.as_dict()["event_count"] == result.records_verified
@@ -67,7 +72,7 @@ def test_evidence_link_payload_validates_against_json_schema() -> None:
     schema = json.loads(EVIDENCE_LINK_SCHEMA_PATH.read_text(encoding="utf-8"))
     validator = Draft202012Validator(schema)
     events = list(iter_events(FIXTURE_DIR / "evidence-plane-v1alpha1.jsonl"))
-    evidence_link = events[-1].payload["evidence_link"]
+    evidence_link = event_to_dict(events[-1])["payload"]["evidence_link"]
 
     errors = sorted(validator.iter_errors(evidence_link), key=lambda error: error.path)
 

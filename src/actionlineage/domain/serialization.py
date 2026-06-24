@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import logging
+import math
 from collections.abc import Mapping
 from datetime import UTC, datetime
 from typing import Any, cast
@@ -102,6 +103,9 @@ def normalize_json(value: Any) -> JsonValue:
 
     if isinstance(value, list | tuple):
         return [normalize_json(child) for child in value]
+
+    if isinstance(value, float) and not math.isfinite(value):
+        raise TypeError("JSON numbers must be finite")
 
     if value is None or isinstance(value, str | int | float | bool):
         return cast(JsonValue, value)

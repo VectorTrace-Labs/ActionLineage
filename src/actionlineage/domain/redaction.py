@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import base64
 import hashlib
+import math
 import re
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, field
@@ -135,6 +136,9 @@ def redact_value(value: object, *, path: Path, policy: RedactionPolicy) -> JsonV
 
     if isinstance(value, bytes):
         return capture_bytes(value, max_length=policy.max_bytes_length)
+
+    if isinstance(value, float) and not math.isfinite(value):
+        raise RedactionError("JSON numbers must be finite")
 
     if value is None or isinstance(value, bool | int | float):
         return cast(JsonValue, value)

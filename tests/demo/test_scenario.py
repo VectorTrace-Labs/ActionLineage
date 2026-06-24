@@ -8,7 +8,7 @@ from typer.testing import CliRunner
 from actionlineage.cli import app
 from actionlineage.demo import DEMO_TRACE_ID, run_demo
 from actionlineage.demo.scenario import build_demo_events
-from actionlineage.domain import EventType
+from actionlineage.domain import EventType, event_to_dict
 from actionlineage.journal import verify_journal
 from actionlineage.projection import query_timeline
 
@@ -18,7 +18,9 @@ runner = CliRunner()
 def test_demo_events_cover_verified_unverified_conflicting_and_not_dispatched_outcomes() -> None:
     events = build_demo_events()
     event_types = [event.event_type for event in events]
-    status_values = json.dumps([event.payload for event in events], sort_keys=True)
+    status_values = json.dumps(
+        [event_to_dict(event)["payload"] for event in events], sort_keys=True
+    )
 
     assert EventType.TOOL_EXECUTION_REQUESTED in event_types
     assert EventType.TOOL_EXECUTION_AUTHORIZED in event_types
@@ -37,7 +39,11 @@ def test_demo_events_cover_verified_unverified_conflicting_and_not_dispatched_ou
 
 def test_run_demo_writes_verified_journal_projection_and_incident_export(tmp_path: Path) -> None:
     result = run_demo(tmp_path / "demo")
-    timeline = query_timeline(result.database_path, trace_id=DEMO_TRACE_ID)
+    timeline = query_timeline(
+        result.database_path,
+        journal_path=result.journal_path,
+        trace_id=DEMO_TRACE_ID,
+    )
     incident = json.loads(result.incident_path.read_text(encoding="utf-8"))
 
     assert result.verification.ok

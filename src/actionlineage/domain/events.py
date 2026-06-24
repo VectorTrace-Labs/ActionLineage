@@ -2,7 +2,8 @@
 
 from __future__ import annotations
 
-from collections.abc import Iterable, Mapping
+import math
+from collections.abc import Iterable, Iterator, Mapping, Sequence
 from datetime import UTC, datetime
 from enum import StrEnum
 from typing import Any, ClassVar, Literal, NoReturn, Self, SupportsIndex, cast
@@ -24,11 +25,28 @@ type JsonValue = JsonScalar | list[JsonValue] | dict[str, JsonValue]
 type JsonObject = dict[str, JsonValue]
 
 
-class FrozenJsonDict(dict[str, Any]):
-    """JSON object container that preserves dict behavior but rejects mutation."""
+class FrozenJsonDict(Mapping[str, Any]):
+    """Immutable JSON object container backed by private frozen storage."""
 
     def _immutable(self) -> NoReturn:
         raise TypeError("event payload JSON objects are immutable")
+
+    def __init__(self, values: Mapping[str, Any]) -> None:
+        self._values = dict(values)
+
+    def __getitem__(self, key: str) -> Any:
+        return self._values[key]
+
+    def __iter__(self) -> Iterator[str]:
+        return iter(self._values)
+
+    def __len__(self) -> int:
+        return len(self._values)
+
+    def __eq__(self, other: object) -> bool:
+        if isinstance(other, Mapping):
+            return dict(self.items()) == dict(other.items())
+        return False
 
     def __setitem__(self, key: str, value: Any) -> None:
         self._immutable()
@@ -51,7 +69,7 @@ class FrozenJsonDict(dict[str, Any]):
     def update(self, *args: object, **kwargs: Any) -> None:
         self._immutable()
 
-    def __ior__(self, other: Any) -> Self:  # type: ignore[misc, override]
+    def __ior__(self, other: Any) -> Self:
         self._immutable()
 
     def copy(self) -> dict[str, Any]:
@@ -60,11 +78,28 @@ class FrozenJsonDict(dict[str, Any]):
         return cast(dict[str, Any], thaw_json_value(self))
 
 
-class FrozenJsonList(list[Any]):
-    """JSON array container that preserves list behavior but rejects mutation."""
+class FrozenJsonList(Sequence[Any]):
+    """Immutable JSON array container backed by a private tuple."""
 
     def _immutable(self) -> NoReturn:
         raise TypeError("event payload JSON arrays are immutable")
+
+    def __init__(self, values: Iterable[Any]) -> None:
+        self._values = tuple(values)
+
+    def __getitem__(self, index: SupportsIndex | slice) -> Any:
+        return self._values[index]
+
+    def __iter__(self) -> Iterator[Any]:
+        return iter(self._values)
+
+    def __len__(self) -> int:
+        return len(self._values)
+
+    def __eq__(self, other: object) -> bool:
+        if isinstance(other, Sequence) and not isinstance(other, str | bytes | bytearray):
+            return list(self) == list(other)
+        return False
 
     def __setitem__(self, index: object, value: Any) -> None:
         self._immutable()
@@ -96,7 +131,7 @@ class FrozenJsonList(list[Any]):
     def sort(self, *args: Any, **kwargs: Any) -> None:
         self._immutable()
 
-    def __iadd__(self, value: Iterable[Any]) -> Self:  # type: ignore[misc]
+    def __iadd__(self, value: Iterable[Any]) -> Self:
         self._immutable()
 
     def __imul__(self, value: SupportsIndex) -> Self:
@@ -353,6 +388,23 @@ class EventEnvelope(FrozenDomainModel):
 
         return cast(dict[str, Any], thaw_json_value(value))
 
+    def model_copy(
+        self,
+        *,
+        update: Mapping[str, Any] | None = None,
+        deep: bool = False,
+    ) -> Self:
+        """Copy through validation so trusted event state remains immutable."""
+
+        copied = super().model_copy(update=update, deep=deep)
+        return type(self).model_validate(copied.model_dump(mode="python"))
+
+    @classmethod
+    def model_construct(cls, _fields_set: set[str] | None = None, **values: Any) -> Self:
+        """Construct through validation; raw trusted construction is intentionally unavailable."""
+
+        return cls.model_validate(values)
+
     @model_validator(mode="after")
     def validate_causality(self) -> EventEnvelope:
         event_type = event_type_value(self.event_type)
@@ -387,10 +439,13 @@ def model_json(value: BaseModel) -> dict[str, Any]:
 def validate_json_value(value: Any) -> None:
     """Validate that a value can be represented in JSON."""
 
+    if isinstance(value, float) and not math.isfinite(value):
+        raise ValueError("payload contains non-finite JSON number")
+
     if value is None or isinstance(value, str | int | float | bool):
         return
 
-    if isinstance(value, list | tuple):
+    if isinstance(value, Sequence) and not isinstance(value, str | bytes | bytearray):
         for item in value:
             validate_json_value(item)
         return
@@ -414,7 +469,7 @@ def freeze_json_value(value: Any) -> Any:
     if isinstance(value, Mapping):
         return FrozenJsonDict({key: freeze_json_value(item) for key, item in value.items()})
 
-    if isinstance(value, list | tuple):
+    if isinstance(value, Sequence) and not isinstance(value, str | bytes | bytearray):
         return FrozenJsonList(freeze_json_value(item) for item in value)
 
     raise ValueError(f"payload contains unsupported JSON value type: {type(value).__name__}")
@@ -426,7 +481,7 @@ def thaw_json_value(value: Any) -> Any:
     if isinstance(value, Mapping):
         return {key: thaw_json_value(item) for key, item in value.items()}
 
-    if isinstance(value, tuple | list):
+    if isinstance(value, Sequence) and not isinstance(value, str | bytes | bytearray):
         return [thaw_json_value(item) for item in value]
 
     return value
