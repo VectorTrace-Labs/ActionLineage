@@ -72,6 +72,11 @@ behind optional extras and must not be imported by `domain`, `journal`,
 - SQLAlchemy for optional Postgres projection support.
 - Pydantic Settings for adapter/runtime configuration boundaries.
 
+ADR-0016 expands this into the protected evidence-kernel boundary. Import
+boundary tests now cover event/evidence, journal, anchoring, observer policy,
+projection, contract, query, and export paths so optional SDKs and service
+frameworks do not enter evidence-critical modules accidentally.
+
 ## Version caution
 
 The MCP Python SDK is undergoing a major-version transition. Verify the official repository before changing the `mcp` constraint. Do not upgrade across a major version in the same pull request as a feature.

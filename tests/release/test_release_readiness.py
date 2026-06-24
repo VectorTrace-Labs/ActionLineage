@@ -259,6 +259,35 @@ def test_structured_log_redaction_boundary_is_tracked() -> None:
     )
 
 
+def test_protected_evidence_kernel_boundary_is_tracked() -> None:
+    adr = (PROJECT_ROOT / "docs/ADR/0016-protected-evidence-kernel-boundary.md").read_text(
+        encoding="utf-8"
+    )
+    architecture = (PROJECT_ROOT / "ARCHITECTURE.md").read_text(encoding="utf-8")
+    dependency_policy = (PROJECT_ROOT / "docs/DEPENDENCY_POLICY.md").read_text(encoding="utf-8")
+    scorecard = (PROJECT_ROOT / "docs/QUALITY_SCORECARD.md").read_text(encoding="utf-8")
+    followups = (PROJECT_ROOT / "docs/SECURITY_ASSESSMENT_FOLLOWUPS.md").read_text(encoding="utf-8")
+    boundary_test = (PROJECT_ROOT / "tests/release/test_protected_kernel_boundary.py").read_text(
+        encoding="utf-8"
+    )
+
+    assert "- Status: Accepted" in adr
+    assert "Protected Kernel Paths" in adr
+    assert "src/actionlineage/journal" in adr
+    assert "src/actionlineage/observers/attestation.py" in adr
+    assert "src/actionlineage/projection" in adr
+    assert "src/actionlineage/exporters" in adr
+    assert "They must\nnot directly import optional runtime dependencies" in adr
+    assert "Protected evidence kernel" in architecture
+    assert "ADR-0016 expands this into the protected evidence-kernel boundary" in (
+        dependency_policy
+    )
+    assert "Protected evidence kernel boundary is explicit and import-tested" in scorecard
+    assert "Protected evidence-kernel boundary" in followups
+    assert "**Protected kernel boundary**: locally confirmed" in followups
+    assert "FORBIDDEN_OPTIONAL_IMPORT_ROOTS" in boundary_test
+
+
 def test_local_release_planning_docs_are_ignored_and_not_linked_publicly() -> None:
     gitignore = (PROJECT_ROOT / ".gitignore").read_text(encoding="utf-8")
     ignore_patterns = tuple(

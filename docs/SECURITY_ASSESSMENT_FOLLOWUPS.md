@@ -155,6 +155,13 @@ and does not expand ActionLineage into a generic tracing platform.
   corroboration, and helper-generated `independent_observer` claims require a
   current in-scope `ObserverAttestationDeclaration` before an evidence link is
   produced.
+- **Protected evidence-kernel boundary**: ADR-0016 now defines the
+  event/evidence, journal verification, anchoring, observer policy, projection
+  contract, query, and export paths that form the evidence-critical kernel.
+  Release import-boundary tests parse those paths and reject optional
+  SDK/framework dependency roots so adapters, service mode, cloud collectors,
+  telemetry mirrors, model providers, demos, labs, and presentation surfaces do
+  not become implicit trust roots.
 
 ## Implemented before this slice
 
@@ -243,10 +250,11 @@ and does not expand ActionLineage into a generic tracing platform.
 - **Tenant isolation**: partially confirmed. Tenant-aware authorization
   primitives exist, but end-to-end tenant isolation across storage, projections,
   exports, logs, caches, and anchors is not demonstrated.
-- **Protected kernel boundary**: partially confirmed. Core imports are tested,
-  but an explicit kernel boundary ADR and import-boundary tests should cover
-  anchoring, observer policy, projection contracts, and query/export trust
-  boundaries.
+- **Protected kernel boundary**: locally confirmed. ADR-0016 defines the
+  protected evidence kernel, and release import-boundary tests cover
+  event/evidence, journal, anchoring, observer policy, projection, contract,
+  query, and export paths. Future boundary expansion still requires ADR review
+  before optional runtime dependencies enter those modules.
 - **Case bundle signatures and long-running recovery**: follow-up. Case bundle
   manifests reserve future external signature/checkpoint fields but do not sign
   artifacts or prove WORM/object-lock behavior. Longer-running crash and
@@ -260,6 +268,5 @@ and does not expand ActionLineage into a generic tracing platform.
 
 1. Use the captured 10k/100k/250k benchmark evidence before proposing segmented
    journals, checkpoint indexes, or ADR-0011 append-index cache work.
-2. Draft a protected-kernel boundary ADR for event/evidence, journal
-   verification, anchoring, observer policy, projection contracts, and
-   query/export trust boundaries.
+2. Define end-to-end tenant isolation boundaries across storage, projections,
+   exports, logs, caches, anchors, and service authorization.

@@ -33,6 +33,16 @@ An adapter may enforce policy before dispatch, but policy enforcement is optiona
 
 ## Components
 
+### Protected evidence kernel
+
+ADR-0016 defines the protected evidence kernel for public-alpha trust claims:
+event/evidence serialization, redaction, source-neutral ingestion, journal
+verification and anchors, observer attestation policy, projection verification,
+contract validation, and query/export boundaries that render verified evidence.
+Optional adapters, service mode, cloud collectors, telemetry mirrors, model
+providers, demos, labs, and presentation surfaces must translate into this
+kernel instead of becoming implicit trust roots.
+
 ### 1. Domain core
 
 Responsibilities:
