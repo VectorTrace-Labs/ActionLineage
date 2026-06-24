@@ -32,20 +32,46 @@ type JsonObject = dict[str, JsonValue]
 class FrozenJsonDict(Mapping[str, Any]):
     """Immutable JSON object container backed by private frozen storage."""
 
+    _items: tuple[tuple[str, Any], ...]
+    __slots__ = ("_items",)
+
     def _immutable(self) -> NoReturn:
         raise TypeError("event payload JSON objects are immutable")
 
     def __init__(self, values: Mapping[str, Any]) -> None:
-        self._values = dict(values)
+        object.__setattr__(
+            self,
+            "_items",
+            tuple((key, freeze_json_value(item)) for key, item in values.items()),
+        )
 
     def __getitem__(self, key: str) -> Any:
-        return self._values[key]
+        for item_key, item_value in self._items:
+            if item_key == key:
+                return item_value
+        raise KeyError(key)
 
     def __iter__(self) -> Iterator[str]:
-        return iter(self._values)
+        return (key for key, _value in self._items)
 
     def __len__(self) -> int:
-        return len(self._values)
+        return len(self._items)
+
+    def __setattr__(self, name: str, value: Any) -> None:
+        self._immutable()
+
+    def __delattr__(self, name: str) -> None:
+        self._immutable()
+
+    def __reduce__(self) -> tuple[type[Self], tuple[dict[str, Any]]]:
+        return (type(self), (cast(dict[str, Any], thaw_json_value(self)),))
+
+    def __copy__(self) -> Self:
+        return self
+
+    def __deepcopy__(self, memo: dict[int, Any]) -> Self:
+        memo[id(self)] = self
+        return self
 
     def __eq__(self, other: object) -> bool:
         if isinstance(other, Mapping):
@@ -85,20 +111,39 @@ class FrozenJsonDict(Mapping[str, Any]):
 class FrozenJsonList(Sequence[Any]):
     """Immutable JSON array container backed by a private tuple."""
 
+    _items: tuple[Any, ...]
+    __slots__ = ("_items",)
+
     def _immutable(self) -> NoReturn:
         raise TypeError("event payload JSON arrays are immutable")
 
     def __init__(self, values: Iterable[Any]) -> None:
-        self._values = tuple(values)
+        object.__setattr__(self, "_items", tuple(freeze_json_value(item) for item in values))
 
     def __getitem__(self, index: SupportsIndex | slice) -> Any:
-        return self._values[index]
+        return self._items[index]
 
     def __iter__(self) -> Iterator[Any]:
-        return iter(self._values)
+        return iter(self._items)
 
     def __len__(self) -> int:
-        return len(self._values)
+        return len(self._items)
+
+    def __setattr__(self, name: str, value: Any) -> None:
+        self._immutable()
+
+    def __delattr__(self, name: str) -> None:
+        self._immutable()
+
+    def __reduce__(self) -> tuple[type[Self], tuple[list[Any]]]:
+        return (type(self), (cast(list[Any], thaw_json_value(self)),))
+
+    def __copy__(self) -> Self:
+        return self
+
+    def __deepcopy__(self, memo: dict[int, Any]) -> Self:
+        memo[id(self)] = self
+        return self
 
     def __eq__(self, other: object) -> bool:
         if isinstance(other, Sequence) and not isinstance(other, str | bytes | bytearray):

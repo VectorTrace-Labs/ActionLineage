@@ -7,13 +7,13 @@ import json
 import os
 import shutil
 import sqlite3
-from collections.abc import Iterable, Iterator, Mapping
+from collections.abc import Iterable, Iterator, Mapping, Sequence
 from contextlib import contextmanager, suppress
 from copy import deepcopy
 from dataclasses import dataclass
 from enum import StrEnum
 from pathlib import Path
-from typing import Any, cast
+from typing import Any, TypeGuard, cast
 from uuid import uuid4
 
 from actionlineage.domain import (
@@ -23,7 +23,12 @@ from actionlineage.domain import (
     event_to_dict,
     serialize_event,
 )
-from actionlineage.domain.events import event_type_value
+from actionlineage.domain.events import (
+    JsonObject,
+    event_type_value,
+    freeze_json_value,
+    thaw_json_value,
+)
 from actionlineage.errors import safe_error_detail
 from actionlineage.journal import (
     JOURNAL_SOURCE_IDENTITY_VERSION,
@@ -34,6 +39,9 @@ from actionlineage.journal import (
 )
 
 PROJECTION_SCHEMA_VERSION = 2
+PROJECTION_PROOF_VERSION = "actionlineage.dev/projection-proof-v1"
+PROJECTION_DIAGNOSTICS_VERSION = "actionlineage.dev/projection-diagnostics-v1"
+PROJECTION_IDENTITY_VERSION = "actionlineage.dev/sqlite-projection-identity-v1"
 INCIDENT_EXPORT_VERSION = "actionlineage.dev/incident-export-v0"
 CASE_BUNDLE_VERSION = "actionlineage.dev/case-bundle-v0"
 CASE_BUNDLE_MANIFEST_VERSION = "actionlineage.dev/case-bundle-manifest-v0"
@@ -188,14 +196,12 @@ class VerifiedProjectionSnapshot:
         return self.journal_snapshot.terminal_hash
 
     def as_dict(self) -> dict[str, object]:
-        """Return a JSON-compatible projection verification summary."""
+        """Return a portable JSON-compatible projection proof."""
 
         return {
             "ok": True,
+            "proof_version": PROJECTION_PROOF_VERSION,
             "state": self.state.value,
-            "journal_path": str(self.journal_path),
-            "database_path": str(self.database_path),
-            "source_journal_path": self.source_journal_path,
             "source_journal_identity": self.source_journal_identity,
             "source_journal_sha256": self.source_journal_sha256,
             "projection_identity": self.projection_identity,
@@ -204,6 +210,24 @@ class VerifiedProjectionSnapshot:
             "last_event_hash": self.last_event_hash,
             "terminal_hash": self.terminal_hash,
             "schema_version": self.schema_version,
+            "journal": {
+                "ok": self.journal_snapshot.ok,
+                "record_count": self.journal_snapshot.record_count,
+                "terminal_hash": self.journal_snapshot.terminal_hash,
+                "journal_sha256": self.journal_snapshot.journal_sha256,
+                "source_identity": self.journal_snapshot.source_identity,
+                "verification": self.journal_snapshot.verification.as_dict(),
+            },
+        }
+
+    def diagnostics_as_dict(self) -> dict[str, object]:
+        """Return local diagnostic paths separate from portable proof data."""
+
+        return {
+            "diagnostics_version": PROJECTION_DIAGNOSTICS_VERSION,
+            "journal_path": str(self.journal_path),
+            "database_path": str(self.database_path),
+            "source_journal_path": self.source_journal_path,
             "journal": self.journal_snapshot.as_dict(),
         }
 
@@ -224,7 +248,10 @@ class TimelineEvent:
     verification_status: str | None
     evidence_subject_event_id: str | None
     evidence_event_id: str | None
-    event: dict[str, Any]
+    event: Mapping[str, Any]
+
+    def __post_init__(self) -> None:
+        object.__setattr__(self, "event", _freeze_json_object(self.event))
 
     def as_dict(self) -> dict[str, object]:
         """Return a JSON-compatible result object."""
@@ -242,7 +269,7 @@ class TimelineEvent:
             "verification_status": self.verification_status,
             "evidence_subject_event_id": self.evidence_subject_event_id,
             "evidence_event_id": self.evidence_event_id,
-            "event": deepcopy(self.event),
+            "event": _thaw_json_object(self.event),
         }
 
 
@@ -284,7 +311,7 @@ class IncidentExport:
     def as_dict(self) -> dict[str, object]:
         """Return a JSON-compatible incident export object."""
 
-        events = [deepcopy(event.event) for event in self.timeline.events]
+        events = [_thaw_json_object(event.event) for event in self.timeline.events]
         result: dict[str, object] = {
             "export_version": self.export_version,
             "selector": {
@@ -306,11 +333,24 @@ class EventExplanation:
     """Causal and evidence context for one projected event."""
 
     event_id: str
-    event: dict[str, Any]
+    event: Mapping[str, Any]
     parent_event_id: str | None
     child_event_ids: tuple[str, ...]
-    evidence_links_as_subject: tuple[dict[str, Any], ...]
-    evidence_links_as_evidence: tuple[dict[str, Any], ...]
+    evidence_links_as_subject: tuple[Mapping[str, Any], ...]
+    evidence_links_as_evidence: tuple[Mapping[str, Any], ...]
+
+    def __post_init__(self) -> None:
+        object.__setattr__(self, "event", _freeze_json_object(self.event))
+        object.__setattr__(
+            self,
+            "evidence_links_as_subject",
+            tuple(_freeze_json_object(link) for link in self.evidence_links_as_subject),
+        )
+        object.__setattr__(
+            self,
+            "evidence_links_as_evidence",
+            tuple(_freeze_json_object(link) for link in self.evidence_links_as_evidence),
+        )
 
     def as_dict(self) -> dict[str, object]:
         """Return a JSON-compatible event explanation."""
@@ -318,11 +358,15 @@ class EventExplanation:
         return {
             "ok": True,
             "event_id": self.event_id,
-            "event": deepcopy(self.event),
+            "event": _thaw_json_object(self.event),
             "parent_event_id": self.parent_event_id,
             "child_event_ids": list(self.child_event_ids),
-            "evidence_links_as_subject": deepcopy(list(self.evidence_links_as_subject)),
-            "evidence_links_as_evidence": deepcopy(list(self.evidence_links_as_evidence)),
+            "evidence_links_as_subject": [
+                _thaw_json_object(link) for link in self.evidence_links_as_subject
+            ],
+            "evidence_links_as_evidence": [
+                _thaw_json_object(link) for link in self.evidence_links_as_evidence
+            ],
         }
 
 
@@ -339,7 +383,22 @@ class CaseBundleExport:
     bundle_version: str = CASE_BUNDLE_VERSION
 
     def as_dict(self) -> dict[str, object]:
-        """Return a JSON-compatible case export result."""
+        """Return a portable JSON-compatible case export result."""
+
+        return {
+            "ok": True,
+            "bundle_version": self.bundle_version,
+            "files": {
+                "case_json": self.json_path.name,
+                "events_ndjson": self.ndjson_path.name,
+                "report_markdown": self.markdown_path.name,
+                "manifest": self.manifest_path.name,
+            },
+            "incident": self.incident.as_dict(),
+        }
+
+    def diagnostics_as_dict(self) -> dict[str, object]:
+        """Return local diagnostic paths separate from portable case data."""
 
         return {
             "ok": True,
@@ -349,7 +408,6 @@ class CaseBundleExport:
             "ndjson_path": str(self.ndjson_path),
             "markdown_path": str(self.markdown_path),
             "manifest_path": str(self.manifest_path),
-            "incident": self.incident.as_dict(),
         }
 
 
@@ -357,7 +415,7 @@ class CaseBundleExport:
 class GroundedInvestigationSummary:
     """Deterministic narrative derived only from projected evidence."""
 
-    selector: dict[str, object]
+    selector: Mapping[str, object]
     headline: str
     key_findings: tuple[str, ...]
     limitations: tuple[str, ...]
@@ -365,13 +423,16 @@ class GroundedInvestigationSummary:
     summary_version: str = GROUNDED_SUMMARY_VERSION
     model_provider: None = None
 
+    def __post_init__(self) -> None:
+        object.__setattr__(self, "selector", _freeze_json_object(self.selector))
+
     def as_dict(self) -> dict[str, object]:
         """Return a JSON-compatible grounded summary."""
 
         return {
             "summary_version": self.summary_version,
             "model_provider": self.model_provider,
-            "selector": deepcopy(self.selector),
+            "selector": _thaw_json_object(self.selector),
             "headline": self.headline,
             "key_findings": list(self.key_findings),
             "limitations": list(self.limitations),
@@ -387,7 +448,10 @@ class InvestigationGraphNode:
     node_id: str
     kind: str
     label: str
-    attributes: dict[str, object]
+    attributes: Mapping[str, object]
+
+    def __post_init__(self) -> None:
+        object.__setattr__(self, "attributes", _freeze_json_object(self.attributes))
 
     def as_dict(self) -> dict[str, object]:
         """Return a JSON-compatible graph node."""
@@ -396,7 +460,7 @@ class InvestigationGraphNode:
             "id": self.node_id,
             "kind": self.kind,
             "label": self.label,
-            "attributes": deepcopy(self.attributes),
+            "attributes": _thaw_json_object(self.attributes),
         }
 
 
@@ -408,7 +472,10 @@ class InvestigationGraphEdge:
     source: str
     target: str
     relationship: str
-    attributes: dict[str, object]
+    attributes: Mapping[str, object]
+
+    def __post_init__(self) -> None:
+        object.__setattr__(self, "attributes", _freeze_json_object(self.attributes))
 
     def as_dict(self) -> dict[str, object]:
         """Return a JSON-compatible graph edge."""
@@ -418,7 +485,7 @@ class InvestigationGraphEdge:
             "source": self.source,
             "target": self.target,
             "relationship": self.relationship,
-            "attributes": deepcopy(self.attributes),
+            "attributes": _thaw_json_object(self.attributes),
         }
 
 
@@ -426,17 +493,20 @@ class InvestigationGraphEdge:
 class InvestigationGraphExport:
     """Dependency-free graph representation for incident investigation."""
 
-    selector: dict[str, object]
+    selector: Mapping[str, object]
     nodes: tuple[InvestigationGraphNode, ...]
     edges: tuple[InvestigationGraphEdge, ...]
     graph_version: str = INVESTIGATION_GRAPH_VERSION
+
+    def __post_init__(self) -> None:
+        object.__setattr__(self, "selector", _freeze_json_object(self.selector))
 
     def as_dict(self) -> dict[str, object]:
         """Return a JSON-compatible investigation graph."""
 
         return {
             "graph_version": self.graph_version,
-            "selector": deepcopy(self.selector),
+            "selector": _thaw_json_object(self.selector),
             "node_count": len(self.nodes),
             "edge_count": len(self.edges),
             "nodes": [node.as_dict() for node in self.nodes],
@@ -447,6 +517,20 @@ class InvestigationGraphExport:
                 "No observation recorded is not proof that a side effect did not occur.",
             ],
         }
+
+
+def _freeze_json_object(value: Mapping[str, object]) -> Mapping[str, Any]:
+    frozen = freeze_json_value(value)
+    if not isinstance(frozen, Mapping):
+        raise TypeError("expected a JSON object")
+    return cast(Mapping[str, Any], frozen)
+
+
+def _thaw_json_object(value: Mapping[str, object]) -> dict[str, Any]:
+    thawed = thaw_json_value(value)
+    if not isinstance(thawed, dict):
+        raise TypeError("expected a JSON object")
+    return cast(dict[str, Any], thawed)
 
 
 @dataclass(frozen=True, slots=True)
@@ -479,16 +563,24 @@ def rebuild_projection(journal_path: Path, database_path: Path) -> RebuildResult
                 raise ProjectionRebuildError(
                     "indexed record count does not match verified journal snapshot"
                 )
+            source_journal_identity = journal_source_identity(snapshot)
+            source_journal_sha256 = snapshot.journal_sha256 or ""
 
             _set_metadata(
                 connection,
                 {
                     "schema_version": str(PROJECTION_SCHEMA_VERSION),
                     "source_journal_path": str(journal_path),
-                    "source_journal_identity": journal_source_identity(snapshot),
+                    "source_journal_identity": source_journal_identity,
                     "source_journal_identity_version": JOURNAL_SOURCE_IDENTITY_VERSION,
-                    "source_journal_sha256": snapshot.journal_sha256 or "",
-                    "projection_identity": _projection_identity(database_path),
+                    "source_journal_sha256": source_journal_sha256,
+                    "projection_identity": _projection_identity(
+                        source_journal_identity=source_journal_identity,
+                        source_journal_sha256=source_journal_sha256,
+                        records_indexed=indexed_count,
+                        last_event_hash=snapshot.terminal_hash,
+                        schema_version=PROJECTION_SCHEMA_VERSION,
+                    ),
                     "records_indexed": str(indexed_count),
                     "last_event_hash": snapshot.terminal_hash or "",
                 },
@@ -1236,19 +1328,9 @@ def _verify_projection_state_on_connection(
     metadata = _get_metadata(connection)
     source_journal_path = _projection_source_path_hint(metadata)
 
-    expected_projection_identity = _projection_identity(database_path)
     stored_projection_identity = metadata.get("projection_identity")
     if not stored_projection_identity:
         raise ValueError("projection metadata is missing projection_identity")
-    if stored_projection_identity != expected_projection_identity:
-        raise ProjectionStateError(
-            ProjectionStateCode.PROJECTION_MISMATCH,
-            "projection identity metadata does not match the database being verified",
-            details={
-                "projection_identity": stored_projection_identity,
-                "expected_projection_identity": expected_projection_identity,
-            },
-        )
 
     snapshot = verified_journal_snapshot(journal_path)
     if not snapshot.ok:
@@ -1344,6 +1426,14 @@ def _verify_projection_state_on_connection(
             },
         )
 
+    _verify_projection_identity(
+        stored_projection_identity,
+        source_journal_identity=stored_identity,
+        source_journal_sha256=stored_journal_sha256 or "",
+        records_indexed=records_indexed,
+        last_event_hash=last_event_hash,
+        schema_version=PROJECTION_SCHEMA_VERSION,
+    )
     _verify_projected_rows(connection, snapshot)
     return VerifiedProjectionSnapshot(
         journal_path=journal_path,
@@ -1544,8 +1634,79 @@ def _verify_projected_row_values(
             )
 
 
-def _projection_identity(database_path: Path) -> str:
-    return f"sqlite-file:{Path(database_path).resolve(strict=False)}"
+def _verify_projection_identity(
+    stored_projection_identity: str,
+    *,
+    source_journal_identity: str,
+    source_journal_sha256: str,
+    records_indexed: int,
+    last_event_hash: str | None,
+    schema_version: int,
+) -> None:
+    if stored_projection_identity.startswith("sqlite-file:"):
+        raise ProjectionStateError(
+            ProjectionStateCode.PROJECTION_REBUILD_REQUIRED,
+            "projection uses legacy path-based projection identity; rebuild required",
+            details={
+                "projection_identity_version": "legacy_path_based",
+                "expected_projection_identity_version": PROJECTION_IDENTITY_VERSION,
+            },
+        )
+
+    expected_projection_identity = _projection_identity(
+        source_journal_identity=source_journal_identity,
+        source_journal_sha256=source_journal_sha256,
+        records_indexed=records_indexed,
+        last_event_hash=last_event_hash,
+        schema_version=schema_version,
+    )
+    if stored_projection_identity != expected_projection_identity:
+        raise ProjectionStateError(
+            ProjectionStateCode.PROJECTION_MISMATCH,
+            "projection identity metadata does not match verified projection contents",
+            details={
+                "projection_identity_version": _projection_identity_version(
+                    stored_projection_identity
+                ),
+                "expected_projection_identity_version": PROJECTION_IDENTITY_VERSION,
+                "projection_identity_sha256": hashlib.sha256(
+                    stored_projection_identity.encode("utf-8")
+                ).hexdigest(),
+            },
+        )
+
+
+def _projection_identity(
+    *,
+    source_journal_identity: str,
+    source_journal_sha256: str,
+    records_indexed: int,
+    last_event_hash: str | None,
+    schema_version: int,
+) -> str:
+    payload: JsonObject = {
+        "version": PROJECTION_IDENTITY_VERSION,
+        "engine": "sqlite",
+        "schema_version": schema_version,
+        "source_journal_identity_version": JOURNAL_SOURCE_IDENTITY_VERSION,
+        "source_journal_identity": source_journal_identity,
+        "source_journal_sha256": source_journal_sha256,
+        "records_indexed": records_indexed,
+        "last_event_hash": last_event_hash,
+    }
+    digest = hashlib.sha256(deterministic_json_bytes(payload)).hexdigest()
+    return f"{PROJECTION_IDENTITY_VERSION}:sha256:{digest}"
+
+
+def _projection_identity_version(identity: str) -> str:
+    if identity.startswith(f"{PROJECTION_IDENTITY_VERSION}:"):
+        return PROJECTION_IDENTITY_VERSION
+    if identity.startswith("sqlite-file:"):
+        return "legacy_path_based"
+    version, separator, _digest = identity.partition(":")
+    if separator and version:
+        return version
+    return "unknown"
 
 
 def _normalize_journal_path(journal_path: Path) -> Path:
@@ -1699,7 +1860,6 @@ def _case_bundle_manifest(
             "run_id": run_id,
         },
         "journal": {
-            "path": str(journal_path),
             "source_identity": verification.get("source_journal_identity"),
             "record_count": journal.get("record_count"),
             "terminal_hash": journal.get("terminal_hash"),
@@ -1707,7 +1867,6 @@ def _case_bundle_manifest(
             "verification": deepcopy(journal.get("verification")),
         },
         "projection": {
-            "database_path": str(database_path),
             "schema_version": verification.get("schema_version"),
             "state": verification.get("state"),
             "projection_identity": verification.get("projection_identity"),
@@ -1884,18 +2043,18 @@ def _timeline_event_matches(event: TimelineEvent, filters: dict[str, str | None]
 
     principal = event_object.get("principal")
     if filters["principal_id"] is not None and not (
-        isinstance(principal, dict) and principal.get("principal_id") == filters["principal_id"]
+        isinstance(principal, Mapping) and principal.get("principal_id") == filters["principal_id"]
     ):
         return False
 
     classification = event_object.get("classification")
     if filters["sensitivity"] is not None and not (
-        isinstance(classification, dict)
+        isinstance(classification, Mapping)
         and classification.get("sensitivity") == filters["sensitivity"]
     ):
         return False
     if filters["trust"] is not None and not (
-        isinstance(classification, dict) and classification.get("trust") == filters["trust"]
+        isinstance(classification, Mapping) and classification.get("trust") == filters["trust"]
     ):
         return False
 
@@ -2066,15 +2225,15 @@ def _evidence_links(events: Iterable[TimelineEvent]) -> Iterator[dict[str, Any]]
 
 
 def _evidence_links_from_event_objects(
-    events: Iterable[dict[str, Any]],
+    events: Iterable[Mapping[str, Any]],
 ) -> Iterator[dict[str, Any]]:
     for event in events:
         payload = event.get("payload")
-        if not isinstance(payload, dict):
+        if not isinstance(payload, Mapping):
             continue
         evidence_link = payload.get("evidence_link")
-        if isinstance(evidence_link, dict):
-            yield cast(dict[str, Any], evidence_link)
+        if isinstance(evidence_link, Mapping):
+            yield _thaw_json_object(evidence_link)
 
 
 def _principal_id(event: dict[str, Any]) -> str | None:
@@ -2129,7 +2288,7 @@ def _payload_summary_values_for_keys(value: object, keys: set[str]) -> tuple[str
             if key in keys and (summary_text := _summary_text(child)) is not None:
                 matches.add(summary_text)
             matches.update(_payload_summary_values_for_keys(child, keys))
-    elif isinstance(value, list):
+    elif _is_json_sequence(value):
         for child in value:
             matches.update(_payload_summary_values_for_keys(child, keys))
     return tuple(sorted(matches))
@@ -2137,12 +2296,12 @@ def _payload_summary_values_for_keys(value: object, keys: set[str]) -> tuple[str
 
 def _payload_values_for_keys(value: object, keys: set[str]) -> set[str]:
     matches: set[str] = set()
-    if isinstance(value, dict):
+    if isinstance(value, Mapping):
         for key, child in value.items():
             if key in keys and isinstance(child, str):
                 matches.add(child)
             matches.update(_payload_values_for_keys(child, keys))
-    elif isinstance(value, list):
+    elif _is_json_sequence(value):
         for child in value:
             matches.update(_payload_values_for_keys(child, keys))
     return matches
@@ -2152,13 +2311,17 @@ def _string_values(value: object) -> set[str]:
     values: set[str] = set()
     if isinstance(value, str):
         values.add(value)
-    elif isinstance(value, dict):
+    elif isinstance(value, Mapping):
         for child in value.values():
             values.update(_string_values(child))
-    elif isinstance(value, list):
+    elif _is_json_sequence(value):
         for child in value:
             values.update(_string_values(child))
     return values
+
+
+def _is_json_sequence(value: object) -> TypeGuard[Sequence[object]]:
+    return isinstance(value, Sequence) and not isinstance(value, str | bytes | bytearray)
 
 
 def _summary_text(value: object) -> str | None:

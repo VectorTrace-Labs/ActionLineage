@@ -1,7 +1,9 @@
 from __future__ import annotations
 
+import copy
 import json
 import math
+import pickle
 from datetime import UTC, datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any
@@ -188,6 +190,65 @@ def test_event_payload_is_recursively_immutable_and_serializes_stably() -> None:
     }
 
 
+def test_event_payload_blocks_top_level_field_reassignment() -> None:
+    event = build_event(payload={"status": "verified"})
+    original = serialize_event(event)
+
+    with pytest.raises(ValidationError, match="frozen"):
+        event.payload = {"status": "modified"}  # type: ignore[misc]
+
+    assert serialize_event(event) == original
+    assert event_to_dict(event)["payload"] == {"status": "verified"}
+
+
+def test_event_payload_blocks_reachable_backing_store_bypasses() -> None:
+    event = build_event(
+        payload={
+            "metadata": {"reviewed": True},
+            "extensions": {"vendor.example": {"classification": "internal"}},
+            "evidence_link": {
+                "subject_event_id": "evt_root",
+                "verification_status": "verified",
+            },
+            "evidence": [{"id": "ev_1", "tags": ["observed", "verified"]}],
+        }
+    )
+    original = serialize_event(event)
+    original_digest = event.integrity.event_hash
+
+    assert not hasattr(event.payload, "_values")
+    assert not hasattr(event.payload["metadata"], "_values")
+    assert not hasattr(event.payload["evidence"], "_values")
+
+    with pytest.raises(TypeError):
+        event.payload._values = {"replaced": True}  # type: ignore[attr-defined]
+    with pytest.raises(TypeError):
+        event.payload["metadata"]._values = {"reviewed": False}
+    with pytest.raises(TypeError):
+        event.payload["evidence"]._values = ({"id": "ev_tampered"},)
+    with pytest.raises(TypeError):
+        event.payload._items = (("replaced", True),)  # type: ignore[attr-defined]
+    with pytest.raises(TypeError):
+        event.payload["metadata"]._items = (("reviewed", False),)
+    with pytest.raises(TypeError):
+        event.payload["evidence"]._items = ("changed",)
+    with pytest.raises(TypeError):
+        del event.payload._items  # type: ignore[attr-defined]
+
+    backing_items = event.payload._items  # type: ignore[attr-defined]
+    assert isinstance(backing_items, tuple)
+    nested_mapping = dict(backing_items)["metadata"]
+    nested_sequence = dict(backing_items)["evidence"]
+    with pytest.raises(TypeError):
+        nested_mapping._items = (("reviewed", False),)
+    with pytest.raises(TypeError):
+        nested_sequence._items = ({"id": "ev_tampered"},)
+
+    assert serialize_event(event) == original
+    assert event.integrity.event_hash == original_digest
+    assert event_to_dict(event)["payload"]["metadata"] == {"reviewed": True}
+
+
 def test_event_payload_blocks_base_class_descriptor_mutation_bypasses() -> None:
     event = build_event(payload={"items": [{"id": "ev_1"}], "metadata": {"reviewed": True}})
     original = serialize_event(event)
@@ -220,6 +281,28 @@ def test_event_payload_is_not_mutated_by_source_aliases() -> None:
     assert event_to_dict(event)["payload"] == {"nested": []}
 
 
+def test_event_payload_aliases_do_not_cross_events() -> None:
+    source: dict[str, Any] = {"nested": {"x": 1}, "items": [{"id": "ev_1"}]}
+    first = build_event(payload=source)
+    second = build_event(payload=source)
+    first_original = serialize_event(first)
+    second_original = serialize_event(second)
+
+    source["nested"]["x"] = 999
+    source["items"][0]["id"] = "ev_tampered"
+    source["items"].append({"id": "ev_2"})
+
+    with pytest.raises(TypeError):
+        first.payload["nested"]._items = (("x", 999),)
+    with pytest.raises(TypeError):
+        second.payload["items"][0]._items = (("id", "ev_tampered"),)
+
+    assert serialize_event(first) == first_original
+    assert serialize_event(second) == second_original
+    assert event_to_dict(first)["payload"] == {"nested": {"x": 1}, "items": [{"id": "ev_1"}]}
+    assert event_to_dict(second)["payload"] == {"nested": {"x": 1}, "items": [{"id": "ev_1"}]}
+
+
 def test_event_model_copy_update_revalidates_payload_immutability() -> None:
     event = build_event(payload={"items": []})
 
@@ -230,6 +313,10 @@ def test_event_model_copy_update_revalidates_payload_immutability() -> None:
         copied.payload["items"].append("changed")  # type: ignore[union-attr]
     with pytest.raises(TypeError):
         list.append(copied.payload["items"], "changed")  # type: ignore[arg-type]
+    with pytest.raises(TypeError):
+        copied.payload._values = {"items": ["changed"]}  # type: ignore[attr-defined]
+    with pytest.raises(TypeError):
+        copied.payload["items"]._items = ("changed",)
 
     assert serialize_event(copied) == original
 
@@ -245,8 +332,34 @@ def test_event_model_construct_revalidates_payload_immutability() -> None:
         constructed.payload["items"].append("changed")  # type: ignore[union-attr]
     with pytest.raises(TypeError):
         list.append(constructed.payload["items"], "changed")  # type: ignore[arg-type]
+    with pytest.raises(TypeError):
+        constructed.payload._values = {"items": ["changed"]}  # type: ignore[attr-defined]
+    with pytest.raises(TypeError):
+        constructed.payload["items"]._items = ("changed",)
 
     assert serialize_event(constructed) == original
+
+
+def test_event_payload_copy_deepcopy_and_pickle_keep_payload_sealed() -> None:
+    event = build_event(payload={"nested": {"x": 1}, "items": [{"id": "ev_1"}]})
+    original_payload = event_to_dict(event)["payload"]
+
+    for copied in (
+        copy.copy(event),
+        copy.deepcopy(event),
+        pickle.loads(pickle.dumps(event)),
+    ):
+        original = serialize_event(copied)
+
+        with pytest.raises(TypeError):
+            copied.payload._values = {"nested": {"x": 999}}  # type: ignore[attr-defined]
+        with pytest.raises(TypeError):
+            copied.payload["nested"]._items = (("x", 999),)
+        with pytest.raises(TypeError):
+            copied.payload["items"][0]["id"] = "ev_tampered"  # type: ignore[index]
+
+        assert serialize_event(copied) == original
+        assert event_to_dict(copied)["payload"] == original_payload
 
 
 @pytest.mark.parametrize("value", [math.nan, math.inf, -math.inf])

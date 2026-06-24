@@ -3,8 +3,10 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+import pytest
+
 from actionlineage.demo.scenario import build_demo_events
-from actionlineage.domain import RedactionPolicy
+from actionlineage.domain import RedactionPolicy, event_to_dict
 from actionlineage.domain.redaction import CAPTURE_DIGEST_SCOPE
 from actionlineage.exporters import (
     ExportProfile,
@@ -78,6 +80,27 @@ def test_export_redacts_canary_secret_from_every_profile() -> None:
 
     attributes = otel_attributes_for_event(event)
     assert raw_secret not in json.dumps(attributes, sort_keys=True)
+
+
+def test_export_profiles_use_original_event_after_failed_payload_backing_store_attack() -> None:
+    event = build_demo_events()[0].model_copy(
+        update={"payload": {"status": "verified", "metadata": {"reviewed": True}}}
+    )
+
+    with pytest.raises(TypeError):
+        event.payload["metadata"]._items = (("reviewed", False),)
+
+    mapped = map_event_for_profile(event, profile=ExportProfile.ACTIONLINEAGE_JSON)
+    payload = mapped["payload"]
+    assert isinstance(payload, dict)
+    payload["status"] = "tampered"
+    payload["metadata"]["reviewed"] = False
+
+    assert event_to_dict(event)["payload"] == {"status": "verified", "metadata": {"reviewed": True}}
+    assert map_event_for_profile(event, profile=ExportProfile.ACTIONLINEAGE_JSON)["payload"] == {
+        "status": "verified",
+        "metadata": {"reviewed": True},
+    }
 
 
 def test_file_sink_writes_ndjson(tmp_path) -> None:

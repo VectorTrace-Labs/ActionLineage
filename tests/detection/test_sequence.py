@@ -28,6 +28,7 @@ from actionlineage.domain import (
     Principal,
     PrincipalType,
     Source,
+    event_to_dict,
 )
 from actionlineage.journal import LocalJournal
 
@@ -136,6 +137,31 @@ def test_rule_metadata_is_exported_with_detection_match() -> None:
     assert len(matches) == 1
     assert matches[0].as_dict()["rule_id"] == "AL-TEST-001"
     assert matches[0].as_dict()["severity"] == "high"
+
+
+def test_sequence_rule_uses_original_event_after_failed_payload_backing_store_attack() -> None:
+    event = _event(
+        event_id="evt_detection_immutability",
+        event_type=EventType.TOOL_EXECUTION_ACKNOWLEDGED,
+        payload={"tool_identity": {"name": "safe_files.read"}},
+    )
+    rule = SequenceRule(
+        name="detect-original-tool",
+        stages=(
+            SequenceStage(
+                event_type="tool.execution.acknowledged",
+                where={"tool_identity.name": "safe_files.read"},
+            ),
+        ),
+    )
+
+    with pytest.raises(TypeError):
+        event.payload["tool_identity"]._items = (("name", "tampered.tool"),)
+
+    matches = evaluate_sequence_rule((event,), rule)
+
+    assert len(matches) == 1
+    assert event_to_dict(event)["payload"] == {"tool_identity": {"name": "safe_files.read"}}
 
 
 def test_bounded_expression_operators_match_known_values() -> None:

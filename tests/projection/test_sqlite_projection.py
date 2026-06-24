@@ -548,9 +548,48 @@ def test_projection_moved_journal_path_keeps_stored_path_as_audit_hint(tmp_path:
     assert timeline.verification is not None
     assert timeline.verification.journal_path == moved_journal_path.resolve(strict=False)
     assert timeline.verification.source_journal_path == str(journal_path.resolve(strict=False))
-    assert timeline.as_dict()["verification"]["journal_path"] == str(
+    assert "journal_path" not in timeline.as_dict()["verification"]
+    assert timeline.verification.diagnostics_as_dict()["journal_path"] == str(
         moved_journal_path.resolve(strict=False)
     )
+
+
+def test_projection_public_proof_omits_host_paths_by_default(tmp_path: Path) -> None:
+    journal_path = (
+        tmp_path / "home" / "alice" / "private" / "actionlineage" / "tenant-a" / "journal.jsonl"
+    )
+    database_path = tmp_path / "Users" / "bob" / "CompanySecrets" / "projection.db"
+    windows_path = r"C:\Users\Carol\Internal\tenant-b\journal.jsonl"
+    journal_path.parent.mkdir(mode=0o700, parents=True)
+    database_path.parent.mkdir(mode=0o700, parents=True)
+    write_journal(journal_path, complete_timeline_events())
+    rebuild_projection(journal_path, database_path)
+    with closing(sqlite3.connect(database_path)) as connection, connection:
+        connection.execute(
+            "UPDATE projection_metadata SET value = ? WHERE key = 'source_journal_path'",
+            (windows_path,),
+        )
+
+    timeline = query_timeline(database_path, journal_path=journal_path, trace_id="trace_01")
+    public_json = json.dumps(timeline.as_dict(), sort_keys=True)
+
+    for leaked_value in (
+        str(journal_path),
+        str(database_path),
+        "/home/alice/private/actionlineage/tenant-a/journal.jsonl",
+        "/Users/bob/CompanySecrets/projection.db",
+        windows_path,
+        "CompanySecrets",
+        "tenant-a",
+        "tenant-b",
+    ):
+        assert leaked_value not in public_json
+
+    assert timeline.verification is not None
+    diagnostics = timeline.verification.diagnostics_as_dict()
+    diagnostics_json = json.dumps(diagnostics, sort_keys=True)
+    assert windows_path in str(diagnostics["source_journal_path"])
+    assert str(database_path) in diagnostics_json
 
 
 def test_projection_journal_path_aliases_are_normalized(
@@ -793,6 +832,117 @@ def test_projection_result_as_dict_returns_defensive_json_copies(tmp_path: Path)
     fresh_payload = fresh_event_object["payload"]
     assert isinstance(fresh_payload, dict)
     assert fresh_payload["phase"] == "started"
+
+
+def test_projection_result_internal_event_is_recursively_immutable(tmp_path: Path) -> None:
+    journal_path = tmp_path / "events.jsonl"
+    database_path = tmp_path / "projection.sqlite"
+    write_journal(journal_path, complete_timeline_events())
+    rebuild_projection(journal_path, database_path)
+
+    timeline = query_timeline(database_path, journal_path=journal_path, trace_id="trace_01")
+    event = timeline.events[0]
+
+    with pytest.raises(TypeError):
+        event.event["payload"]["phase"] = "tampered"  # type: ignore[index]
+    with pytest.raises(TypeError):
+        event.event._items = (("event_id", "evt_tampered"),)  # type: ignore[attr-defined]
+    with pytest.raises(TypeError):
+        event.event["payload"]._items = (("phase", "tampered"),)  # type: ignore[attr-defined]
+    with pytest.raises(AttributeError):
+        _ = event.event._values  # type: ignore[attr-defined]
+
+    exported = timeline.as_dict()
+    exported_events = exported["events"]
+    assert isinstance(exported_events, list)
+    exported_events[0]["event"]["payload"]["phase"] = "tampered"
+
+    assert timeline.events[0].event["payload"]["phase"] == "started"
+    assert timeline.as_dict()["events"][0]["event"]["payload"]["phase"] == "started"
+
+
+def test_projection_result_constructor_does_not_retain_event_aliases() -> None:
+    source_event: dict[str, object] = {
+        "event_id": "evt_alias",
+        "event_type": "agent.run.started",
+        "payload": {"status": "original"},
+    }
+    projected = sqlite_projection.TimelineEvent(
+        journal_record_number=1,
+        event_id="evt_alias",
+        event_type="agent.run.started",
+        occurred_at="2026-06-21T18:42:12Z",
+        observed_at="2026-06-21T18:42:12Z",
+        trace_id="trace_alias",
+        run_id="run_alias",
+        sequence=0,
+        event_hash="sha256:event",
+        verification_status=None,
+        evidence_subject_event_id=None,
+        evidence_event_id=None,
+        event=source_event,
+    )
+
+    source_event["payload"]["status"] = "tampered"  # type: ignore[index]
+    with pytest.raises(TypeError):
+        projected.event["payload"]["status"] = "tampered"  # type: ignore[index]
+
+    assert projected.event["payload"]["status"] == "original"
+    assert projected.as_dict()["event"]["payload"]["status"] == "original"
+
+
+def test_event_explanation_internal_state_is_immutable_and_serializes_detached(
+    tmp_path: Path,
+) -> None:
+    journal_path = tmp_path / "events.jsonl"
+    database_path = tmp_path / "projection.sqlite"
+    link = EvidenceLink(
+        subject_event_id="evt_1",
+        relationship=EvidenceRelationship.CORROBORATES,
+        evidence_event_id="evt_2",
+        corroboration_type=CorroborationType.INDEPENDENT_OBSERVER,
+        observer_identity="local_receiver_fixture",
+        confidence=0.95,
+        verification_status=VerificationStatus.VERIFIED,
+        limitations=("local deterministic fixture only",),
+    )
+    write_journal(
+        journal_path,
+        (
+            timeline_event(0, EventType.AGENT_INTENT_RECORDED, parent_event_id=None),
+            timeline_event(
+                1,
+                EventType.TOOL_EXECUTION_ACKNOWLEDGED,
+                parent_event_id="evt_0",
+                payload={"tool_identity": {"name": "safe_http.send"}},
+            ),
+            timeline_event(2, EventType.SIDE_EFFECT_OBSERVED, parent_event_id="evt_1"),
+            timeline_event(
+                3,
+                EventType.SIDE_EFFECT_VERIFIED,
+                parent_event_id="evt_2",
+                payload={"evidence_link": link.as_payload()},
+            ),
+        ),
+    )
+    rebuild_projection(journal_path, database_path)
+
+    explanation = explain_event(database_path, journal_path=journal_path, event_id="evt_1")
+
+    with pytest.raises(TypeError):
+        explanation.event["payload"]["tool_identity"]["name"] = "tampered"  # type: ignore[index]
+    with pytest.raises(TypeError):
+        explanation.evidence_links_as_subject[0]._items = (  # type: ignore[attr-defined]
+            ("subject_event_id", "evt_tampered"),
+        )
+
+    exported = explanation.as_dict()
+    exported["event"]["payload"]["tool_identity"]["name"] = "tampered"
+    exported["evidence_links_as_subject"][0]["subject_event_id"] = "evt_tampered"
+
+    fresh = explanation.as_dict()
+    assert fresh["event"]["payload"]["tool_identity"]["name"] == "safe_http.send"
+    assert fresh["evidence_links_as_subject"][0]["subject_event_id"] == "evt_1"
 
 
 def test_projection_indexes_verification_status_and_evidence_links(tmp_path: Path) -> None:
@@ -1067,6 +1217,23 @@ def test_grounded_summary_is_derived_from_incident_evidence(tmp_path: Path) -> N
     assert "append-only local journal" in str(summary["canonical_source"])
 
 
+def test_grounded_summary_selector_is_immutable_and_as_dict_is_detached(tmp_path: Path) -> None:
+    journal_path = tmp_path / "events.jsonl"
+    database_path = tmp_path / "projection.sqlite"
+    write_journal(journal_path, complete_timeline_events())
+    rebuild_projection(journal_path, database_path)
+
+    summary = summarize_incident(database_path, journal_path=journal_path, trace_id="trace_01")
+
+    with pytest.raises(TypeError):
+        summary.selector._items = (("value", "tampered"),)  # type: ignore[attr-defined]
+
+    exported = summary.as_dict()
+    exported["selector"]["value"] = "tampered"
+
+    assert summary.as_dict()["selector"]["value"] == "trace_01"
+
+
 def test_investigation_graph_export_links_events_and_evidence(tmp_path: Path) -> None:
     journal_path = tmp_path / "events.jsonl"
     database_path = tmp_path / "projection.sqlite"
@@ -1122,6 +1289,34 @@ def test_investigation_graph_export_links_events_and_evidence(tmp_path: Path) ->
     assert evidence_edge["attributes"]["observer_identity"] == "local_receiver_fixture"
     assert evidence_edge["attributes"]["verification_status"] == "verified"
     assert any("No observation recorded is not proof" in item for item in graph["limitations"])
+
+
+def test_investigation_graph_internal_attributes_are_immutable(tmp_path: Path) -> None:
+    journal_path = tmp_path / "events.jsonl"
+    database_path = tmp_path / "projection.sqlite"
+    write_journal(journal_path, complete_timeline_events())
+    rebuild_projection(journal_path, database_path)
+
+    graph = export_investigation_graph(
+        database_path, journal_path=journal_path, trace_id="trace_01"
+    )
+    first_node = graph.nodes[0]
+    first_edge = graph.edges[0]
+
+    with pytest.raises(TypeError):
+        graph.selector._items = (("value", "tampered"),)  # type: ignore[attr-defined]
+    with pytest.raises(TypeError):
+        first_node.attributes._items = (("event_id", "evt_tampered"),)  # type: ignore[attr-defined]
+    with pytest.raises(TypeError):
+        first_edge.attributes._items = (("relationship", "tampered"),)  # type: ignore[attr-defined]
+
+    exported = graph.as_dict()
+    exported["selector"]["value"] = "tampered"
+    exported["nodes"][0]["attributes"]["event_id"] = "evt_tampered"
+
+    fresh = graph.as_dict()
+    assert fresh["selector"]["value"] == "trace_01"
+    assert fresh["nodes"][0]["attributes"].get("event_id") != "evt_tampered"
 
 
 def test_event_explanation_links_causality_and_evidence(tmp_path: Path) -> None:
@@ -1190,6 +1385,30 @@ def test_projection_cli_error_redacts_missing_event_id_canary(tmp_path: Path) ->
     assert "Bearer [REDACTED:bearer_token]" in result.stdout
 
 
+def test_case_export_embedded_incident_keeps_verified_timeline_immutable(tmp_path: Path) -> None:
+    journal_path = tmp_path / "events.jsonl"
+    database_path = tmp_path / "projection.sqlite"
+    output_dir = tmp_path / "case"
+    write_journal(journal_path, complete_timeline_events())
+    rebuild_projection(journal_path, database_path)
+
+    case = export_case_bundle(
+        database_path,
+        output_dir,
+        journal_path=journal_path,
+        trace_id="trace_01",
+    )
+    embedded_event = case.incident.timeline.events[0]
+
+    with pytest.raises(TypeError):
+        embedded_event.event["payload"]["phase"] = "tampered"  # type: ignore[index]
+
+    case_data = case.incident.as_dict()
+    case_data["events"][0]["payload"]["phase"] = "tampered"
+
+    assert case.incident.as_dict()["events"][0]["payload"]["phase"] == "started"
+
+
 def test_case_bundle_export_writes_redacted_reports_without_absence_overclaim(
     tmp_path: Path,
 ) -> None:
@@ -1212,7 +1431,8 @@ def test_case_bundle_export_writes_redacted_reports_without_absence_overclaim(
     files = {entry["path"]: entry for entry in manifest["files"]}
 
     assert result.as_dict()["ok"] is True
-    assert result.as_dict()["manifest_path"] == str(result.manifest_path)
+    assert result.as_dict()["files"]["manifest"] == "manifest.json"
+    assert result.diagnostics_as_dict()["manifest_path"] == str(result.manifest_path)
     assert case_data["event_count"] == 5
     assert len(ndjson_lines) == 5
     assert "No observation recorded is not proof" in markdown
@@ -1240,6 +1460,11 @@ def test_case_bundle_export_writes_redacted_reports_without_absence_overclaim(
     assert manifest["projection"]["schema_version"] == 2
     assert manifest["external_signature"] is None
     assert manifest["external_checkpoint"] is None
+    manifest_json = json.dumps(manifest, sort_keys=True)
+    result_json = json.dumps(result.as_dict(), sort_keys=True)
+    for leaked_value in (str(journal_path), str(database_path), str(bundle_dir)):
+        assert leaked_value not in manifest_json
+        assert leaked_value not in result_json
 
     for exported_path in (result.json_path, result.ndjson_path, result.markdown_path):
         data = exported_path.read_bytes()
@@ -1566,7 +1791,8 @@ def test_projection_cli_filter_explain_and_case_export(tmp_path: Path) -> None:
     assert explain_data["parent_event_id"] == "evt_1"
     assert explain_data["child_event_ids"] == ["evt_3"]
     assert case_result.exit_code == 0
-    assert Path(case_data["markdown_path"]).exists()
+    assert case_data["files"]["report_markdown"] == "report.md"
+    assert (case_dir / case_data["files"]["report_markdown"]).exists()
 
 
 def test_projection_cli_summarize(tmp_path: Path) -> None:

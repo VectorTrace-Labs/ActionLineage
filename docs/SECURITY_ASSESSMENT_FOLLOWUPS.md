@@ -8,11 +8,14 @@ and does not expand ActionLineage into a generic tracing platform.
 
 - **Immutable verified event payload views**: local regression tests cover
   ordinary mutation, `dict.__setitem__`, `dict.update`, `list.append`,
-  `list.__setitem__`, caller alias mutation, and Pydantic
+  `list.__setitem__`, caller alias mutation, cross-event aliasing, reachable
+  backing-store access/replacement, and Pydantic
   `model_copy(update=...)`/`model_construct(...)` paths. `EventEnvelope.payload`
-  now uses immutable `Mapping`/sequence containers that do not subclass mutable
-  built-ins, and returns mutable JSON only through explicit serialization
-  boundaries as defensive copies.
+  now uses sealed tuple-backed immutable `Mapping`/sequence containers that do
+  not subclass mutable built-ins, and returns mutable JSON only through explicit
+  serialization boundaries as defensive copies. Regression coverage also checks
+  copy/deepcopy/pickle, verified journal snapshots, evidence-like payloads,
+  metadata, extension fields, detection, and export-after-mutation attempts.
 - **SQLite projection binding for verified reads**: local regression tests cover
   every projected column that can influence selection, ordering, interpretation,
   or output, including selector fields, timestamps, sequence, parent IDs,
@@ -33,11 +36,21 @@ and does not expand ActionLineage into a generic tracing platform.
 - **Read-only projection verification and health**: local regression tests cover
   missing and incomplete projection databases and assert verification does not
   create files, tables, metadata, or migrations on read paths.
-- **Public result defensive copies**: local regression tests cover mutable
-  nested observer state, external sensor records, extension-pack metadata, pack
-  compatibility metadata, and service-health details. These public result
-  boundaries now return defensive copies so caller mutation of one result object
-  cannot change subsequent renders from the same trusted object.
+- **Immutable projection and public result boundaries**: local regression tests
+  cover verification-bearing projection timeline events, event explanations,
+  grounded-summary selectors, graph selectors and attributes, and case-export
+  embedded incident timelines. These result objects now store recursively
+  immutable JSON containers internally and return mutable data only through
+  detached `as_dict()` serialization boundaries. Related public-result tests
+  also cover mutable nested observer state, external sensor records,
+  extension-pack metadata, pack compatibility metadata, and service-health
+  details.
+- **Portable projection proof path privacy**: local regression tests cover
+  POSIX, macOS-shaped, Windows-shaped, CLI, case-bundle, and service timeline
+  path canaries. Public projection proofs and portable case-bundle results now
+  omit host paths by default, local paths live behind explicit diagnostics
+  methods, projection identity is content-derived rather than `sqlite-file`
+  path-derived, and case manifests use relative artifact names.
 - **Service ingestion idempotency and partial outcomes**: local regression tests
   cover service-level replay, same-key/different-record conflicts, concurrent
   duplicate requests released through a barrier, partial-batch HTTP 207
@@ -105,6 +118,12 @@ and does not expand ActionLineage into a generic tracing platform.
   retry guidance, and claim boundaries. Local regression tests cover
   deterministic JSON output, required fault coverage, fail-closed rule lookup,
   immutability, and public exports.
+- **Security hardening finding matrix**:
+  `docs/SECURITY_HARDENING_FINDINGS_MATRIX.md` classifies all 12 findings from
+  the production-readiness hardening brief as fixed, partially fixed, requiring
+  migration, requiring an external service, or requiring independent validation.
+  Release-readiness tests assert every finding ID remains tracked and that the
+  completed Phase 1 trust-boundary fixes stay visible.
 - **Capture digest scope**: local regression and property tests cover scoped
   capture digests for truncated text and byte values. Capture metadata now
   records `actionlineage.capture.v1/redaction-boundary` so bounded-content

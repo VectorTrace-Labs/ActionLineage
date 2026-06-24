@@ -625,7 +625,8 @@ def _timeline_row(event: TimelineEvent) -> str:
 
 
 def _event_detail(event: TimelineEvent) -> str:
-    payload = escape(json.dumps(event.event, indent=2, sort_keys=True))
+    event_data = event.as_dict()["event"]
+    payload = escape(json.dumps(event_data, indent=2, sort_keys=True))
     return (
         '<div class="event-detail">'
         f"<strong><code>{escape(event.event_id)}</code></strong> "
@@ -799,22 +800,22 @@ def _css_token(value: str) -> str:
 
 def _parent_event_id(event: TimelineEvent) -> str | None:
     causality = event.event.get("causality")
-    if not isinstance(causality, dict):
+    if not isinstance(causality, Mapping):
         return None
     parent = causality.get("parent_event_id")
     return parent if isinstance(parent, str) else None
 
 
-def _payload(event: TimelineEvent) -> dict[str, Any]:
+def _payload(event: TimelineEvent) -> Mapping[str, Any]:
     payload = event.event.get("payload")
-    return payload if isinstance(payload, dict) else {}
+    return cast(Mapping[str, Any], payload) if isinstance(payload, Mapping) else {}
 
 
-def _evidence_link(event: TimelineEvent) -> dict[str, Any] | None:
+def _evidence_link(event: TimelineEvent) -> Mapping[str, Any] | None:
     link = _payload(event).get("evidence_link")
-    if not isinstance(link, dict):
+    if not isinstance(link, Mapping):
         return None
-    return cast(dict[str, Any], link)
+    return cast(Mapping[str, Any], link)
 
 
 def _verification_status(event: TimelineEvent) -> str:

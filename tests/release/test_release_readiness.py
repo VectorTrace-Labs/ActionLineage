@@ -182,6 +182,21 @@ def test_local_durability_failure_semantics_boundary_is_tracked() -> None:
     assert "test_local_durability_policy_covers_required_faults" in durability_tests
 
 
+def test_security_hardening_findings_matrix_tracks_full_brief() -> None:
+    matrix = (PROJECT_ROOT / "docs/SECURITY_HARDENING_FINDINGS_MATRIX.md").read_text(
+        encoding="utf-8"
+    )
+
+    assert "The pass started on `main` at commit `460a99d`" in matrix
+    assert "F1" in matrix
+    assert "Confirmed and fixed in this pass" in matrix
+    assert "Verified projection results contain mutable nested objects" in matrix
+    assert "Future projection/result types must use the same immutable-result boundary" in matrix
+    assert "F3 public/portable path privacy" in matrix
+    for finding_id in [f"F{index}" for index in range(1, 13)]:
+        assert f"| {finding_id} |" in matrix
+
+
 def test_observer_attestation_policy_boundary_is_tracked() -> None:
     adr = (PROJECT_ROOT / "docs/ADR/0012-observer-attestation-policy.md").read_text(
         encoding="utf-8"

@@ -800,6 +800,9 @@ def test_service_ingest_endpoint_writes_and_rebuilds_projection(tmp_path: Path) 
     )
     assert timeline.status_code == 200
     assert timeline.json()["event_count"] == 1
+    timeline_text = json.dumps(timeline.json(), sort_keys=True)
+    assert str(demo.journal_path) not in timeline_text
+    assert str(demo.database_path) not in timeline_text
 
 
 def test_service_ingest_replay_reports_duplicate_without_new_append(tmp_path: Path) -> None:

@@ -207,6 +207,12 @@ def test_verified_snapshot_events_reject_nested_payload_mutation(tmp_path: Path)
         event.payload["evidence"].append({"id": "ev_2"})  # type: ignore[union-attr]
     with pytest.raises(TypeError):
         event.payload["evidence"][0]["id"] = "ev_tampered"  # type: ignore[index]
+    with pytest.raises(TypeError):
+        event.payload._values = {"metadata": {"reviewed": False}}  # type: ignore[attr-defined]
+    with pytest.raises(TypeError):
+        event.payload["metadata"]._items = (("reviewed", False),)
+    with pytest.raises(TypeError):
+        event.payload["evidence"]._items = ({"id": "ev_tampered"},)
 
     assert serialize_event(snapshot.events[0]) == original_serialized
     assert snapshot.events[0].integrity.event_hash == original_hash
