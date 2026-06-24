@@ -119,6 +119,11 @@ fails, the service reports the committed prefix and the failed record with HTTP
 the committed prefix. Storage exception details are bounded to an error type in
 the per-record outcome. Retrying the same multi-record body is idempotent for
 the committed prefix and can import the remaining suffix once storage recovers.
+If the service process exits after a journal append commits but before
+projection rebuild returns, the restarted service reports `projection_stale`
+health until a retry or explicit rebuild repairs the disposable projection.
+Retrying the same idempotency key after restart reports the existing event as a
+duplicate and rebuilds without appending another journal record.
 
 Service-mode case exports are written under a configured export root. Set
 `ACTIONLINEAGE_EXPORT_ROOT` for environment-driven service startup; otherwise

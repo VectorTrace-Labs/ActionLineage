@@ -4,6 +4,7 @@ import os
 import subprocess
 import sys
 from concurrent.futures import ThreadPoolExecutor
+from multiprocessing import get_context
 from pathlib import Path
 from threading import Barrier
 
@@ -38,6 +39,35 @@ from actionlineage.service import (
 
 JWT_HS256_KEY = "test-key-material-for-hs256-000000"
 JWT_OTHER_HS256_KEY = "other-key-material-for-hs256-0000"
+SERVICE_CRASH_EXIT_CODE = 86
+
+
+def _crash_after_service_append(
+    journal_path: str,
+    database_path: str,
+    body: dict[str, object],
+) -> None:
+    def crash_before_projection_rebuild(*_args: object, **_kwargs: object) -> None:
+        os._exit(SERVICE_CRASH_EXIT_CODE)
+
+    authenticator = StaticTokenAuthenticator(
+        tokens={
+            "writer": ServicePrincipal(
+                principal_id="writer",
+                roles=frozenset({ServiceRole.WRITE, ServiceRole.READ}),
+            )
+        }
+    )
+    app = create_app(
+        journal_path=Path(journal_path),
+        database_path=Path(database_path),
+        authenticator=authenticator,
+    )
+    service_api_module.rebuild_projection = crash_before_projection_rebuild
+
+    with TestClient(app) as client:
+        client.post("/ingest", headers={"Authorization": "Bearer writer"}, json=body)
+    os._exit(0)
 
 
 def test_static_token_authenticator_and_rbac() -> None:
@@ -856,6 +886,83 @@ def test_service_ingest_retry_after_partial_commit_completes_remaining_batch(
     assert snapshot.record_count == initial_count + 2
     assert timeline.status_code == 200
     assert timeline.json()["event_count"] == 2
+
+
+def test_service_ingest_retry_repairs_process_crash_after_append(tmp_path: Path) -> None:
+    demo = run_demo(tmp_path / "demo")
+    initial_count = LocalJournal(demo.journal_path).verified_snapshot().record_count
+    body = {
+        "correlation": {"trace_id": "trace_service", "run_id": "run_service"},
+        "records": [
+            {
+                "idempotency_key": "service-record-crash-after-append",
+                "event_type": "agent.intent.recorded",
+                "payload": {"intent": {"summary": "survive process crash"}},
+                "source_kind": "external_json",
+                "sort_key": "001",
+            }
+        ],
+    }
+    process = get_context("spawn").Process(
+        target=_crash_after_service_append,
+        args=(str(demo.journal_path), str(demo.database_path), body),
+    )
+
+    process.start()
+    process.join(timeout=10)
+    if process.is_alive():
+        process.terminate()
+        process.join(timeout=5)
+        pytest.fail("service ingest crash simulation did not exit")
+
+    snapshot_after_crash = LocalJournal(demo.journal_path).verified_snapshot()
+    degraded = check_local_health(
+        journal_path=demo.journal_path,
+        database_path=demo.database_path,
+    )
+    client = _client(
+        demo.journal_path,
+        demo.database_path,
+        token="writer",
+        roles=frozenset({ServiceRole.WRITE, ServiceRole.READ}),
+    )
+    stale_timeline = client.get(
+        "/timeline",
+        params={"trace_id": "trace_service"},
+        headers={"Authorization": "Bearer writer"},
+    )
+
+    assert process.exitcode == SERVICE_CRASH_EXIT_CODE
+    assert snapshot_after_crash.ok
+    assert snapshot_after_crash.record_count == initial_count + 1
+    assert degraded.ok is False
+    assert degraded.issues[0].code == "projection_stale"
+    assert stale_timeline.status_code == 503
+
+    recovered = client.post(
+        "/ingest",
+        headers={"Authorization": "Bearer writer", "X-Request-ID": "restart-retry"},
+        json=body,
+    )
+    healthy = check_local_health(
+        journal_path=demo.journal_path,
+        database_path=demo.database_path,
+    )
+    repaired_timeline = client.get(
+        "/timeline",
+        params={"trace_id": "trace_service"},
+        headers={"Authorization": "Bearer writer"},
+    )
+
+    assert recovered.status_code == 200
+    assert recovered.json()["imported_count"] == 0
+    assert recovered.json()["duplicate_count"] == 1
+    assert recovered.json()["journal_committed"] is False
+    assert recovered.json()["projection"]["state"] == "rebuilt"
+    assert healthy.ok is True
+    assert repaired_timeline.status_code == 200
+    assert repaired_timeline.json()["event_count"] == 1
+    assert LocalJournal(demo.journal_path).verified_snapshot().record_count == initial_count + 1
 
 
 def test_service_ingest_reports_projection_stale_after_committed_append(

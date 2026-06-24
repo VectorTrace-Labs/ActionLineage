@@ -65,6 +65,11 @@ and does not expand ActionLineage into a generic tracing platform.
   retrying the same multi-record body after only its prefix committed. The retry
   reports the committed prefix as duplicate, imports the remaining suffix,
   rebuilds the projection, and avoids duplicate journal appends.
+- **Service ingest process-crash recovery**: local subprocess regression tests
+  cover a service process exiting after journal append and before projection
+  rebuild. A restarted service reports `projection_stale`, rejects stale
+  timeline reads, and repairs the projection on idempotent retry without adding
+  a duplicate journal record.
 - **Capture digest scope**: local regression and property tests cover scoped
   capture digests for truncated text and byte values. Capture metadata now
   records `actionlineage.capture.v1/redaction-boundary` so bounded-content
@@ -125,11 +130,11 @@ and does not expand ActionLineage into a generic tracing platform.
   Source ingestion and service-mode local journal writes have deterministic
   duplicate, conflict, partial-batch, projection-stale, and duplicate retry
   recovery tests, plus later-append storage failure handling after a committed
-  prefix and retry completion for the remaining suffix. Remaining work includes
-  process-crash fault injection, authenticated append indexes or checkpoints for
-  stronger replay recovery, and a deliberate decision if future APIs need
-  all-or-nothing transactional batch semantics instead of explicit partial
-  success.
+  prefix, retry completion for the remaining suffix, and subprocess crash
+  recovery after append-before-projection. Remaining work includes authenticated
+  append indexes or checkpoints for stronger replay recovery and a deliberate
+  decision if future APIs need all-or-nothing transactional batch semantics
+  instead of explicit partial success.
 - **Tenant isolation**: partially confirmed. Tenant-aware authorization
   primitives exist, but end-to-end tenant isolation across storage, projections,
   exports, logs, caches, and anchors is not demonstrated.
@@ -154,7 +159,7 @@ and does not expand ActionLineage into a generic tracing platform.
    before proposing segmented journals or checkpoint indexes.
 3. Draft ADRs for observer attestation policy, canonicalization v1, causal edge
    evolution, and external checkpoint trust roots.
-4. Add deeper service ingestion crash/fault injection around process restart
-   after append and authenticated append checkpoints.
+4. Decide authenticated append checkpoint/index scope before adding durability
+   behavior beyond local hash-chain recovery.
 5. Audit attachment-count limits and redaction digest behavior across journal,
    projection, export, logs, exceptions, and test snapshots.
