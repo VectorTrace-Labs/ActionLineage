@@ -15,6 +15,8 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
+from actionlineage.errors import redact_error_text
+
 MANIFEST_SCHEMA_VERSION = "actionlineage.dev/release-candidate-manifest-v0"
 REQUIRED_ARTIFACT_PATTERNS = (
     "actionlineage-sbom.json",
@@ -115,7 +117,7 @@ def main(argv: Sequence[str] | None = None) -> int:
             gates=gates,
         )
     except (OSError, ValueError, tomllib.TOMLDecodeError, json.JSONDecodeError) as exc:
-        print(json.dumps({"ok": False, "error": str(exc)}, sort_keys=True))
+        print(json.dumps({"ok": False, "error": _safe_text(exc)}, sort_keys=True))
         return 1
 
     if result.ok:
@@ -287,7 +289,7 @@ def _github_state(artifact_root: Path, *, release: str) -> dict[str, Any]:
         state["tag_refs"] = [row["ref"] for row in tags if isinstance(row, dict) and "ref" in row]
     if isinstance(release_lookup, dict):
         if "message" in release_lookup:
-            state["release_lookup_message"] = release_lookup["message"]
+            state["release_lookup_message"] = _safe_text(release_lookup["message"])
         elif "tag_name" in release_lookup:
             state["release_lookup_message"] = release_lookup["tag_name"]
     if isinstance(releases, list):
@@ -301,6 +303,10 @@ def _load_json_if_present(path: Path) -> Any | None:
     if not path.exists():
         return None
     return json.loads(path.read_text(encoding="utf-8"))
+
+
+def _safe_text(value: object) -> str:
+    return redact_error_text(str(value))
 
 
 def _git_head(repository_root: Path) -> str | None:

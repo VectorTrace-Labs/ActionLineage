@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import importlib.util
 import io
+import json
 import sys
 import tarfile
 import zipfile
@@ -212,6 +213,43 @@ def test_fetch_json_reports_urllib_and_curl_fallback_failures(
     assert "SSL certificate problem" in error
 
 
+def test_fetch_json_redacts_urllib_and_curl_diagnostics(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    checker = _load_checker()
+    urlopen_secret = "urlopensecretvalue123456789"
+    curl_secret = "curlsecretvalue123456789"
+
+    def fail_urlopen(*_args: object, **_kwargs: object) -> object:
+        raise checker.urllib.error.URLError(f"Bearer {urlopen_secret}")
+
+    def fake_run(
+        args: list[str], *, check: bool, capture_output: bool, text: bool, timeout: float
+    ) -> object:
+        assert check is False
+        assert capture_output is True
+        assert text is True
+        assert timeout == 4.5
+        return checker.subprocess.CompletedProcess(
+            args,
+            60,
+            stdout="",
+            stderr=f"curl failed with api_key={curl_secret}",
+        )
+
+    monkeypatch.setattr(checker.urllib.request, "urlopen", fail_urlopen)
+    monkeypatch.setattr(checker.subprocess, "run", fake_run)
+
+    data, error = checker._fetch_json("https://example.test/data.json", 3.5)
+
+    assert data is None
+    assert error is not None
+    assert urlopen_secret not in error
+    assert curl_secret not in error
+    assert "Bearer [REDACTED:bearer_token]" in error
+    assert "api_key=[REDACTED:secret]" in error
+
+
 def test_project_url_head_falls_back_to_bounded_curl_after_url_error(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -301,6 +339,73 @@ def test_project_url_head_reports_urllib_and_curl_fallback_failures(
     assert "certificate verify failed" in checks[0].actual
     assert "curl HEAD fallback failed (60)" in checks[0].actual
     assert "SSL certificate problem" in checks[0].actual
+
+
+def test_project_url_head_redacts_urllib_and_curl_diagnostics(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    checker = _load_checker()
+    urlopen_secret = "headurlopensecretvalue123456789"
+    curl_secret = "headcurlsecretvalue123456789"
+
+    def fail_urlopen(*_args: object, **_kwargs: object) -> object:
+        raise checker.urllib.error.URLError(f"Bearer {urlopen_secret}")
+
+    def fake_run(
+        args: list[str], *, check: bool, capture_output: bool, text: bool, timeout: float
+    ) -> object:
+        assert check is False
+        assert capture_output is True
+        assert text is True
+        assert timeout == 4.5
+        return checker.subprocess.CompletedProcess(
+            args,
+            60,
+            stdout="000",
+            stderr=f"curl HEAD failed with access_token={curl_secret}",
+        )
+
+    monkeypatch.setattr(checker.urllib.request, "urlopen", fail_urlopen)
+    monkeypatch.setattr(checker.subprocess, "run", fake_run)
+
+    checks = checker._check_url_heads({"Homepage": "https://example.test/project"}, 3.5)
+
+    assert len(checks) == 1
+    actual = checks[0].actual
+    assert actual is not None
+    assert urlopen_secret not in actual
+    assert curl_secret not in actual
+    assert "Bearer [REDACTED:bearer_token]" in actual
+    assert "access_token=[REDACTED:secret]" in actual
+
+
+def test_project_url_head_redacts_url_detail_canary(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    checker = _load_checker()
+    raw_secret = "projecturlsecretvalue123456789"
+    url = f"https://example.test/project?access_token={raw_secret}"
+
+    class FakeResponse:
+        status = 200
+
+        def __enter__(self) -> object:
+            return self
+
+        def __exit__(self, *_args: object) -> None:
+            return None
+
+    def fake_urlopen(*_args: object, **_kwargs: object) -> object:
+        return FakeResponse()
+
+    monkeypatch.setattr(checker.urllib.request, "urlopen", fake_urlopen)
+
+    checks = checker._check_url_heads({"Homepage": url}, 3.5)
+    details = json.dumps(checks[0].details, sort_keys=True)
+
+    assert checks[0].status == "PASS"
+    assert raw_secret not in details
+    assert "access_token=[REDACTED:secret]" in details
 
 
 def test_github_release_404_from_curl_fallback_is_a_failure(

@@ -16,6 +16,8 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
+from actionlineage.errors import redact_error_text
+
 PASS = "PASS"
 FAIL = "FAIL"
 UNKNOWN = "UNKNOWN"
@@ -688,7 +690,7 @@ def _is_not_found_error(error: str) -> bool:
 def _check_url_heads(project_urls: dict[str, str], timeout_seconds: float) -> list[Check]:
     checks: list[Check] = []
     for name, url in sorted(project_urls.items()):
-        details: dict[str, Any] = {"url": url}
+        details: dict[str, Any] = {"url": _safe_error_text(url)}
         request = urllib.request.Request(
             url,
             method="HEAD",
@@ -700,8 +702,9 @@ def _check_url_heads(project_urls: dict[str, str], timeout_seconds: float) -> li
         except urllib.error.HTTPError as exc:
             status_code = exc.code
         except (OSError, urllib.error.URLError) as exc:
+            original_error = _safe_error_text(exc)
             status_code, fallback_error = _fetch_head_status_with_curl(
-                url, timeout_seconds, str(exc)
+                url, timeout_seconds, original_error
             )
             if fallback_error is not None:
                 checks.append(
@@ -717,7 +720,7 @@ def _check_url_heads(project_urls: dict[str, str], timeout_seconds: float) -> li
                 continue
             assert status_code is not None
             details["fallback"] = "curl"
-            details["original_error"] = str(exc)
+            details["original_error"] = original_error
         checks.append(
             Check(
                 id=f"online.project_url.{_slug(name)}",
@@ -738,17 +741,18 @@ def _fetch_json(url: str, timeout_seconds: float) -> tuple[Any | None, str | Non
         with urllib.request.urlopen(request, timeout=timeout_seconds) as response:
             return json.loads(response.read().decode("utf-8")), None
     except urllib.error.HTTPError as exc:
-        return None, f"HTTP {exc.code}: {exc.reason}"
+        return None, _safe_error_text(f"HTTP {exc.code}: {exc.reason}")
     except json.JSONDecodeError as exc:
-        return None, str(exc)
+        return None, _safe_error_text(exc)
     except (OSError, urllib.error.URLError) as exc:
-        return _fetch_json_with_curl(url, timeout_seconds, str(exc))
+        return _fetch_json_with_curl(url, timeout_seconds, _safe_error_text(exc))
 
 
 def _fetch_json_with_curl(
     url: str, timeout_seconds: float, original_error: str
 ) -> tuple[Any | None, str | None]:
     curl_timeout = max(1.0, timeout_seconds)
+    original_error = _safe_error_text(original_error)
     command = [
         "curl",
         "--fail",
@@ -774,22 +778,30 @@ def _fetch_json_with_curl(
             timeout=curl_timeout + 1.0,
         )
     except FileNotFoundError as exc:
-        return None, f"{original_error}; curl fallback unavailable: {exc}"
+        return None, f"{original_error}; curl fallback unavailable: {_safe_error_text(exc)}"
     except subprocess.TimeoutExpired:
         return None, f"{original_error}; curl fallback timed out after {curl_timeout} seconds"
     if result.returncode != 0:
         diagnostic = result.stderr.strip() or result.stdout.strip() or "no diagnostic"
-        return None, f"{original_error}; curl fallback failed ({result.returncode}): {diagnostic}"
+        return (
+            None,
+            f"{original_error}; curl fallback failed "
+            f"({result.returncode}): {_safe_error_text(diagnostic)}",
+        )
     try:
         return json.loads(result.stdout), None
     except json.JSONDecodeError as exc:
-        return None, f"{original_error}; curl fallback returned invalid JSON: {exc}"
+        return (
+            None,
+            f"{original_error}; curl fallback returned invalid JSON: {_safe_error_text(exc)}",
+        )
 
 
 def _fetch_head_status_with_curl(
     url: str, timeout_seconds: float, original_error: str
 ) -> tuple[int | None, str | None]:
     curl_timeout = max(1.0, timeout_seconds)
+    original_error = _safe_error_text(original_error)
     command = [
         "curl",
         "--head",
@@ -819,7 +831,7 @@ def _fetch_head_status_with_curl(
             timeout=curl_timeout + 1.0,
         )
     except FileNotFoundError as exc:
-        return None, f"{original_error}; curl HEAD fallback unavailable: {exc}"
+        return None, f"{original_error}; curl HEAD fallback unavailable: {_safe_error_text(exc)}"
     except subprocess.TimeoutExpired:
         return None, f"{original_error}; curl HEAD fallback timed out after {curl_timeout} seconds"
     status_text = result.stdout.strip()
@@ -827,14 +839,23 @@ def _fetch_head_status_with_curl(
         diagnostic = result.stderr.strip() or status_text or "no diagnostic"
         return (
             None,
-            f"{original_error}; curl HEAD fallback failed ({result.returncode}): {diagnostic}",
+            f"{original_error}; curl HEAD fallback failed "
+            f"({result.returncode}): {_safe_error_text(diagnostic)}",
         )
     if not status_text.isdecimal():
-        return None, f"{original_error}; curl HEAD fallback returned invalid status: {status_text}"
+        return (
+            None,
+            f"{original_error}; curl HEAD fallback returned invalid status: "
+            f"{_safe_error_text(status_text)}",
+        )
     status_code = int(status_text)
     if status_code == 0:
         return None, f"{original_error}; curl HEAD fallback returned no HTTP status"
     return status_code, None
+
+
+def _safe_error_text(value: object) -> str:
+    return redact_error_text(str(value))
 
 
 def _no_cache_headers() -> dict[str, str]:

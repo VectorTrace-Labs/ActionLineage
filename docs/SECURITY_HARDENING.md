@@ -106,6 +106,12 @@ failures such as disk-full or permission errors. These paths fail as
 `JournalAppendError`, avoid echoing secret-like canaries in the public error
 message, and release the local sidecar lock where it was acquired.
 
+Release evidence regressions cover network and artifact diagnostic output from
+release consistency checks, release-candidate manifest generation, release
+review-index rendering, and CI quality-summary generation. Bearer-token,
+API-key, access-token, and signed-URL-shaped canaries are redacted before those
+scripts write JSON or Markdown proof artifacts.
+
 ## Supply Chain
 
 - Keep core dependencies small and documented.

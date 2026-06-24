@@ -121,6 +121,13 @@ and does not expand ActionLineage into a generic tracing platform.
   issue messages/details. These core exception exits now redact and bound risky
   text before returning `JournalAppendError`, `ProjectionStateError` details, or
   service health JSON.
+- **Release diagnostic redaction**: local release-consistency and
+  release-hardening regressions cover bearer-token, API-key, access-token, and
+  signed-URL-shaped canaries in URL-open failures, curl stderr/stdout fallback
+  diagnostics, checked URL details, release-candidate manifest exceptions,
+  review-index malformed-report messages, release lookup markdown, and coverage
+  XML errors. Release evidence scripts now redact these diagnostics before
+  writing JSON or Markdown artifacts.
 
 ## Implemented before this slice
 
@@ -175,11 +182,11 @@ and does not expand ActionLineage into a generic tracing platform.
   artifacts that carry bounded capture metadata preserve redaction-boundary
   digest scope. Public CLI and service-mode error detail serialization redacts
   and bounds exception text before JSON/HTTP output, release smoke artifacts
-  redact captured stdout/stderr before writing bounded command output, and core
+  redact captured stdout/stderr before writing bounded command output, core
   journal/ingestion/projection/health exception exits redact lower-level
-  exception text.
-  Broader digest-correlation review across release/network diagnostic scripts
-  and future structured log surfaces remains open.
+  exception text, and release diagnostic scripts redact network and artifact
+  generation failures before writing JSON or Markdown proof artifacts. Broader
+  digest-correlation review across future structured log surfaces remains open.
 - **Container and deployment defaults**: partially confirmed. Runtime hardening
   should remain preview/local-ops scoped until container and Kubernetes defaults
   have executable validation.
@@ -219,5 +226,4 @@ and does not expand ActionLineage into a generic tracing platform.
    evolution, and external checkpoint trust roots.
 4. Capture benchmark artifacts before implementing any ADR-0011 append-index
    cache.
-5. Audit redaction digest behavior across release/network diagnostic scripts
-   and any future structured log surfaces.
+5. Audit redaction digest behavior across any future structured log surfaces.

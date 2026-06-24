@@ -13,6 +13,8 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
+from actionlineage.errors import redact_error_text
+
 MANIFEST_SCHEMA_VERSION = "actionlineage.dev/release-candidate-manifest-v0"
 
 
@@ -348,7 +350,7 @@ def _release_consistency_reports(
                 {
                     "code": "malformed_release_consistency_report",
                     "path": artifact.path,
-                    "message": str(exc),
+                    "message": _safe_text(exc),
                 }
             )
             continue
@@ -530,7 +532,8 @@ def _public_state_section(manifest: Mapping[str, Any]) -> list[str]:
         f"project URLs `{_urls_status(testpypi)}` | "
         f"{_metadata_gate(testpypi)} |",
         f"| GitHub Releases | listed tags `{_md_cell(release_tag_text or 'none')}`, "
-        f"release lookup `{_md_cell(str(github.get('release_lookup_message', 'unknown')))}` | "
+        "release lookup "
+        f"`{_md_cell(_safe_text(github.get('release_lookup_message', 'unknown')))}` | "
         "BLOCKED_ON_OWNER if the expected release object is absent |",
     ]
 
@@ -584,6 +587,10 @@ def _compact_json_value(value: object) -> str:
 
 def _md_cell(value: str) -> str:
     return value.replace("\\", "\\\\").replace("|", "\\|").replace("\n", " ")
+
+
+def _safe_text(value: object) -> str:
+    return redact_error_text(str(value))
 
 
 def _sha256_file(path: Path) -> str:

@@ -10,6 +10,8 @@ from collections.abc import Sequence
 from dataclasses import dataclass
 from pathlib import Path
 
+from actionlineage.errors import redact_error_text
+
 DEFAULT_COVERAGE_FLOOR = 85.0
 
 
@@ -54,7 +56,7 @@ def build_summary(
         coverage = parse_coverage_xml(coverage_xml)
     except (FileNotFoundError, ValueError, ET.ParseError) as exc:
         coverage = None
-        coverage_error = str(exc)
+        coverage_error = redact_error_text(str(exc))
     artifact_checks = (
         ("Demo evidence map", demo_map_svg.exists(), str(demo_map_svg)),
         ("SBOM", sbom_path.exists(), str(sbom_path)),

@@ -9,6 +9,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 from types import ModuleType
 
+import pytest
 from hypothesis import given, settings
 from hypothesis import strategies as st
 
@@ -420,6 +421,28 @@ def test_ci_quality_summary_reports_missing_evidence(tmp_path: Path) -> None:
     assert "| Wheel quickstart smoke | MISSING |" in result.markdown
 
 
+def test_ci_quality_summary_redacts_coverage_error_canary(tmp_path: Path) -> None:
+    writer = _load_script("write_ci_quality_summary")
+    raw_secret = "coverageerrorsecretvalue123456789"
+
+    result = writer.build_summary(
+        python_version="3.13.5",
+        coverage_xml=tmp_path / f"missing Bearer {raw_secret}" / "coverage.xml",
+        coverage_floor=85,
+        sbom_path=tmp_path / "missing-sbom.json",
+        license_report_path=tmp_path / "missing-license-report.json",
+        provenance_path=tmp_path / "missing-provenance.json",
+        dist_dir=tmp_path / "missing-dist",
+        wheel_smoke_dir=tmp_path / "missing-wheel-smoke",
+        sdist_smoke_dir=tmp_path / "missing-sdist-smoke",
+        demo_map_svg=tmp_path / "missing-demo-map.svg",
+    )
+
+    assert not result.ok
+    assert raw_secret not in result.markdown
+    assert "Bearer [REDACTED:bearer_token]" in result.markdown
+
+
 def test_lightweight_sbom_includes_runtime_dependency() -> None:
     generator = _load_script("generate_sbom")
 
@@ -641,6 +664,32 @@ def test_release_candidate_manifest_requires_core_release_artifacts(tmp_path: Pa
     assert not result.ok
     assert {issue["code"] for issue in result.issues} == {"required_artifact_missing"}
     assert len(result.issues) == 5
+
+
+def test_release_candidate_manifest_main_redacts_exception_canary(
+    capsys: pytest.CaptureFixture[str],
+    tmp_path: Path,
+) -> None:
+    writer = _load_script("write_release_candidate_manifest")
+    raw_secret = "manifesterrorsecretvalue123456789"
+
+    status = writer.main(
+        (
+            "--project",
+            str(tmp_path / f"missing Bearer {raw_secret}" / "pyproject.toml"),
+            "--artifact-root",
+            str(tmp_path / "artifacts"),
+            "--repository-root",
+            str(tmp_path),
+            "--output",
+            str(tmp_path / "manifest.json"),
+        )
+    )
+    payload = capsys.readouterr().out
+
+    assert status == 1
+    assert raw_secret not in payload
+    assert "Bearer [REDACTED:bearer_token]" in payload
 
 
 def test_release_review_index_verifies_manifest_artifacts(tmp_path: Path) -> None:
@@ -875,6 +924,82 @@ def test_release_review_index_reports_malformed_release_consistency_report(
     assert not result.ok
     assert result.issues[0]["code"] == "malformed_release_consistency_report"
     assert result.issues[0]["path"] == "build/release-candidate/release-consistency-offline.json"
+
+
+def test_release_review_index_redacts_malformed_report_exception(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    writer = _load_script("write_release_review_index")
+    artifact_root = tmp_path / "build" / "release-candidate"
+    artifact_root.mkdir(parents=True)
+    report = artifact_root / "release-consistency-offline.json"
+    report.write_text("{}", encoding="utf-8")
+    manifest_path = artifact_root / "manifest.json"
+    manifest_path.write_text(
+        json.dumps(
+            {
+                "schema_version": "actionlineage.dev/release-candidate-manifest-v0",
+                "release": "0.1.0a3",
+                "artifact_root": "build/release-candidate",
+                "artifacts": [
+                    {
+                        "path": str(report.relative_to(tmp_path)),
+                        "sha256": hashlib.sha256(b"{}").hexdigest(),
+                        "size_bytes": 2,
+                    }
+                ],
+                "gates": [],
+            }
+        ),
+        encoding="utf-8",
+    )
+    raw_secret = "reviewindexsecretvalue123456789"
+    original_load = writer._load_json_object
+
+    def fake_load_json(path: Path) -> dict[str, object]:
+        if path == report:
+            raise ValueError(f"release report rejected api_key={raw_secret}")
+        return original_load(path)
+
+    monkeypatch.setattr(writer, "_load_json_object", fake_load_json)
+
+    result = writer.build_review_index(manifest_path, repository_root=tmp_path)
+    payload = json.dumps(result.issues, sort_keys=True)
+
+    assert not result.ok
+    assert raw_secret not in payload
+    assert "api_key=[REDACTED:secret]" in payload
+
+
+def test_release_review_index_redacts_release_lookup_message(tmp_path: Path) -> None:
+    writer = _load_script("write_release_review_index")
+    artifact_root = tmp_path / "build" / "release-candidate"
+    artifact_root.mkdir(parents=True)
+    manifest_path = artifact_root / "manifest.json"
+    raw_secret = "lookuperrorsecretvalue123456789"
+    manifest_path.write_text(
+        json.dumps(
+            {
+                "schema_version": "actionlineage.dev/release-candidate-manifest-v0",
+                "release": "0.1.0a3",
+                "artifact_root": "build/release-candidate",
+                "artifacts": [],
+                "gates": [],
+                "public_state": {
+                    "github": {
+                        "release_lookup_message": f"GitHub error Bearer {raw_secret}",
+                    }
+                },
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    result = writer.build_review_index(manifest_path, repository_root=tmp_path)
+
+    assert raw_secret not in result.markdown
+    assert "Bearer [REDACTED:bearer_token]" in result.markdown
 
 
 def test_demo_evidence_map_is_deterministic_and_checkable(tmp_path: Path) -> None:
