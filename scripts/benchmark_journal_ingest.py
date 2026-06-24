@@ -67,6 +67,12 @@ def main() -> int:
         default=None,
         help="Directory for generated synthetic journals. Defaults to a temporary directory.",
     )
+    parser.add_argument(
+        "--report-path",
+        type=Path,
+        default=None,
+        help="Optional JSON file path for the benchmark report. Stdout is still written.",
+    )
     args = parser.parse_args()
 
     counts = _parse_counts(args.counts)
@@ -84,7 +90,7 @@ def main() -> int:
                 repetitions=args.repetitions,
                 temporary_output_dir=True,
             )
-            _write_report(report)
+            _write_report(report, report_path=args.report_path)
     else:
         report = _run_benchmarks(
             output_dir=args.output_dir,
@@ -93,7 +99,7 @@ def main() -> int:
             repetitions=args.repetitions,
             temporary_output_dir=False,
         )
-        _write_report(report)
+        _write_report(report, report_path=args.report_path)
     return 0
 
 
@@ -253,8 +259,13 @@ def _parse_counts(raw: str) -> tuple[int, ...]:
     return tuple(counts)
 
 
-def _write_report(report: dict[str, object]) -> None:
-    print(json.dumps(_json_ready(report), indent=2, sort_keys=True))
+def _write_report(report: dict[str, object], *, report_path: Path | None) -> None:
+    payload = json.dumps(_json_ready(report), indent=2, sort_keys=True)
+    if report_path is not None:
+        report_path.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
+        report_path.write_text(payload + "\n", encoding="utf-8")
+        report_path.chmod(0o600)
+    print(payload)
 
 
 def _json_ready(value: Any) -> Any:

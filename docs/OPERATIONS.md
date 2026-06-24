@@ -211,15 +211,17 @@ the synthetic local journal benchmark outside the release-critical path:
 
 ```bash
 uv run python scripts/benchmark_journal_ingest.py \
-  --counts 10000,100000 \
+  --counts 10000,100000,250000 \
   --repetitions 3 \
-  --output-dir /tmp/actionlineage-journal-bench
+  --output-dir build/journal-ingest-benchmark-YYYYMMDD \
+  --report-path build/journal-ingest-benchmark-YYYYMMDD/report.json
 ```
 
 The benchmark emits JSON with setup time, verified snapshot timing, and duplicate
 idempotency-scan timing. Results are local performance evidence only; they are
 not production throughput guarantees and should not be committed unless a
-release or design review explicitly asks for the artifact.
+release or design review explicitly asks for the artifact. The `build/` path is
+ignored by git and is suitable for local design-review evidence.
 
 ## PostgreSQL Projection
 

@@ -12,6 +12,7 @@ PROJECT_ROOT = Path(__file__).resolve().parents[2]
 
 def test_journal_ingest_benchmark_script_outputs_json_report(tmp_path: Path) -> None:
     output_dir = tmp_path / "benchmark"
+    report_path = tmp_path / "reports" / "journal-benchmark.json"
     result = subprocess.run(
         [
             sys.executable,
@@ -24,6 +25,8 @@ def test_journal_ingest_benchmark_script_outputs_json_report(tmp_path: Path) -> 
             "1",
             "--output-dir",
             str(output_dir),
+            "--report-path",
+            str(report_path),
         ],
         cwd=PROJECT_ROOT,
         check=False,
@@ -34,6 +37,8 @@ def test_journal_ingest_benchmark_script_outputs_json_report(tmp_path: Path) -> 
     assert result.returncode == 0, result.stderr
     assert result.stderr == ""
     report = json.loads(result.stdout)
+    assert json.loads(report_path.read_text(encoding="utf-8")) == report
+    assert report_path.stat().st_mode & 0o777 == 0o600
     benchmark = report["results"][0]
     journal_path = Path(benchmark["journal_path"])
     snapshot = LocalJournal(journal_path).verified_snapshot()

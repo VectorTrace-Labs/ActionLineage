@@ -77,8 +77,13 @@ and does not expand ActionLineage into a generic tracing platform.
 - **Journal ingest benchmark tooling**: `scripts/benchmark_journal_ingest.py`
   generates synthetic journals and emits JSON timings for verified snapshots and
   duplicate idempotency scans. Tiny-count regression coverage keeps the script
-  executable; 10k/100k benchmark artifacts are still local release/design-review
-  work.
+  executable, and `--report-path` writes a private JSON report for local
+  release/design-review evidence. The 2026-06-24 local run at 10k, 100k, and
+  250k records captured `build/journal-ingest-benchmark-20260624/report.json`
+  with median verified-snapshot timings of 1.504702s, 16.369742s, and
+  41.759091s, and median duplicate-idempotency scan timings of 1.519528s,
+  16.827593s, and 42.519948s. This is synthetic local evidence, not production
+  throughput evidence.
 - **Capture digest scope**: local regression and property tests cover scoped
   capture digests for truncated text and byte values. Capture metadata now
   records `actionlineage.capture.v1/redaction-boundary` so bounded-content
@@ -138,12 +143,12 @@ and does not expand ActionLineage into a generic tracing platform.
 ## Confirmed or partially confirmed follow-ups
 
 - **Journal scalability and append integrity**: partially confirmed. Appends
-  verify the existing journal before write, preserving local integrity but
-  requiring captured benchmark results before segmented checkpoint or
-  append-index implementation. ADR-0011 requires future append indexes to remain
-  rebuildable caches bound to verified journal state rather than trusted
-  evidence; benchmark tooling now exists for verified snapshots and duplicate
-  idempotency scans.
+  verify the existing journal before write, preserving local integrity. The
+  2026-06-24 synthetic local benchmark captured 10k, 100k, and 250k journal
+  timings and shows full verification plus duplicate idempotency scans remain
+  linear-cost pressure points before any larger journal cache design. ADR-0011
+  requires future append indexes to remain rebuildable caches bound to verified
+  journal state rather than trusted evidence.
 - **Observer independence**: partially confirmed. Observer records carry trust
   labels and limitations, but independence is not yet the result of a structured
   attestation policy. This requires an ADR and versioned model work.
@@ -220,10 +225,8 @@ and does not expand ActionLineage into a generic tracing platform.
 
 1. Add projection-state checks to any future non-SQLite read APIs before those
    APIs are exposed.
-2. Run `scripts/benchmark_journal_ingest.py` at 10k, 100k, and feasible larger
-   journals before proposing segmented journals or checkpoint indexes.
+2. Use the captured 10k/100k/250k benchmark evidence before proposing segmented
+   journals, checkpoint indexes, or ADR-0011 append-index cache work.
 3. Draft ADRs for observer attestation policy, canonicalization v1, causal edge
    evolution, and external checkpoint trust roots.
-4. Capture benchmark artifacts before implementing any ADR-0011 append-index
-   cache.
-5. Audit redaction digest behavior across any future structured log surfaces.
+4. Audit redaction digest behavior across any future structured log surfaces.
