@@ -73,6 +73,28 @@ that verification pass and record verification status, verified count, terminal
 hash, and failure details. Security-sensitive consumers should use verified
 snapshots rather than raw parsing helpers.
 
+## Local durability failure semantics
+
+ADR-0018 defines `actionlineage.dev/local-durability-policy-v1` as the local
+durability failure-semantics boundary. The executable policy lives in
+`actionlineage.journal.local_durability_policy()` and separates canonical
+journal state from derived artifacts:
+
+- append candidates rejected during preflight are not persisted evidence;
+- write, flush, `fsync`, and partial-record failures can leave only a verified
+  prefix usable as canonical evidence;
+- projection failures, service crashes after append, and partial service
+  batches can leave committed journal evidence with stale derived state;
+- case-bundle failures leave no published bundle and must preserve existing
+  bundles;
+- future append-cache mismatches must be ignored or rebuilt from a verified
+  journal; and
+- unavailable external checkpoint verification remains explicit unknown,
+  stale, or unverified status rather than silently becoming verified.
+
+Future signatures, segmented journals, append caches, or long-running fault
+injection must satisfy this policy or update it with tests in the same change.
+
 ## Trusted anchors
 
 Use `create_journal_anchor()` or the CLI to capture a trusted root:

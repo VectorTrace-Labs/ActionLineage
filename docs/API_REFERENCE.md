@@ -35,6 +35,10 @@ explicitly needed.
   `verify_external_anchor_attestation`
 - `JournalArchiveManifest`, `create_journal_archive_manifest`,
   `verify_journal_archive_manifest`
+- `LOCAL_DURABILITY_POLICY_VERSION`, `DurabilitySurface`, `DurabilityFault`,
+  `DurabilityOutcome`
+- `LocalDurabilityRule`, `local_durability_policy`,
+  `get_local_durability_rule`
 - `query_timeline`, `query_filtered_timeline`, `export_incident`
 - `explain_event`, `export_case_bundle`
 - `summarize_incident`, `GroundedInvestigationSummary`

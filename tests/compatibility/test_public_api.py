@@ -118,6 +118,8 @@ def test_public_api_exports_stable_core_symbols() -> None:
         "write_console",
         "assess_event_compatibility",
         "built_in_sequence_rules",
+        "local_durability_policy",
+        "get_local_durability_rule",
     }
 
     assert expected_exports <= set(actionlineage.__all__)

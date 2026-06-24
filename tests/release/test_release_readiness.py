@@ -144,7 +144,42 @@ def test_append_checkpoint_scope_decision_is_tracked() -> None:
     assert "Append checkpoint/index scope" in followups
     assert "Journal benchmark decision boundary" in followups
     assert "trusted append indexes are not allowed" in followups
-    assert "Narrow the local durability threat model" in followups
+    assert "Add longer-running recovery and filesystem fault-injection tests" in followups
+
+
+def test_local_durability_failure_semantics_boundary_is_tracked() -> None:
+    adr = (PROJECT_ROOT / "docs/ADR/0018-local-durability-failure-semantics.md").read_text(
+        encoding="utf-8"
+    )
+    architecture = (PROJECT_ROOT / "ARCHITECTURE.md").read_text(encoding="utf-8")
+    api = (PROJECT_ROOT / "docs/API_REFERENCE.md").read_text(encoding="utf-8")
+    journal_integrity = (PROJECT_ROOT / "docs/JOURNAL_INTEGRITY.md").read_text(encoding="utf-8")
+    operations = (PROJECT_ROOT / "docs/OPERATIONS.md").read_text(encoding="utf-8")
+    scorecard = (PROJECT_ROOT / "docs/QUALITY_SCORECARD.md").read_text(encoding="utf-8")
+    maturity = (PROJECT_ROOT / "docs/MATURITY.md").read_text(encoding="utf-8")
+    followups = (PROJECT_ROOT / "docs/SECURITY_ASSESSMENT_FOLLOWUPS.md").read_text(encoding="utf-8")
+    durability_source = (PROJECT_ROOT / "src/actionlineage/journal/durability.py").read_text(
+        encoding="utf-8"
+    )
+    durability_tests = (PROJECT_ROOT / "tests/journal/test_durability_policy.py").read_text(
+        encoding="utf-8"
+    )
+
+    assert "- Status: Accepted" in adr
+    assert "actionlineage.dev/local-durability-policy-v1" in adr
+    assert "Future code that changes local durability behavior" in adr
+    assert "ADR-0018" in architecture
+    assert "LOCAL_DURABILITY_POLICY_VERSION" in api
+    assert "local_durability_policy" in api
+    assert "Local durability failure semantics" in journal_integrity
+    assert "Local Durability Semantics" in operations
+    assert "Local durability failure semantics are explicit and executable" in scorecard
+    assert "actionlineage.dev/local-durability-policy-v1" in maturity
+    assert "Local durability failure-semantics boundary" in followups
+    assert "longer-running recovery and filesystem fault-injection tests" in followups
+    assert "LOCAL_DURABILITY_POLICY_VERSION" in durability_source
+    assert "DEFAULT_LOCAL_DURABILITY_RULES" in durability_source
+    assert "test_local_durability_policy_covers_required_faults" in durability_tests
 
 
 def test_observer_attestation_policy_boundary_is_tracked() -> None:

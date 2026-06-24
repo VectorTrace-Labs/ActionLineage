@@ -167,6 +167,12 @@ tests/
 
 ## Failure semantics
 
+ADR-0018 and `actionlineage.dev/local-durability-policy-v1` define the local
+durability policy for journal-adjacent failures. The append-only journal remains
+canonical evidence; projections, case bundles, append caches, and external
+checkpoints are derived or externally qualified state unless a verified journal
+and trusted root prove otherwise.
+
 - **Journal unavailable**: fail visibly. Adapters that may create side effects must use documented fail behavior and must not execute silently without evidence.
 - **Policy evaluator timeout**: apply the adapter's configured fail behavior and emit a local failure event if possible.
 - **Tool timeout**: emit acknowledged failure or timeout from the tool boundary, plus unverified/timed-out side-effect status when observation cannot corroborate execution.

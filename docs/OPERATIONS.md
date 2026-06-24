@@ -169,6 +169,28 @@ claims.
 - Projection databases can be rebuilt and should not be treated as canonical.
 - Export case bundles for sharing, but preserve journal verification metadata.
 
+## Local Durability Semantics
+
+ADR-0018 and `actionlineage.journal.local_durability_policy()` define the local
+failure semantics operators should assume during recovery. The policy keeps the
+append-only journal as canonical evidence and treats projections, case bundles,
+append caches, and external checkpoints as derived or externally qualified
+state.
+
+Important operational consequences:
+
+- rejected append candidates are not persisted evidence;
+- interrupted appends with incomplete records require verified-prefix recovery,
+  never in-place truncation;
+- service retries after a committed append should use the same idempotency key
+  and may repair stale projection state;
+- partial service batches may commit a prefix and must not be interpreted as
+  all-or-nothing transactions;
+- failed case-bundle staging or publish collisions do not create a trusted
+  bundle and must preserve existing bundles; and
+- external checkpoint outages leave external status unknown or unverified even
+  when local journal verification succeeds.
+
 ## Deployment Notes
 
 The repository includes Docker, Compose, Kubernetes, and Helm examples for local

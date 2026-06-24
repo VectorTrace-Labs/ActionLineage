@@ -99,6 +99,12 @@ and does not expand ActionLineage into a generic tracing platform.
   append indexes must be rebuildable caches only, and the append-only journal
   remains canonical evidence. Local regression tests assert the boundary is
   emitted with every benchmark report.
+- **Local durability failure-semantics boundary**:
+  `actionlineage.dev/local-durability-policy-v1` now records reviewed local
+  fault classes, outcomes, canonical journal state, derived-artifact state,
+  retry guidance, and claim boundaries. Local regression tests cover
+  deterministic JSON output, required fault coverage, fail-closed rule lookup,
+  immutability, and public exports.
 - **Capture digest scope**: local regression and property tests cover scoped
   capture digests for truncated text and byte values. Capture metadata now
   records `actionlineage.capture.v1/redaction-boundary` so bounded-content
@@ -276,8 +282,10 @@ and does not expand ActionLineage into a generic tracing platform.
   before optional runtime dependencies enter those modules.
 - **Case bundle signatures and long-running recovery**: follow-up. Case bundle
   manifests reserve future external signature/checkpoint fields but do not sign
-  artifacts or prove WORM/object-lock behavior. Longer-running crash and
-  filesystem fault injection should be added before stronger durability claims.
+  artifacts or prove WORM/object-lock behavior.
+  `actionlineage.dev/local-durability-policy-v1` now narrows the local failure
+  classes that longer-running crash and filesystem fault injection should
+  exercise before stronger durability claims.
 - **Generated release evidence**: follow-up. Manual scorecards should be backed
   by a commit-bound evidence manifest before stronger release claims.
 - **External validation**: follow-up. Independent review, partner integrations,
@@ -285,9 +293,10 @@ and does not expand ActionLineage into a generic tracing platform.
 
 ## Next implementation order
 
-1. Narrow the local durability threat model and failure semantics before adding
-   case-bundle signatures, longer-running recovery fault injection, segmented
-   journals, checkpoint indexes, or ADR-0011 append-index cache work.
+1. Add longer-running recovery and filesystem fault-injection tests against
+   `actionlineage.dev/local-durability-policy-v1` before case-bundle
+   signatures, segmented journals, checkpoint indexes, or ADR-0011 append-index
+   cache work.
 2. If future append-cache work is proposed, define target workloads, acceptance
    thresholds, stale/tamper/mismatched-journal tests, and rebuild behavior
    before implementing cache-backed ingest or read behavior.

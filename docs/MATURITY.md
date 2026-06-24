@@ -39,6 +39,11 @@ evidence and limitations.
   manifests, and recovery helpers under documented local trust assumptions;
   verified-prefix recovery writes separate files and rejects in-place journal
   overwrite.
+- `actionlineage.dev/local-durability-policy-v1` documents and tests the local
+  durability failure-semantics boundary for append failures, verified-prefix
+  recovery, projection staleness, service partial batches, case-bundle
+  publication failures, future append-cache mismatches, and external checkpoint
+  outage status.
 - HTTP fixture observers keep multiple plausible records unverified and expose
   `ambiguous_candidate_count` rather than selecting one match without evidence.
 - Observer attestation declarations and `verify_observation()` gating keep

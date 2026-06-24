@@ -1000,7 +1000,12 @@ def test_inspect_task_accepts_live_configuration_metadata() -> None:
     assert sample.metadata["seed"] == 7
 
 
-def test_inspect_run_writes_logs_summary_and_scorecard(tmp_path: Path) -> None:
+def test_inspect_run_writes_logs_summary_and_scorecard(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("HOME", str(tmp_path / "inspect-home"))
+    monkeypatch.setenv("INSPECT_TRACE_FILE", str(tmp_path / "inspect-trace.log"))
     pytest.importorskip("inspect_ai")
     from actionlineage_evals.inspect_tasks import run_inspect_eval
 
