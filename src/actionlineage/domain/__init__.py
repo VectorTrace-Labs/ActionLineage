@@ -2,6 +2,9 @@
 
 from actionlineage.domain.events import (
     CANONICALIZATION_VERSION,
+    DEFAULT_JSON_MAX_ARRAY_LENGTH,
+    DEFAULT_JSON_MAX_DEPTH,
+    DEFAULT_JSON_MAX_OBJECT_MEMBERS,
     SPEC_VERSION,
     Causality,
     Classification,
@@ -40,6 +43,9 @@ from actionlineage.domain.time import Clock, FixedClock, SystemClock
 
 __all__ = [
     "CANONICALIZATION_VERSION",
+    "DEFAULT_JSON_MAX_ARRAY_LENGTH",
+    "DEFAULT_JSON_MAX_DEPTH",
+    "DEFAULT_JSON_MAX_OBJECT_MEMBERS",
     "SPEC_VERSION",
     "CaptureMetadata",
     "Causality",

@@ -61,6 +61,9 @@ Default local bounds:
 | --- | --- | --- |
 | String capture | 4096 characters | `RedactionPolicy.max_string_length` |
 | Bytes capture | 4096 bytes | `RedactionPolicy.max_bytes_length` |
+| JSON nesting depth | 64 levels | `validate_json_value`, `normalize_json`, `RedactionPolicy.max_json_depth` |
+| JSON object members | 4096 members per object | `validate_json_value`, `normalize_json`, `RedactionPolicy.max_object_members` |
+| JSON array items | 4096 items per array | `validate_json_value`, `normalize_json`, `RedactionPolicy.max_array_length` |
 | Detection regex | bounded by rule parser and tests | `SequenceRule` validation |
 | Journal append | one canonical event per line | `LocalJournal.append` |
 | Projection rebuild | verified journals only | `rebuild_projection` |

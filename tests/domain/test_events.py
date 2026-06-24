@@ -12,6 +12,9 @@ from pydantic import ValidationError
 
 from actionlineage.domain import (
     CANONICALIZATION_VERSION,
+    DEFAULT_JSON_MAX_ARRAY_LENGTH,
+    DEFAULT_JSON_MAX_DEPTH,
+    DEFAULT_JSON_MAX_OBJECT_MEMBERS,
     Causality,
     Classification,
     Correlation,
@@ -253,3 +256,26 @@ def test_non_finite_payload_numbers_are_rejected(value: float) -> None:
 
     with pytest.raises(ValidationError, match="non-finite"):
         build_event(payload={"nested": [value]})
+
+
+def test_payload_rejects_json_depth_over_default_limit() -> None:
+    value: object = "leaf"
+    for _ in range(DEFAULT_JSON_MAX_DEPTH + 2):
+        value = [value]
+
+    with pytest.raises(ValidationError, match="JSON depth"):
+        build_event(payload={"nested": value})
+
+
+def test_payload_rejects_object_member_count_over_default_limit() -> None:
+    payload = {f"k{i}": i for i in range(DEFAULT_JSON_MAX_OBJECT_MEMBERS + 1)}
+
+    with pytest.raises(ValidationError, match="object exceeds"):
+        build_event(payload=payload)
+
+
+def test_payload_rejects_array_length_over_default_limit() -> None:
+    payload = {"items": list(range(DEFAULT_JSON_MAX_ARRAY_LENGTH + 1))}
+
+    with pytest.raises(ValidationError, match="array exceeds"):
+        build_event(payload=payload)

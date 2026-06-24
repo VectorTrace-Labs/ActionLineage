@@ -13,6 +13,7 @@ from actionlineage.domain import (
     serialize_event_for_persistence,
 )
 from actionlineage.domain.events import JsonValue
+from actionlineage.domain.serialization import normalize_json
 from tests.domain.test_events import build_event
 
 CANARY_TOKEN = "al_canary_token_123456789"
@@ -112,3 +113,34 @@ def test_non_json_values_fail_closed_before_persistence() -> None:
 
     with pytest.raises(RedactionError, match="redaction failed before persistence"):
         RedactionPolicy().apply(event_data)
+
+
+def test_redaction_rejects_json_structure_limits() -> None:
+    with pytest.raises(RedactionError, match="redaction failed before persistence"):
+        RedactionPolicy(max_json_depth=1).apply({"a": {"b": {"c": "too deep"}}})
+
+    with pytest.raises(RedactionError, match="redaction failed before persistence"):
+        RedactionPolicy(max_object_members=1).apply({"a": 1, "b": 2})
+
+    with pytest.raises(RedactionError, match="redaction failed before persistence"):
+        RedactionPolicy(max_array_length=1).apply({"items": [1, 2]})
+
+
+def test_redaction_does_not_traverse_sensitive_subtree_for_structure_limits() -> None:
+    result = RedactionPolicy(max_json_depth=0).apply(
+        {"password": {"nested": [{"secret": "raw-secret"}]}}
+    )
+
+    assert isinstance(result, dict)
+    assert result["password"]["marker"] == "actionlineage.redacted.v1"
+
+
+def test_normalize_json_rejects_json_structure_limits() -> None:
+    with pytest.raises(TypeError, match="JSON depth"):
+        normalize_json({"a": {"b": "too deep"}}, max_depth=1)
+
+    with pytest.raises(TypeError, match="JSON object"):
+        normalize_json({"a": 1, "b": 2}, max_object_members=1)
+
+    with pytest.raises(TypeError, match="JSON array"):
+        normalize_json([1, 2], max_array_length=1)

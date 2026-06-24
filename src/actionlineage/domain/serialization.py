@@ -11,7 +11,15 @@ from typing import Any, cast
 
 from pydantic import ValidationError
 
-from actionlineage.domain.events import EventEnvelope, JsonObject, JsonValue, model_json
+from actionlineage.domain.events import (
+    DEFAULT_JSON_MAX_ARRAY_LENGTH,
+    DEFAULT_JSON_MAX_DEPTH,
+    DEFAULT_JSON_MAX_OBJECT_MEMBERS,
+    EventEnvelope,
+    JsonObject,
+    JsonValue,
+    model_json,
+)
 from actionlineage.domain.redaction import RedactionBoundary, RedactionError, RedactionPolicy
 from actionlineage.errors import EventParseError, event_parse_error_from_validation
 
@@ -87,22 +95,51 @@ def deterministic_json_bytes(value: JsonObject) -> bytes:
     ).encode("utf-8")
 
 
-def normalize_json(value: Any) -> JsonValue:
+def normalize_json(
+    value: Any,
+    *,
+    max_depth: int = DEFAULT_JSON_MAX_DEPTH,
+    max_object_members: int = DEFAULT_JSON_MAX_OBJECT_MEMBERS,
+    max_array_length: int = DEFAULT_JSON_MAX_ARRAY_LENGTH,
+    _depth: int = 0,
+) -> JsonValue:
     """Normalize supported Python values into deterministic JSON-compatible values."""
+
+    if _depth > max_depth:
+        raise TypeError(f"JSON depth exceeds {max_depth}")
 
     if isinstance(value, datetime):
         return canonical_timestamp(value)
 
     if isinstance(value, Mapping):
+        if len(value) > max_object_members:
+            raise TypeError(f"JSON object exceeds {max_object_members} members")
         normalized: dict[str, JsonValue] = {}
         for key, child in value.items():
             if not isinstance(key, str):
                 raise TypeError("JSON object keys must be strings")
-            normalized[key] = normalize_json(child)
+            normalized[key] = normalize_json(
+                child,
+                max_depth=max_depth,
+                max_object_members=max_object_members,
+                max_array_length=max_array_length,
+                _depth=_depth + 1,
+            )
         return normalized
 
     if isinstance(value, list | tuple):
-        return [normalize_json(child) for child in value]
+        if len(value) > max_array_length:
+            raise TypeError(f"JSON array exceeds {max_array_length} items")
+        return [
+            normalize_json(
+                child,
+                max_depth=max_depth,
+                max_object_members=max_object_members,
+                max_array_length=max_array_length,
+                _depth=_depth + 1,
+            )
+            for child in value
+        ]
 
     if isinstance(value, float) and not math.isfinite(value):
         raise TypeError("JSON numbers must be finite")

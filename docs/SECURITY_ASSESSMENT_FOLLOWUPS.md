@@ -65,9 +65,10 @@ and does not expand ActionLineage into a generic tracing platform.
   sequence handling still couples source sequence and journal order. Multi-parent
   causal edges require a versioned schema change or migration path.
 - **Input limits and redaction**: partially confirmed. Non-finite JSON numbers
-  are rejected at the event and redaction boundaries. Existing redaction and
-  size controls still need structural-depth, collection-count, attachment-count,
-  and digest-correlation review across all sinks.
+  are rejected at the event and redaction boundaries. Event validation,
+  normalization, and redaction now enforce default JSON nesting-depth,
+  object-member, and array-length limits. Attachment-count limits and
+  digest-correlation review across all sinks remain open.
 - **Container and deployment defaults**: partially confirmed. Runtime hardening
   should remain preview/local-ops scoped until container and Kubernetes defaults
   have executable validation.
@@ -96,5 +97,5 @@ and does not expand ActionLineage into a generic tracing platform.
    evolution, and external checkpoint trust roots.
 4. Expand service ingestion tests for concurrency, idempotency conflicts,
    projection rebuild failure after append, and partial batch responses.
-5. Audit input structural limits and redaction digest behavior across journal,
+5. Audit attachment-count limits and redaction digest behavior across journal,
    projection, export, logs, exceptions, and test snapshots.

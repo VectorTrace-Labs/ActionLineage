@@ -10,7 +10,12 @@ from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, field
 from typing import Literal, Protocol, cast
 
-from actionlineage.domain.events import JsonValue
+from actionlineage.domain.events import (
+    DEFAULT_JSON_MAX_ARRAY_LENGTH,
+    DEFAULT_JSON_MAX_DEPTH,
+    DEFAULT_JSON_MAX_OBJECT_MEMBERS,
+    JsonValue,
+)
 
 type Path = tuple[str, ...]
 type CaptureMarker = Literal["actionlineage.capture.v1"]
@@ -90,6 +95,9 @@ class RedactionPolicy:
     sensitive_field_names: frozenset[str] = DEFAULT_SENSITIVE_FIELD_NAMES
     max_string_length: int = DEFAULT_MAX_STRING_LENGTH
     max_bytes_length: int = DEFAULT_MAX_BYTES_LENGTH
+    max_json_depth: int = DEFAULT_JSON_MAX_DEPTH
+    max_object_members: int = DEFAULT_JSON_MAX_OBJECT_MEMBERS
+    max_array_length: int = DEFAULT_JSON_MAX_ARRAY_LENGTH
     patterns: tuple[RedactionPattern, ...] = field(default_factory=lambda: DEFAULT_PATTERNS)
 
     @classmethod
@@ -99,11 +107,17 @@ class RedactionPolicy:
         *,
         max_string_length: int = DEFAULT_MAX_STRING_LENGTH,
         max_bytes_length: int = DEFAULT_MAX_BYTES_LENGTH,
+        max_json_depth: int = DEFAULT_JSON_MAX_DEPTH,
+        max_object_members: int = DEFAULT_JSON_MAX_OBJECT_MEMBERS,
+        max_array_length: int = DEFAULT_JSON_MAX_ARRAY_LENGTH,
     ) -> RedactionPolicy:
         return cls(
             sensitive_paths=frozenset(normalize_path(path) for path in paths),
             max_string_length=max_string_length,
             max_bytes_length=max_bytes_length,
+            max_json_depth=max_json_depth,
+            max_object_members=max_object_members,
+            max_array_length=max_array_length,
         )
 
     def apply(self, value: object) -> JsonValue:
@@ -125,11 +139,20 @@ def normalize_path(path: str | Sequence[str]) -> Path:
     return tuple(part.lower() for part in parts)
 
 
-def redact_value(value: object, *, path: Path, policy: RedactionPolicy) -> JsonValue:
+def redact_value(
+    value: object,
+    *,
+    path: Path,
+    policy: RedactionPolicy,
+    _depth: int = 0,
+) -> JsonValue:
     """Redact an arbitrary value into a JSON-compatible value."""
 
     if is_sensitive_path(path, policy) or is_sensitive_field(path, policy):
         return redacted_marker("sensitive")
+
+    if _depth > policy.max_json_depth:
+        raise RedactionError(f"JSON depth exceeds {policy.max_json_depth}")
 
     if isinstance(value, str):
         return capture_string(redact_text(value, policy), max_length=policy.max_string_length)
@@ -144,6 +167,8 @@ def redact_value(value: object, *, path: Path, policy: RedactionPolicy) -> JsonV
         return cast(JsonValue, value)
 
     if isinstance(value, Mapping):
+        if len(value) > policy.max_object_members:
+            raise RedactionError(f"JSON object exceeds {policy.max_object_members} members")
         redacted: dict[str, JsonValue] = {}
         for raw_key, raw_child in value.items():
             if not isinstance(raw_key, str):
@@ -152,11 +177,14 @@ def redact_value(value: object, *, path: Path, policy: RedactionPolicy) -> JsonV
                 raw_child,
                 path=(*path, raw_key.lower()),
                 policy=policy,
+                _depth=_depth + 1,
             )
         return redacted
 
     if isinstance(value, Sequence) and not isinstance(value, str | bytes | bytearray):
-        return [redact_value(child, path=path, policy=policy) for child in value]
+        if len(value) > policy.max_array_length:
+            raise RedactionError(f"JSON array exceeds {policy.max_array_length} items")
+        return [redact_value(child, path=path, policy=policy, _depth=_depth + 1) for child in value]
 
     raise RedactionError(f"unsupported value type for redaction: {type(value).__name__}")
 

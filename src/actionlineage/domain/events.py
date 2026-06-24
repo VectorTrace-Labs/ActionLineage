@@ -19,6 +19,9 @@ from pydantic import (
 
 SPEC_VERSION: Literal["actionlineage.dev/v1alpha1"] = "actionlineage.dev/v1alpha1"
 CANONICALIZATION_VERSION = "actionlineage.dev/json-deterministic-v0"
+DEFAULT_JSON_MAX_DEPTH = 64
+DEFAULT_JSON_MAX_OBJECT_MEMBERS = 4096
+DEFAULT_JSON_MAX_ARRAY_LENGTH = 4096
 
 type JsonScalar = str | int | float | bool | None
 type JsonValue = JsonScalar | list[JsonValue] | dict[str, JsonValue]
@@ -436,8 +439,18 @@ def model_json(value: BaseModel) -> dict[str, Any]:
     return dumped
 
 
-def validate_json_value(value: Any) -> None:
+def validate_json_value(
+    value: Any,
+    *,
+    max_depth: int = DEFAULT_JSON_MAX_DEPTH,
+    max_object_members: int = DEFAULT_JSON_MAX_OBJECT_MEMBERS,
+    max_array_length: int = DEFAULT_JSON_MAX_ARRAY_LENGTH,
+    _depth: int = 0,
+) -> None:
     """Validate that a value can be represented in JSON."""
+
+    if _depth > max_depth:
+        raise ValueError(f"payload JSON depth exceeds {max_depth}")
 
     if isinstance(value, float) and not math.isfinite(value):
         raise ValueError("payload contains non-finite JSON number")
@@ -446,15 +459,31 @@ def validate_json_value(value: Any) -> None:
         return
 
     if isinstance(value, Sequence) and not isinstance(value, str | bytes | bytearray):
+        if len(value) > max_array_length:
+            raise ValueError(f"payload JSON array exceeds {max_array_length} items")
         for item in value:
-            validate_json_value(item)
+            validate_json_value(
+                item,
+                max_depth=max_depth,
+                max_object_members=max_object_members,
+                max_array_length=max_array_length,
+                _depth=_depth + 1,
+            )
         return
 
     if isinstance(value, Mapping):
+        if len(value) > max_object_members:
+            raise ValueError(f"payload JSON object exceeds {max_object_members} members")
         for key, item in value.items():
             if not isinstance(key, str):
                 raise ValueError("payload object keys must be strings")
-            validate_json_value(item)
+            validate_json_value(
+                item,
+                max_depth=max_depth,
+                max_object_members=max_object_members,
+                max_array_length=max_array_length,
+                _depth=_depth + 1,
+            )
         return
 
     raise ValueError(f"payload contains unsupported JSON value type: {type(value).__name__}")
