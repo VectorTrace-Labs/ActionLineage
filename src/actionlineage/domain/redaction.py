@@ -71,6 +71,43 @@ DEFAULT_SENSITIVE_FIELD_NAMES = frozenset(
         "x_api_key",
     }
 )
+DEFAULT_CAPTURE_EXEMPT_PATHS: frozenset[Path] = frozenset(
+    {
+        ("spec_version",),
+        ("event_id",),
+        ("event_type",),
+        ("occurred_at",),
+        ("observed_at",),
+        ("source", "component"),
+        ("source", "instance_id"),
+        ("source", "version"),
+        ("correlation", "trace_id"),
+        ("correlation", "run_id"),
+        ("correlation", "span_id"),
+        ("correlation", "session_id"),
+        ("causality", "root_event_id"),
+        ("causality", "parent_event_id"),
+        ("principal", "principal_id"),
+        ("principal", "principal_type"),
+        ("principal", "on_behalf_of"),
+        ("principal", "model_id"),
+        ("principal", "credential_id"),
+        ("classification", "sensitivity"),
+        ("classification", "trust"),
+        ("integrity", "canonicalization"),
+        ("integrity", "previous_event_hash"),
+        ("integrity", "event_hash"),
+        ("payload", "evidence_link", "subject_event_id"),
+        ("payload", "evidence_link", "relationship"),
+        ("payload", "evidence_link", "evidence_event_id"),
+        ("payload", "evidence_link", "corroboration_type"),
+        ("payload", "evidence_link", "observer_identity"),
+        ("payload", "evidence_link", "verification_status"),
+        ("payload", "subject_event_id"),
+        ("payload", "evidence_event_id"),
+        ("payload", "verification_status"),
+    }
+)
 
 
 class RedactionError(RuntimeError):
@@ -135,6 +172,7 @@ class RedactionPolicy:
     max_json_depth: int = DEFAULT_JSON_MAX_DEPTH
     max_object_members: int = DEFAULT_JSON_MAX_OBJECT_MEMBERS
     max_array_length: int = DEFAULT_JSON_MAX_ARRAY_LENGTH
+    capture_exempt_paths: frozenset[Path] = DEFAULT_CAPTURE_EXEMPT_PATHS
     patterns: tuple[RedactionPattern, ...] = field(default_factory=lambda: DEFAULT_PATTERNS)
 
     @classmethod
@@ -149,6 +187,7 @@ class RedactionPolicy:
         max_json_depth: int = DEFAULT_JSON_MAX_DEPTH,
         max_object_members: int = DEFAULT_JSON_MAX_OBJECT_MEMBERS,
         max_array_length: int = DEFAULT_JSON_MAX_ARRAY_LENGTH,
+        capture_exempt_paths: Sequence[str | Sequence[str]] | None = None,
     ) -> RedactionPolicy:
         return cls(
             sensitive_paths=frozenset(normalize_path(path) for path in paths),
@@ -159,6 +198,11 @@ class RedactionPolicy:
             max_json_depth=max_json_depth,
             max_object_members=max_object_members,
             max_array_length=max_array_length,
+            capture_exempt_paths=(
+                DEFAULT_CAPTURE_EXEMPT_PATHS
+                if capture_exempt_paths is None
+                else frozenset(normalize_path(path) for path in capture_exempt_paths)
+            ),
         )
 
     def apply(self, value: object) -> JsonValue:
@@ -230,7 +274,10 @@ def redact_value(
         raise RedactionError(f"JSON depth exceeds {policy.max_json_depth}")
 
     if isinstance(value, str):
-        captured = capture_string(redact_text(value, policy), max_length=policy.max_string_length)
+        redacted_text = redact_text(value, policy)
+        if is_capture_exempt_path(path, policy):
+            return redacted_text
+        captured = capture_string(redacted_text, max_length=policy.max_string_length)
         record_capture(captured, _capture_budget)
         return captured
 
@@ -312,6 +359,10 @@ def is_sensitive_field(path: Path, policy: RedactionPolicy) -> bool:
         return False
     normalized_name = path[-1].replace("-", "_").lower()
     return normalized_name in policy.sensitive_field_names
+
+
+def is_capture_exempt_path(path: Path, policy: RedactionPolicy) -> bool:
+    return path in policy.capture_exempt_paths
 
 
 def redacted_marker(reason: str) -> dict[str, JsonValue]:

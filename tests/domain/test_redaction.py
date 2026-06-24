@@ -147,6 +147,25 @@ def test_oversized_payload_is_truncated_with_metadata_and_digest() -> None:
     assert captured["digest_scope"] == CAPTURE_DIGEST_SCOPE
 
 
+def test_redaction_preserves_event_envelope_fields_when_capture_limit_is_tight() -> None:
+    oversized_value = "x" * 80
+    event = build_event(payload={"body": oversized_value})
+    policy = RedactionPolicy(max_string_length=12)
+
+    serialized = serialize_event_for_persistence(event, redaction_policy=policy)
+    data = json.loads(serialized)
+
+    assert data["spec_version"] == "actionlineage.dev/v1alpha1"
+    assert data["event_type"] == "agent.run.started"
+    assert data["occurred_at"] == "2026-06-21T18:42:12.123456Z"
+    assert data["observed_at"] == "2026-06-21T18:42:12.123456Z"
+    assert data["source"]["component"] == "unit-test"
+    assert data["correlation"]["trace_id"] == "trace_01"
+    assert data["causality"]["root_event_id"] == "evt_root"
+    assert data["integrity"]["canonicalization"] == "actionlineage.dev/json-deterministic-v0"
+    assert data["payload"]["body"]["marker"] == "actionlineage.capture.v1"
+
+
 def test_redaction_rejects_too_many_captured_values_before_persistence() -> None:
     raw_value = "attachment-content-123456789"
     event = build_event(payload={"items": [raw_value, raw_value, raw_value]})

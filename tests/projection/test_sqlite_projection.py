@@ -19,8 +19,10 @@ from actionlineage.domain import (
     EventType,
     EvidenceLink,
     EvidenceRelationship,
+    RedactionPolicy,
     VerificationStatus,
 )
+from actionlineage.domain.redaction import CAPTURE_DIGEST_SCOPE
 from actionlineage.journal import LocalJournal
 from actionlineage.projection import (
     CASE_BUNDLE_MANIFEST_VERSION,
@@ -116,6 +118,19 @@ def replace_journal_lines(path: Path, lines: list[bytes]) -> None:
 
 def sha256_digest(data: bytes) -> str:
     return f"sha256:{hashlib.sha256(data).hexdigest()}"
+
+
+def capture_markers(value: object) -> list[dict[str, object]]:
+    markers: list[dict[str, object]] = []
+    if isinstance(value, dict):
+        if value.get("marker") == "actionlineage.capture.v1":
+            markers.append(value)
+        for child in value.values():
+            markers.extend(capture_markers(child))
+    elif isinstance(value, list):
+        for child in value:
+            markers.extend(capture_markers(child))
+    return markers
 
 
 def database_fingerprint(path: Path) -> dict[str, object]:
@@ -1110,6 +1125,53 @@ def test_case_bundle_export_writes_redacted_reports_without_absence_overclaim(
         entry = files[exported_path.name]
         assert entry["size_bytes"] == len(data)
         assert entry["sha256"] == sha256_digest(data)
+
+
+def test_case_bundle_machine_artifacts_preserve_capture_digest_scope(
+    tmp_path: Path,
+) -> None:
+    journal_path = tmp_path / "events.jsonl"
+    database_path = tmp_path / "projection.sqlite"
+    bundle_dir = tmp_path / "case"
+    oversized_value = "case-bundle-sensitive-content-" * 4
+    journal = LocalJournal(
+        journal_path,
+        redaction_policy=RedactionPolicy(max_string_length=12),
+    )
+    journal.append(
+        timeline_event(
+            0,
+            EventType.AGENT_RUN_STARTED,
+            parent_event_id=None,
+            payload={"body": oversized_value},
+        )
+    )
+    rebuild_projection(journal_path, database_path)
+
+    result = export_case_bundle(
+        database_path,
+        bundle_dir,
+        journal_path=journal_path,
+        trace_id="trace_01",
+    )
+    case_text = result.json_path.read_text(encoding="utf-8")
+    ndjson_text = result.ndjson_path.read_text(encoding="utf-8")
+    report = result.markdown_path.read_text(encoding="utf-8")
+    case_data = json.loads(case_text)
+    ndjson_events = [json.loads(line) for line in ndjson_text.splitlines()]
+
+    assert oversized_value not in case_text
+    assert oversized_value not in ndjson_text
+    assert oversized_value not in report
+
+    case_markers = capture_markers(case_data)
+    ndjson_markers = capture_markers(ndjson_events)
+    assert case_markers
+    assert ndjson_markers
+    for marker in (*case_markers, *ndjson_markers):
+        assert marker["digest"].startswith("sha256:")
+        assert marker["digest_scope"] == CAPTURE_DIGEST_SCOPE
+    assert CAPTURE_DIGEST_SCOPE not in report
 
 
 def test_case_bundle_export_refuses_existing_artifacts(tmp_path: Path) -> None:

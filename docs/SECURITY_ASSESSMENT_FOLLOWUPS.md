@@ -87,10 +87,20 @@ and does not expand ActionLineage into a generic tracing platform.
   produce too many bounded capture markers or exceed the aggregate encoded
   captured-content budget. Redaction now fails closed before persistence when
   either limit is crossed.
+- **Event-envelope capture preservation**: local regression tests cover tight
+  capture settings that truncate payload content without corrupting
+  `spec_version`, event type, timestamps, correlation, causality, principal,
+  classification, or integrity control fields before serialization or journal
+  append validation.
 - **Observer digest scope**: local observer regressions cover body, expected
   body, and webhook signature digest scope fields. HTTP fixture observers now
   preserve digest strings for correlation while labeling them as observer
   metadata rather than raw bodies, signatures, or external trust roots.
+- **Machine-readable export capture digest scope**: local export and case
+  bundle regressions cover every export profile plus `case.json` and
+  `events.ndjson`. Exported bounded-capture digests retain
+  `actionlineage.capture.v1/redaction-boundary`; summary-only Markdown does not
+  carry payload digest metadata.
 
 ## Implemented before this slice
 
@@ -140,8 +150,11 @@ and does not expand ActionLineage into a generic tracing platform.
   URL, signed URL, webhook, and proxy-authorization field aliases, plus common
   inline assignment, signed URL parameter, and credential-bearing database URL
   forms. Bounded capture now enforces per-event capture-count and aggregate
-  captured-content ceilings. Broader digest-correlation review across
-  non-observer sinks remains open.
+  captured-content ceilings without corrupting event-envelope control fields.
+  Machine-readable exporter and case-bundle artifacts that carry bounded
+  capture metadata preserve redaction-boundary digest scope. Broader
+  digest-correlation review across logs, exceptions, and generated test
+  snapshots remains open.
 - **Container and deployment defaults**: partially confirmed. Runtime hardening
   should remain preview/local-ops scoped until container and Kubernetes defaults
   have executable validation.
@@ -181,5 +194,5 @@ and does not expand ActionLineage into a generic tracing platform.
    evolution, and external checkpoint trust roots.
 4. Capture benchmark artifacts before implementing any ADR-0011 append-index
    cache.
-5. Audit redaction digest behavior across journal, projection, export, logs,
-   exceptions, and test snapshots.
+5. Audit redaction digest behavior across logs, exceptions, and generated test
+   snapshots.

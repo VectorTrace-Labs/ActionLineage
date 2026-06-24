@@ -5,6 +5,7 @@ from pathlib import Path
 
 from actionlineage.demo.scenario import build_demo_events
 from actionlineage.domain import RedactionPolicy
+from actionlineage.domain.redaction import CAPTURE_DIGEST_SCOPE
 from actionlineage.exporters import (
     ExportProfile,
     FileSink,
@@ -164,6 +165,28 @@ def test_otel_attributes_are_redacted_and_bounded() -> None:
     assert payload["body"]["digest_scope"] == "actionlineage.capture.v1/redaction-boundary"
 
 
+def test_export_profiles_preserve_capture_digest_scope_for_payload_exports() -> None:
+    event = build_demo_events()[0].model_copy(update={"payload": {"body": "x" * 80}})
+    redaction_policy = RedactionPolicy(max_string_length=12)
+
+    for profile in ExportProfile:
+        mapped = map_event_for_profile(
+            event,
+            profile=profile,
+            redaction_policy=redaction_policy,
+        )
+        capture_markers = _capture_markers(_payload_carrying_export_surface(profile, mapped))
+
+        if profile == ExportProfile.SIGMA:
+            assert capture_markers == []
+            continue
+
+        assert capture_markers, profile
+        for marker in capture_markers:
+            assert marker["digest"].startswith("sha256:")
+            assert marker["digest_scope"] == CAPTURE_DIGEST_SCOPE
+
+
 def test_opentelemetry_semconv_proposal_matches_exporter_keys() -> None:
     proposal_path = REPO_ROOT / "integrations" / "opentelemetry" / "actionlineage-semconv-v0.json"
     proposal = json.loads(proposal_path.read_text(encoding="utf-8"))
@@ -235,3 +258,25 @@ class RecordingTracer:
         span = RecordingSpan(name)
         self.spans.append(span)
         return span
+
+
+def _payload_carrying_export_surface(
+    profile: ExportProfile,
+    mapped: dict[str, object],
+) -> object:
+    if profile == ExportProfile.OPENTELEMETRY:
+        return json.loads(str(mapped["actionlineage.payload_json"]))
+    return mapped
+
+
+def _capture_markers(value: object) -> list[dict[str, object]]:
+    markers: list[dict[str, object]] = []
+    if isinstance(value, dict):
+        if value.get("marker") == "actionlineage.capture.v1":
+            markers.append(value)
+        for child in value.values():
+            markers.extend(_capture_markers(child))
+    elif isinstance(value, list):
+        for child in value:
+            markers.extend(_capture_markers(child))
+    return markers
