@@ -289,6 +289,65 @@ def test_public_quickstart_smoke_reports_timed_out_step(monkeypatch) -> None:
     assert "step timed out after 0.01 seconds" in result.stderr
 
 
+def test_public_quickstart_smoke_redacts_subprocess_output_canaries(
+    monkeypatch,
+) -> None:
+    smoker = _load_script("smoke_public_quickstart")
+    stdout_secret = "stdoutsmokesecretvalue123456789"
+    stderr_secret = "stderrsmokesecretvalue123456789"
+
+    def fake_run(*_args, **_kwargs):
+        return smoker.subprocess.CompletedProcess(
+            args=("actionlineage", "demo", "run"),
+            returncode=1,
+            stdout=f"Bearer {stdout_secret}\n",
+            stderr=f"token={stderr_secret}\n",
+        )
+
+    monkeypatch.setattr(smoker.subprocess, "run", fake_run)
+
+    result = smoker._run_step(
+        name="demo",
+        command=("actionlineage", "demo", "run"),
+        timeout_seconds=1,
+    )
+
+    assert result.exit_code == 1
+    assert stdout_secret not in result.stdout
+    assert stderr_secret not in result.stderr
+    assert "Bearer [REDACTED:bearer_token]" in result.stdout
+    assert "token=[REDACTED:secret]" in result.stderr
+
+
+def test_public_quickstart_smoke_redacts_timed_out_output_canaries(monkeypatch) -> None:
+    smoker = _load_script("smoke_public_quickstart")
+    stdout_secret = "timeoutstdoutsecretvalue123456789"
+    stderr_secret = "timeoutstderrsecretvalue123456789"
+
+    def fake_run(*args, **kwargs):
+        raise smoker.subprocess.TimeoutExpired(
+            cmd=args[0],
+            timeout=kwargs["timeout"],
+            output=f"Bearer {stdout_secret}",
+            stderr=f"api_key={stderr_secret}",
+        )
+
+    monkeypatch.setattr(smoker.subprocess, "run", fake_run)
+
+    result = smoker._run_step(
+        name="demo",
+        command=("actionlineage", "demo", "run"),
+        timeout_seconds=0.01,
+    )
+
+    assert result.exit_code == 124
+    assert stdout_secret not in result.stdout
+    assert stderr_secret not in result.stderr
+    assert "Bearer [REDACTED:bearer_token]" in result.stdout
+    assert "api_key=[REDACTED:secret]" in result.stderr
+    assert "step timed out after 0.01 seconds" in result.stderr
+
+
 def test_ci_quality_summary_reports_coverage_and_artifacts(tmp_path: Path) -> None:
     writer = _load_script("write_ci_quality_summary")
     coverage_xml = tmp_path / "coverage.xml"

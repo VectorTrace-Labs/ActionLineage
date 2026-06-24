@@ -13,9 +13,13 @@ from collections.abc import Sequence
 from dataclasses import asdict, dataclass
 from pathlib import Path
 
+from actionlineage.domain import RedactionPolicy
+from actionlineage.domain.redaction import CAPTURE_DIGEST_SCOPE
+
 DEFAULT_TRACE_ID = "trace_demo_evidence_plane"
 DEFAULT_EXPECTED_VERSION = "0.1.0a6"
 DEFAULT_STEP_TIMEOUT_SECONDS = 120.0
+OUTPUT_REDACTION_POLICY = RedactionPolicy(max_string_length=4000)
 
 
 @dataclass(frozen=True, slots=True)
@@ -224,10 +228,24 @@ def _artifact_step(
 
 
 def _bounded_output(value: str, *, limit: int = 4000) -> str:
-    if len(value) <= limit:
-        return value
-    digest_note = f"\n[TRUNCATED original_length={len(value)}]\n"
-    return value[: limit - len(digest_note)] + digest_note
+    redacted = OUTPUT_REDACTION_POLICY.apply(value)
+    if isinstance(redacted, str):
+        if len(redacted) <= limit:
+            return redacted
+        digest_note = f"\n[TRUNCATED original_length={len(redacted)}]\n"
+        return redacted[: limit - len(digest_note)] + digest_note
+    if isinstance(redacted, dict) and redacted.get("marker") == "actionlineage.capture.v1":
+        return _capture_limit_note(redacted)
+    return json.dumps(redacted, sort_keys=True)
+
+
+def _capture_limit_note(metadata: dict[str, object]) -> str:
+    original_length = metadata.get("original_length", "unknown")
+    digest = metadata.get("digest", "unknown")
+    digest_scope = metadata.get("digest_scope", CAPTURE_DIGEST_SCOPE)
+    return (
+        f"[TRUNCATED original_length={original_length} digest={digest} digest_scope={digest_scope}]"
+    )
 
 
 def _output_text(value: bytes | str | None) -> str:

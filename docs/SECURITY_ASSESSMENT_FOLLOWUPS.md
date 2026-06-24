@@ -110,6 +110,10 @@ and does not expand ActionLineage into a generic tracing platform.
   cover user-controlled identifiers flowing into JSON/HTTP error details.
   Public error serialization now redacts and bounds exception text before
   returning it to users, while Pydantic validation details remain generic.
+- **Release smoke output redaction**: local release-hardening regressions cover
+  subprocess stdout/stderr captured by the public quickstart smoke script,
+  including timeout output. Smoke artifacts now redact canaries before writing
+  bounded command output into release evidence JSON.
 
 ## Implemented before this slice
 
@@ -163,8 +167,10 @@ and does not expand ActionLineage into a generic tracing platform.
   Machine-readable exporter, case-bundle, incident-summary, and demo-map
   artifacts that carry bounded capture metadata preserve redaction-boundary
   digest scope. Public CLI and service-mode error detail serialization redacts
-  and bounds exception text before JSON/HTTP output. Broader digest-correlation
-  review across structured logs and lower-level exception paths remains open.
+  and bounds exception text before JSON/HTTP output, and release smoke artifacts
+  redact captured stdout/stderr before writing bounded command output. Broader
+  digest-correlation review across structured logs and lower-level exception
+  paths remains open.
 - **Container and deployment defaults**: partially confirmed. Runtime hardening
   should remain preview/local-ops scoped until container and Kubernetes defaults
   have executable validation.
