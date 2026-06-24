@@ -281,11 +281,26 @@ def test_planned_v1_canonicalization_label_fails_journal_verification(
     assert result.issues[0].actual == PLANNED_CANONICALIZATION_VERSION
 
 
+def _move_spec_version_to_front(line: bytes) -> bytes:
+    data = json.loads(line)
+    return json.dumps(
+        {"spec_version": data.pop("spec_version"), **data},
+        ensure_ascii=False,
+        separators=(",", ":"),
+        sort_keys=False,
+        allow_nan=False,
+    ).encode("utf-8")
+
+
+def _insert_noncanonical_space(line: bytes) -> bytes:
+    return line.replace(b'":{"', b'": {"', 1)
+
+
 @pytest.mark.parametrize(
     "mutate",
     (
-        lambda line: _move_spec_version_to_front(line),
-        lambda line: line.replace(b'":{"', b'": {"', 1),
+        _move_spec_version_to_front,
+        _insert_noncanonical_space,
     ),
 )
 def test_noncanonical_json_format_fails_even_when_semantics_match(
@@ -307,17 +322,6 @@ def test_noncanonical_json_format_fails_even_when_semantics_match(
     assert result.issues[0].message == (
         "journal record bytes do not exactly match canonical serialization"
     )
-
-
-def _move_spec_version_to_front(line: bytes) -> bytes:
-    data = json.loads(line)
-    return json.dumps(
-        {"spec_version": data.pop("spec_version"), **data},
-        ensure_ascii=False,
-        separators=(",", ":"),
-        sort_keys=False,
-        allow_nan=False,
-    ).encode("utf-8")
 
 
 def test_crlf_line_ending_fails_canonical_byte_verification(tmp_path: Path) -> None:

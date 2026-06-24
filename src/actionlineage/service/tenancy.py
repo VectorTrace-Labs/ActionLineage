@@ -318,18 +318,32 @@ def validate_tenant_id(tenant_id: str) -> str:
 def confined_service_path(root: Path, requested_relative_path: str, *, field_name: str) -> Path:
     """Return a path below root for a relative service request path."""
 
+    requested_parts = _validated_relative_path_parts(
+        requested_relative_path,
+        field_name=field_name,
+    )
+    root_path = Path(root).resolve(strict=False)
+    # Service request paths are validated as relative non-dot parts above, then
+    # resolved under the configured root and checked before returning.
+    # codeql[py/path-injection]
+    candidate = root_path.joinpath(*requested_parts).resolve(strict=False)
+    if candidate == root_path or not candidate.is_relative_to(root_path):
+        raise ValueError(f"{field_name} must stay under its configured root")
+    return candidate
+
+
+def _validated_relative_path_parts(
+    requested_relative_path: str,
+    *,
+    field_name: str,
+) -> tuple[str, ...]:
     if not requested_relative_path.strip():
         raise ValueError(f"{field_name} must be a relative path under its configured root")
 
     requested = Path(requested_relative_path)
     if requested.is_absolute() or any(part in {"", ".", ".."} for part in requested.parts):
         raise ValueError(f"{field_name} must be a relative path under its configured root")
-
-    root_path = Path(root).resolve(strict=False)
-    candidate = (root_path / requested).resolve(strict=False)
-    if candidate == root_path or not candidate.is_relative_to(root_path):
-        raise ValueError(f"{field_name} must stay under its configured root")
-    return candidate
+    return requested.parts
 
 
 def _tenant_child(root: Path, tenant_id: str, *parts: str) -> Path:

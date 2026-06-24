@@ -274,7 +274,7 @@ def _analyze_results(results: list[dict[str, object]]) -> dict[str, object]:
         ],
         "interpretation": [
             "Full verified snapshots and duplicate idempotency scans are "
-            "linear-cost pressure points.",
+            + "linear-cost pressure points.",
             "This benchmark is measurement evidence only, not production throughput evidence.",
         ],
         "decision_boundary": {

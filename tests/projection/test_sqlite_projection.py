@@ -40,7 +40,6 @@ from actionlineage.projection import (
     summarize_incident,
     verify_projection_state,
 )
-from actionlineage.projection.sqlite import ensure_schema, index_event
 from tests.domain.test_events import BASE_TIME, build_event
 
 runner = CliRunner()
@@ -712,9 +711,9 @@ def test_event_indexing_is_idempotent_for_the_same_projected_event(tmp_path: Pat
     )
 
     with closing(sqlite3.connect(database_path)) as connection, connection:
-        ensure_schema(connection)
-        first = index_event(connection, persisted_event, journal_record_number=1)
-        second = index_event(connection, persisted_event, journal_record_number=1)
+        sqlite_projection.ensure_schema(connection)
+        first = sqlite_projection.index_event(connection, persisted_event, journal_record_number=1)
+        second = sqlite_projection.index_event(connection, persisted_event, journal_record_number=1)
 
     assert first is True
     assert second is False
@@ -751,7 +750,7 @@ def test_projection_schema_v1_migrates_to_verification_indexes(tmp_path: Path) -
             PRAGMA user_version = 1;
             """
         )
-        ensure_schema(connection)
+        sqlite_projection.ensure_schema(connection)
         columns = {row[1] for row in connection.execute("PRAGMA table_info(events)").fetchall()}
         user_version = connection.execute("PRAGMA user_version").fetchone()
 

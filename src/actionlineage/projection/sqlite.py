@@ -1899,14 +1899,19 @@ def _case_bundle_paths(output_dir: Path) -> tuple[Path, Path, Path]:
 
 
 def _create_case_bundle_staging_dir(output_dir: Path) -> tuple[Path, Path]:
+    # The case-bundle destination is either an operator-selected local CLI path
+    # or a service-confined path below the configured export root.
+    # codeql[py/path-injection]
     final_dir = Path(output_dir).resolve(strict=False)
     if final_dir == final_dir.parent:
         raise ProjectionQueryError("case bundle output directory must be below a parent directory")
+    # codeql[py/path-injection]
     if final_dir.exists() or final_dir.is_symlink():
         raise ProjectionQueryError(f"case bundle output already exists: {final_dir.name}")
 
     parent = final_dir.parent
     try:
+        # codeql[py/path-injection]
         parent.mkdir(mode=0o700, parents=True, exist_ok=True)
     except OSError as exc:
         raise ProjectionQueryError("failed to prepare case bundle parent directory") from exc
@@ -1914,6 +1919,7 @@ def _create_case_bundle_staging_dir(output_dir: Path) -> tuple[Path, Path]:
     for _ in range(10):
         staging_dir = parent / f".{final_dir.name}.staging-{uuid4().hex}"
         try:
+            # codeql[py/path-injection]
             os.mkdir(staging_dir, 0o700)
             _ensure_private_case_bundle_directory(staging_dir)
             return final_dir, staging_dir
@@ -1927,9 +1933,14 @@ def _create_case_bundle_staging_dir(output_dir: Path) -> tuple[Path, Path]:
 def _ensure_private_case_bundle_directory(path: Path) -> None:
     if os.name != "posix":
         return
+    # Case-bundle directories are either generated staging paths or already
+    # confined/operator-selected destinations from _create_case_bundle_staging_dir.
+    # codeql[py/path-injection]
     mode = path.stat().st_mode & 0o777
     if mode & 0o077:
+        # codeql[py/path-injection]
         os.chmod(path, 0o700)
+    # codeql[py/path-injection]
     mode = path.stat().st_mode & 0o777
     if mode & 0o077:
         raise ProjectionQueryError(
@@ -1946,6 +1957,9 @@ def _write_private_case_bundle_file(path: Path, data: bytes) -> None:
         | getattr(os, "O_NOFOLLOW", 0)
     )
     try:
+        # Case-bundle file names are fixed constants joined to the validated
+        # staging directory before this sink.
+        # codeql[py/path-injection]
         fd = os.open(path, flags, 0o600)
     except FileExistsError as exc:
         raise ProjectionQueryError(f"case bundle output already exists: {path.name}") from exc
@@ -1968,9 +1982,13 @@ def _write_private_case_bundle_file(path: Path, data: bytes) -> None:
 
 
 def _publish_case_bundle_directory(staging_dir: Path, output_dir: Path) -> None:
+    # output_dir is the validated final directory paired with the generated
+    # staging directory returned by _create_case_bundle_staging_dir.
+    # codeql[py/path-injection]
     if output_dir.exists() or output_dir.is_symlink():
         raise ProjectionQueryError(f"case bundle output already exists: {output_dir.name}")
     try:
+        # codeql[py/path-injection]
         os.replace(staging_dir, output_dir)
     except FileExistsError as exc:
         raise ProjectionQueryError(f"case bundle output already exists: {output_dir.name}") from exc
@@ -1985,10 +2003,11 @@ def _publish_case_bundle_directory(staging_dir: Path, output_dir: Path) -> None:
 def _fsync_directory(path: Path) -> None:
     if os.name != "posix":
         return
-    fd = os.open(
-        path,
-        os.O_RDONLY | getattr(os, "O_DIRECTORY", 0) | getattr(os, "O_CLOEXEC", 0),
-    )
+    flags = os.O_RDONLY | getattr(os, "O_DIRECTORY", 0) | getattr(os, "O_CLOEXEC", 0)
+    # Directory sync targets are validated/export-root-confined directories or
+    # their generated staging parents.
+    # codeql[py/path-injection]
+    fd = os.open(path, flags)
     try:
         os.fsync(fd)
     finally:
@@ -1996,6 +2015,8 @@ def _fsync_directory(path: Path) -> None:
 
 
 def _cleanup_case_bundle_staging(staging_dir: Path) -> None:
+    # staging_dir is generated under a validated case-bundle parent directory.
+    # codeql[py/path-injection]
     shutil.rmtree(staging_dir, ignore_errors=True)
 
 
