@@ -40,6 +40,16 @@ class EvidenceNormalizer:
             raise ValueError("initial_sequence must be non-negative")
         self._sequence = self.initial_sequence
 
+    def rebase_initial_sequence(self, initial_sequence: int) -> None:
+        """Set the first sequence before any records are emitted."""
+
+        if initial_sequence < 0:
+            raise ValueError("initial_sequence must be non-negative")
+        if self._sequence != self.initial_sequence or self._root_event_id is not None:
+            raise ValueError("cannot rebase a normalizer after records have been emitted")
+        self.initial_sequence = initial_sequence
+        self._sequence = initial_sequence
+
     def record(
         self,
         event_type: EventType | str,

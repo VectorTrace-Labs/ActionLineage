@@ -28,6 +28,7 @@ from actionlineage.evidence import (
     ToolIdentity,
     collect_records,
     import_evidence_batch,
+    import_evidence_batch_atomically,
 )
 from actionlineage.journal import LocalJournal
 
@@ -134,6 +135,88 @@ def test_batch_import_reports_duplicate_within_same_batch(tmp_path: Path) -> Non
     assert result.imported_count == 2
     assert result.duplicate_count == 1
     assert result.outcomes[-1].status == IngestOutcomeStatus.DUPLICATE
+
+
+def test_batch_import_reports_conflicting_idempotency_key(tmp_path: Path) -> None:
+    journal = LocalJournal(tmp_path / "events.jsonl")
+    original = action_record("010-action-a", "010", "docs/a.txt")
+    changed = action_record("010-action-a", "010", "docs/changed.txt")
+
+    first = import_evidence_batch(
+        (root_record(), original), normalizer=make_normalizer(), journal=journal
+    )
+    second = import_evidence_batch(
+        (changed,),
+        normalizer=make_normalizer(),
+        journal=journal,
+        existing_events=journal,
+    )
+
+    assert first.imported_count == 2
+    assert second.imported_count == 0
+    assert second.conflict_count == 1
+    assert second.ok is False
+    assert second.outcomes[0].status == IngestOutcomeStatus.CONFLICT
+    assert second.outcomes[0].event_id == "evt_a"
+    assert journal.verify().records_verified == 2
+
+
+def test_batch_import_treats_non_service_ingested_by_as_payload_for_conflicts(
+    tmp_path: Path,
+) -> None:
+    journal = LocalJournal(tmp_path / "events.jsonl")
+    original = EvidenceRecord(
+        idempotency_key="000-custom-provenance",
+        event_type=EventType.AGENT_INTENT_RECORDED,
+        payload={"ingested_by": {"custom": "first"}},
+        source_kind=EvidenceSourceKind.EXTERNAL_JSON,
+        sort_key="000",
+    )
+    changed = EvidenceRecord(
+        idempotency_key="000-custom-provenance",
+        event_type=EventType.AGENT_INTENT_RECORDED,
+        payload={"ingested_by": {"custom": "second"}},
+        source_kind=EvidenceSourceKind.EXTERNAL_JSON,
+        sort_key="000",
+    )
+
+    first = import_evidence_batch((original,), normalizer=make_normalizer(), journal=journal)
+    second = import_evidence_batch(
+        (changed,),
+        normalizer=make_normalizer(),
+        journal=journal,
+        existing_events=journal,
+    )
+
+    assert first.imported_count == 1
+    assert second.conflict_count == 1
+    assert second.outcomes[0].status == IngestOutcomeStatus.CONFLICT
+
+
+def test_atomic_batch_import_assigns_sequence_from_locked_journal_snapshot(
+    tmp_path: Path,
+) -> None:
+    journal = LocalJournal(tmp_path / "events.jsonl")
+    import_evidence_batch((root_record(),), normalizer=make_normalizer(), journal=journal)
+
+    result = import_evidence_batch_atomically(
+        (
+            EvidenceRecord(
+                idempotency_key="100-root-2",
+                event_type=EventType.AGENT_INTENT_RECORDED,
+                payload={"intent": "second imported root"},
+                source_kind=EvidenceSourceKind.EXTERNAL_JSON,
+                sort_key="100",
+            ),
+        ),
+        normalizer=make_normalizer(),
+        journal=journal,
+    )
+    snapshot = journal.verified_snapshot()
+
+    assert result.imported_count == 1
+    assert snapshot.events[-1].causality.sequence == 1
+    assert snapshot.events[-1].payload["ingest"]["idempotency_key"] == "100-root-2"
 
 
 def test_batch_import_redacts_before_persistence(tmp_path: Path) -> None:

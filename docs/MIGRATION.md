@@ -32,6 +32,13 @@ without this payload key remain valid; readers must treat those records as
 legacy records without authenticated ingestion provenance rather than inventing
 an identity.
 
+Source-neutral ingestion records in `0.1.0a6` may also include
+`payload.ingest.record_fingerprint` with
+`payload.ingest.fingerprint_version`. Existing records that only have
+`payload.ingest.idempotency_key` remain readable and replay as duplicates for
+compatibility; they cannot prove same-key/different-record conflicts because no
+fingerprint was persisted at the time.
+
 `/live` is now process liveness. `/ready` is readiness and fails closed when the
 internal journal is malformed, locked beyond the configured timeout, or
 hash-corrupted. `/health` remains available as a readiness-compatible alias.

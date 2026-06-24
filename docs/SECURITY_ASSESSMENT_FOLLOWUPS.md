@@ -30,6 +30,13 @@ and does not expand ActionLineage into a generic tracing platform.
   compatibility metadata, and service-health details. These public result
   boundaries now return defensive copies so caller mutation of one result object
   cannot change subsequent renders from the same trusted object.
+- **Service ingestion idempotency and partial outcomes**: local regression tests
+  cover service-level replay, same-key/different-record conflicts, concurrent
+  duplicate requests released through a barrier, partial-batch HTTP 207
+  responses, and projection rebuild failure after a committed journal append.
+  The service now scans idempotency fingerprints, assigns journal sequences, and
+  appends under the local journal lock, then reports stale projections without
+  rolling back or hiding the canonical append.
 
 ## Implemented before this slice
 
@@ -72,9 +79,13 @@ and does not expand ActionLineage into a generic tracing platform.
 - **Container and deployment defaults**: partially confirmed. Runtime hardening
   should remain preview/local-ops scoped until container and Kubernetes defaults
   have executable validation.
-- **Concurrency, idempotency, and batch semantics**: partially confirmed. Source
-  ingestion has idempotency tests, but service-level concurrent duplicate and
-  partial-batch semantics need deterministic API tests and documentation.
+- **Concurrency, idempotency, and batch semantics**: partially confirmed.
+  Source ingestion and service-mode local journal writes have deterministic
+  duplicate, conflict, partial-batch, and projection-stale tests. Remaining work
+  includes process-crash fault injection, authenticated append indexes or
+  checkpoints for stronger replay recovery, and a deliberate decision if future
+  APIs need all-or-nothing transactional batch semantics instead of explicit
+  partial success.
 - **Tenant isolation**: partially confirmed. Tenant-aware authorization
   primitives exist, but end-to-end tenant isolation across storage, projections,
   exports, logs, caches, and anchors is not demonstrated.
@@ -95,7 +106,7 @@ and does not expand ActionLineage into a generic tracing platform.
    before proposing segmented journals or checkpoint indexes.
 3. Draft ADRs for observer attestation policy, canonicalization v1, causal edge
    evolution, and external checkpoint trust roots.
-4. Expand service ingestion tests for concurrency, idempotency conflicts,
-   projection rebuild failure after append, and partial batch responses.
+4. Add service ingestion crash/fault injection around response loss, process
+   restart after append, and storage errors during multi-record batches.
 5. Audit attachment-count limits and redaction digest behavior across journal,
    projection, export, logs, exceptions, and test snapshots.

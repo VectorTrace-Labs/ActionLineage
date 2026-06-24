@@ -16,6 +16,7 @@ from actionlineage.evidence.ingestion import (
     VerificationRecord,
     collect_records,
     import_evidence_batch,
+    import_evidence_batch_atomically,
 )
 from actionlineage.evidence.normalization import EvidenceNormalizer
 
@@ -36,4 +37,5 @@ __all__ = [
     "VerificationRecord",
     "collect_records",
     "import_evidence_batch",
+    "import_evidence_batch_atomically",
 ]

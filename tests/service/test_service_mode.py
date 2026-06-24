@@ -3,11 +3,14 @@ from __future__ import annotations
 import os
 import subprocess
 import sys
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
+from threading import Barrier
 
 import pytest
 from fastapi.testclient import TestClient
 
+import actionlineage.service.api as service_api_module
 from actionlineage.contracts import ContractEventRequirement, LineageContract, contract_to_dict
 from actionlineage.demo import run_demo
 from actionlineage.journal import LocalJournal
@@ -487,6 +490,222 @@ def test_service_ingest_endpoint_writes_and_rebuilds_projection(tmp_path: Path) 
     )
     assert timeline.status_code == 200
     assert timeline.json()["event_count"] == 1
+
+
+def test_service_ingest_replay_reports_duplicate_without_new_append(tmp_path: Path) -> None:
+    demo = run_demo(tmp_path / "demo")
+    client = _client(
+        demo.journal_path,
+        demo.database_path,
+        token="writer",
+        roles=frozenset({ServiceRole.WRITE, ServiceRole.READ}),
+    )
+    body = {
+        "correlation": {"trace_id": "trace_service", "run_id": "run_service"},
+        "records": [
+            {
+                "idempotency_key": "service-record-replay",
+                "event_type": "agent.intent.recorded",
+                "payload": {"intent": {"summary": "service ingest"}},
+                "source_kind": "external_json",
+                "sort_key": "001",
+            }
+        ],
+    }
+    initial_count = LocalJournal(demo.journal_path).verified_snapshot().record_count
+
+    first = client.post("/ingest", headers={"Authorization": "Bearer writer"}, json=body)
+    second = client.post(
+        "/ingest",
+        headers={"Authorization": "Bearer writer", "X-Request-ID": "different-response"},
+        json=body,
+    )
+    snapshot = LocalJournal(demo.journal_path).verified_snapshot()
+
+    assert first.status_code == 200
+    assert first.json()["imported_count"] == 1
+    assert second.status_code == 200
+    assert second.json()["imported_count"] == 0
+    assert second.json()["duplicate_count"] == 1
+    assert second.json()["outcomes"][0]["status"] == "duplicate"
+    assert snapshot.record_count == initial_count + 1
+
+
+def test_service_ingest_rejects_same_idempotency_key_for_different_record(
+    tmp_path: Path,
+) -> None:
+    demo = run_demo(tmp_path / "demo")
+    client = _client(
+        demo.journal_path,
+        demo.database_path,
+        token="writer",
+        roles=frozenset({ServiceRole.WRITE, ServiceRole.READ}),
+    )
+    original = {
+        "correlation": {"trace_id": "trace_service", "run_id": "run_service"},
+        "records": [
+            {
+                "idempotency_key": "service-record-conflict",
+                "event_type": "agent.intent.recorded",
+                "payload": {"intent": {"summary": "service ingest"}},
+                "source_kind": "external_json",
+                "sort_key": "001",
+            }
+        ],
+    }
+    changed = {
+        **original,
+        "records": [
+            {
+                **original["records"][0],
+                "payload": {"intent": {"summary": "changed ingest"}},
+            }
+        ],
+    }
+
+    first = client.post("/ingest", headers={"Authorization": "Bearer writer"}, json=original)
+    second = client.post("/ingest", headers={"Authorization": "Bearer writer"}, json=changed)
+
+    assert first.status_code == 200
+    assert second.status_code == 409
+    assert second.json()["conflict_count"] == 1
+    assert second.json()["outcomes"][0]["status"] == "conflict"
+
+
+def test_service_ingest_partial_batch_uses_multi_status(tmp_path: Path) -> None:
+    demo = run_demo(tmp_path / "demo")
+    client = _client(
+        demo.journal_path,
+        demo.database_path,
+        token="writer",
+        roles=frozenset({ServiceRole.WRITE, ServiceRole.READ}),
+    )
+    initial_count = LocalJournal(demo.journal_path).verified_snapshot().record_count
+
+    response = client.post(
+        "/ingest",
+        headers={"Authorization": "Bearer writer"},
+        json={
+            "correlation": {"trace_id": "trace_service", "run_id": "run_service"},
+            "records": [
+                {
+                    "idempotency_key": "service-record-partial-ok",
+                    "event_type": "agent.intent.recorded",
+                    "payload": {"intent": {"summary": "service ingest"}},
+                    "source_kind": "external_json",
+                    "sort_key": "001",
+                },
+                {
+                    "idempotency_key": "service-record-partial-invalid",
+                    "event_type": "agent.intent.recorded",
+                    "payload": {"oversized": [0] * 4097},
+                    "source_kind": "external_json",
+                    "sort_key": "002",
+                },
+            ],
+        },
+    )
+    snapshot = LocalJournal(demo.journal_path).verified_snapshot()
+
+    assert response.status_code == 207
+    assert response.json()["ok"] is False
+    assert response.json()["imported_count"] == 1
+    assert response.json()["failed_count"] == 1
+    assert response.json()["journal_committed"] is True
+    assert snapshot.record_count == initial_count + 1
+
+
+def test_service_ingest_reports_projection_stale_after_committed_append(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    demo = run_demo(tmp_path / "demo")
+    client = _client(
+        demo.journal_path,
+        demo.database_path,
+        token="writer",
+        roles=frozenset({ServiceRole.WRITE, ServiceRole.READ}),
+    )
+    initial_count = LocalJournal(demo.journal_path).verified_snapshot().record_count
+
+    def fail_rebuild(*_args: object, **_kwargs: object) -> None:
+        raise service_api_module.ProjectionError("simulated projection rebuild failure")
+
+    monkeypatch.setattr(service_api_module, "rebuild_projection", fail_rebuild)
+    response = client.post(
+        "/ingest",
+        headers={"Authorization": "Bearer writer"},
+        json={
+            "correlation": {"trace_id": "trace_service", "run_id": "run_service"},
+            "records": [
+                {
+                    "idempotency_key": "service-record-projection-stale",
+                    "event_type": "agent.intent.recorded",
+                    "payload": {"intent": {"summary": "service ingest"}},
+                    "source_kind": "external_json",
+                    "sort_key": "001",
+                }
+            ],
+        },
+    )
+    snapshot = LocalJournal(demo.journal_path).verified_snapshot()
+
+    assert response.status_code == 503
+    assert response.json()["ok"] is False
+    assert response.json()["imported_count"] == 1
+    assert response.json()["journal_committed"] is True
+    assert response.json()["projection"]["state"] == "stale"
+    assert response.json()["projection"]["error"] == "projection_rebuild_failed"
+    assert snapshot.record_count == initial_count + 1
+
+
+def test_service_concurrent_duplicate_ingest_reports_duplicate_not_failure(
+    tmp_path: Path,
+) -> None:
+    demo = run_demo(tmp_path / "demo")
+    initial_count = LocalJournal(demo.journal_path).verified_snapshot().record_count
+    authenticator = StaticTokenAuthenticator(
+        tokens={
+            "writer": ServicePrincipal(
+                principal_id="writer",
+                roles=frozenset({ServiceRole.WRITE, ServiceRole.READ}),
+            )
+        }
+    )
+    app = create_app(
+        journal_path=demo.journal_path,
+        database_path=demo.database_path,
+        authenticator=authenticator,
+    )
+    barrier = Barrier(2)
+    body = {
+        "correlation": {"trace_id": "trace_service", "run_id": "run_service"},
+        "records": [
+            {
+                "idempotency_key": "service-record-concurrent",
+                "event_type": "agent.intent.recorded",
+                "payload": {"intent": {"summary": "service ingest"}},
+                "source_kind": "external_json",
+                "sort_key": "001",
+            }
+        ],
+    }
+
+    def post_once() -> dict[str, object]:
+        barrier.wait(timeout=5)
+        with TestClient(app) as client:
+            response = client.post("/ingest", headers={"Authorization": "Bearer writer"}, json=body)
+        assert response.status_code == 200
+        return response.json()
+
+    with ThreadPoolExecutor(max_workers=2) as executor:
+        responses = list(executor.map(lambda _: post_once(), range(2)))
+    snapshot = LocalJournal(demo.journal_path).verified_snapshot()
+
+    assert sorted(response["imported_count"] for response in responses) == [0, 1]
+    assert sorted(response["duplicate_count"] for response in responses) == [0, 1]
+    assert {response["failed_count"] for response in responses} == {0}
+    assert snapshot.record_count == initial_count + 1
 
 
 def test_service_ingest_preserves_authenticated_provenance_for_asserted_principal(

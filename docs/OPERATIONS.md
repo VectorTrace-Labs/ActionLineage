@@ -79,10 +79,11 @@ Service endpoints:
 - `POST /detections/evaluate`
 - `POST /export-case`
 
-`/ingest` requires `write`; timeline, events, contract validation, and detection
-evaluation require `read`; case export requires `export`. Journal-dependent
-service endpoints fail closed with HTTP 503 when the internal journal does not
-verify.
+`/ingest` requires `write`; capability-only principals must grant both
+`events:write` and `projections:rebuild` in the current alpha service model.
+Timeline, events, contract validation, and detection evaluation require `read`;
+case export requires `export`. Journal-dependent service endpoints fail closed
+with HTTP 503 when the internal journal does not verify.
 
 Service-created events include server-controlled `payload.ingested_by`
 provenance. It records the authenticated service principal, role set,
@@ -97,6 +98,17 @@ without invented authenticated identity.
 Write-role credentials cannot assert `classification.trust=trusted`. Trusted
 evidence assertions require an admin service role in this alpha service model;
 unprivileged attempts are rejected.
+
+`/ingest` idempotency is evaluated against the canonical local journal, not the
+SQLite projection. The service holds the local journal append lock while it
+checks existing idempotency fingerprints, assigns journal sequences, and appends
+new events. Replaying the same idempotency key with the same request fingerprint
+returns `duplicate`; reusing the key for a different record returns HTTP 409 and
+`conflict`. A mixed batch with at least one committed record and at least one
+record-level failure returns HTTP 207 with per-record outcomes. If the journal
+append commits but the rebuildable projection fails afterward, the response is
+HTTP 503 with `journal_committed: true` and `projection.state: "stale"`; clients
+can retry safely with the same idempotency key.
 
 Service-mode case exports are written under a configured export root. Set
 `ACTIONLINEAGE_EXPORT_ROOT` for environment-driven service startup; otherwise

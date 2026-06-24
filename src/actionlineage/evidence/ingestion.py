@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import hashlib
 from collections.abc import Iterable, Iterator, Mapping
 from dataclasses import dataclass
 from enum import StrEnum
@@ -20,15 +21,28 @@ from actionlineage.domain import (
     ResourceType,
     Source,
     VerificationStatus,
+    deterministic_json_bytes,
 )
-from actionlineage.domain.events import JsonObject
+from actionlineage.domain.events import JsonObject, event_type_value, model_json, thaw_json_value
 from actionlineage.evidence.normalization import EvidenceNormalizer
 from actionlineage.journal import (
+    JournalAppendError,
     JournalError,
     JournalReader,
     JournalWriter,
+    LocalJournal,
     VerifiedJournalSnapshot,
 )
+from actionlineage.journal.hashing import prepare_event_for_append
+from actionlineage.journal.local import (
+    _append_line,
+    _ensure_private_directory,
+    _journal_lock,
+    verified_journal_snapshot,
+)
+
+INGEST_RECORD_FINGERPRINT_VERSION = "actionlineage.dev/ingest-record-fingerprint-v1"
+INGESTION_PROVENANCE_VERSION = "actionlineage.dev/ingestion-provenance-v1"
 
 
 class EvidenceSourceKind(StrEnum):
@@ -48,6 +62,7 @@ class IngestOutcomeStatus(StrEnum):
 
     IMPORTED = "imported"
     DUPLICATE = "duplicate"
+    CONFLICT = "conflict"
     FAILED = "failed"
 
 
@@ -292,6 +307,12 @@ class BatchImportResult:
         return self._count(IngestOutcomeStatus.DUPLICATE)
 
     @property
+    def conflict_count(self) -> int:
+        """Number of records rejected because an idempotency key was reused differently."""
+
+        return self._count(IngestOutcomeStatus.CONFLICT)
+
+    @property
     def failed_count(self) -> int:
         """Number of records that failed validation, normalization, or persistence."""
 
@@ -301,7 +322,7 @@ class BatchImportResult:
     def ok(self) -> bool:
         """Return true when the batch had no failed records."""
 
-        return self.failed_count == 0
+        return self.failed_count == 0 and self.conflict_count == 0
 
     def as_dict(self) -> dict[str, object]:
         """Return a JSON-compatible result object."""
@@ -310,6 +331,7 @@ class BatchImportResult:
             "ok": self.ok,
             "imported_count": self.imported_count,
             "duplicate_count": self.duplicate_count,
+            "conflict_count": self.conflict_count,
             "failed_count": self.failed_count,
             "outcomes": [outcome.as_dict() for outcome in self.outcomes],
         }
@@ -332,24 +354,23 @@ def import_evidence_batch(
     duplicate canonical evidence.
     """
 
-    seen_idempotency_keys = _existing_idempotency_keys(existing_events)
+    seen_idempotency_entries = _existing_idempotency_entries(existing_events)
     outcomes: list[IngestOutcome] = []
-    batch_seen: set[str] = set()
+    batch_seen: dict[str, _IdempotencyEntry] = {}
 
     for record in sorted(records, key=lambda item: (item.sort_key, item.idempotency_key)):
-        if record.idempotency_key in seen_idempotency_keys or record.idempotency_key in batch_seen:
-            outcomes.append(
-                IngestOutcome(
-                    idempotency_key=record.idempotency_key,
-                    status=IngestOutcomeStatus.DUPLICATE,
-                )
-            )
+        record_fingerprint = _record_idempotency_fingerprint(record, normalizer)
+        matched_entry = seen_idempotency_entries.get(record.idempotency_key) or batch_seen.get(
+            record.idempotency_key
+        )
+        if matched_entry is not None:
+            outcomes.append(_matched_idempotency_outcome(record, matched_entry, record_fingerprint))
             continue
 
         try:
             event = normalizer.record(
                 record.event_type,
-                _payload_with_ingest_metadata(record),
+                _payload_with_ingest_metadata(record, record_fingerprint=record_fingerprint),
                 source=record.source,
                 principal=record.principal,
                 classification=record.classification,
@@ -365,7 +386,10 @@ def import_evidence_batch(
             )
             continue
 
-        batch_seen.add(record.idempotency_key)
+        batch_seen[record.idempotency_key] = _IdempotencyEntry(
+            event_id=persisted.event_id,
+            record_fingerprint=record_fingerprint,
+        )
         outcomes.append(
             IngestOutcome(
                 idempotency_key=record.idempotency_key,
@@ -373,6 +397,105 @@ def import_evidence_batch(
                 event_id=persisted.event_id,
             )
         )
+
+    return BatchImportResult(outcomes=tuple(outcomes))
+
+
+def import_evidence_batch_atomically(
+    records: Iterable[EvidenceRecord],
+    *,
+    normalizer: EvidenceNormalizer,
+    journal: LocalJournal,
+) -> BatchImportResult:
+    """Import a batch while holding the local journal append lock.
+
+    The verified snapshot, idempotency scan, sequence assignment, and append are
+    performed under one exclusive journal lock so concurrent service requests
+    observe deterministic duplicate or conflict outcomes instead of stale
+    sequence failures.
+    """
+
+    ordered_records = tuple(sorted(records, key=lambda item: (item.sort_key, item.idempotency_key)))
+    try:
+        _ensure_private_directory(journal.path.parent)
+    except OSError as exc:
+        raise JournalAppendError("failed to prepare journal directory") from exc
+
+    outcomes: list[IngestOutcome] = []
+    with _journal_lock(
+        journal.path.with_suffix(f"{journal.path.suffix}.lock"),
+        mode="exclusive",
+        operation="batch-import",
+        timeout_seconds=journal.lock_timeout_seconds,
+        poll_seconds=journal.lock_poll_seconds,
+    ):
+        try:
+            snapshot = verified_journal_snapshot(journal.path, lock=False)
+        except OSError as exc:
+            raise JournalAppendError("failed to verify existing journal before append") from exc
+        if not snapshot.ok:
+            raise JournalAppendError("cannot append to a journal that fails verification")
+
+        normalizer.rebase_initial_sequence(snapshot.record_count)
+        seen_entries = _existing_idempotency_entries(snapshot)
+        batch_seen: dict[str, _IdempotencyEntry] = {}
+        next_sequence = snapshot.record_count
+        previous_event_hash = snapshot.terminal_hash
+
+        for record in ordered_records:
+            record_fingerprint = _record_idempotency_fingerprint(record, normalizer)
+            matched_entry = seen_entries.get(record.idempotency_key) or batch_seen.get(
+                record.idempotency_key
+            )
+            if matched_entry is not None:
+                outcomes.append(
+                    _matched_idempotency_outcome(record, matched_entry, record_fingerprint)
+                )
+                continue
+
+            try:
+                event = normalizer.record(
+                    record.event_type,
+                    _payload_with_ingest_metadata(record, record_fingerprint=record_fingerprint),
+                    source=record.source,
+                    principal=record.principal,
+                    classification=record.classification,
+                )
+                if event.causality.sequence != next_sequence:
+                    raise JournalAppendError(
+                        f"event sequence {event.causality.sequence} does not match next journal "
+                        f"sequence {next_sequence}"
+                    )
+                persisted = _append_event_inside_lock(
+                    journal,
+                    event,
+                    previous_event_hash=previous_event_hash,
+                )
+            except JournalError:
+                raise
+            except ValueError as exc:
+                outcomes.append(
+                    IngestOutcome(
+                        idempotency_key=record.idempotency_key,
+                        status=IngestOutcomeStatus.FAILED,
+                        error=_safe_error_message(exc),
+                    )
+                )
+                continue
+
+            next_sequence += 1
+            previous_event_hash = persisted.integrity.event_hash
+            batch_seen[record.idempotency_key] = _IdempotencyEntry(
+                event_id=persisted.event_id,
+                record_fingerprint=record_fingerprint,
+            )
+            outcomes.append(
+                IngestOutcome(
+                    idempotency_key=record.idempotency_key,
+                    status=IngestOutcomeStatus.IMPORTED,
+                    event_id=persisted.event_id,
+                )
+            )
 
     return BatchImportResult(outcomes=tuple(outcomes))
 
@@ -386,20 +509,32 @@ def collect_records(adapters: Iterable[EvidenceSourceAdapter]) -> tuple[Evidence
     return tuple(collected)
 
 
-def _payload_with_ingest_metadata(record: EvidenceRecord) -> JsonObject:
+@dataclass(frozen=True, slots=True)
+class _IdempotencyEntry:
+    event_id: str
+    record_fingerprint: str | None
+
+
+def _payload_with_ingest_metadata(
+    record: EvidenceRecord,
+    *,
+    record_fingerprint: str,
+) -> JsonObject:
     payload = dict(record.payload)
     payload["ingest"] = {
+        "fingerprint_version": INGEST_RECORD_FINGERPRINT_VERSION,
         "idempotency_key": record.idempotency_key,
+        "record_fingerprint": record_fingerprint,
         "source_kind": record.source_kind.value,
     }
     return payload
 
 
-def _existing_idempotency_keys(
+def _existing_idempotency_entries(
     existing_events: JournalReader | VerifiedJournalSnapshot | None,
-) -> set[str]:
+) -> dict[str, _IdempotencyEntry]:
     if existing_events is None:
-        return set()
+        return {}
     snapshot = (
         existing_events
         if isinstance(existing_events, VerifiedJournalSnapshot)
@@ -408,22 +543,105 @@ def _existing_idempotency_keys(
     if not snapshot.ok:
         raise JournalError("cannot scan idempotency keys from an unverified journal")
 
-    idempotency_keys: set[str] = set()
+    idempotency_entries: dict[str, _IdempotencyEntry] = {}
     for event in snapshot.events:
-        key = _event_idempotency_key(event)
+        ingest = event.payload.get("ingest")
+        key = _event_idempotency_key_from_ingest(ingest)
         if key is not None:
-            idempotency_keys.add(key)
-    return idempotency_keys
+            idempotency_entries[key] = _IdempotencyEntry(
+                event_id=event.event_id,
+                record_fingerprint=_event_idempotency_fingerprint_from_ingest(ingest),
+            )
+    return idempotency_entries
 
 
 def _event_idempotency_key(event: EventEnvelope) -> str | None:
-    ingest = event.payload.get("ingest")
+    return _event_idempotency_key_from_ingest(event.payload.get("ingest"))
+
+
+def _event_idempotency_key_from_ingest(ingest: object) -> str | None:
     if not isinstance(ingest, Mapping):
         return None
     key = ingest.get("idempotency_key")
     if isinstance(key, str) and key:
         return key
     return None
+
+
+def _event_idempotency_fingerprint_from_ingest(ingest: object) -> str | None:
+    if not isinstance(ingest, Mapping):
+        return None
+    fingerprint = ingest.get("record_fingerprint")
+    if isinstance(fingerprint, str) and fingerprint:
+        return fingerprint
+    return None
+
+
+def _matched_idempotency_outcome(
+    record: EvidenceRecord,
+    entry: _IdempotencyEntry,
+    record_fingerprint: str,
+) -> IngestOutcome:
+    if entry.record_fingerprint is None or entry.record_fingerprint == record_fingerprint:
+        return IngestOutcome(
+            idempotency_key=record.idempotency_key,
+            status=IngestOutcomeStatus.DUPLICATE,
+            event_id=entry.event_id,
+        )
+    return IngestOutcome(
+        idempotency_key=record.idempotency_key,
+        status=IngestOutcomeStatus.CONFLICT,
+        event_id=entry.event_id,
+        error="idempotency key already used for different evidence record",
+    )
+
+
+def _record_idempotency_fingerprint(
+    record: EvidenceRecord,
+    normalizer: EvidenceNormalizer,
+) -> str:
+    payload: JsonObject = thaw_json_value(record.payload)
+    if _is_service_ingestion_provenance(payload.get("ingested_by")):
+        payload.pop("ingested_by", None)
+    payload.pop("ingest", None)
+    preimage: JsonObject = {
+        "classification": model_json(record.classification or normalizer.classification),
+        "correlation": model_json(normalizer.correlation),
+        "event_type": event_type_value(record.event_type),
+        "idempotency_key": record.idempotency_key,
+        "payload": payload,
+        "principal": model_json(record.principal or normalizer.principal),
+        "sort_key": record.sort_key,
+        "source": model_json(record.source or normalizer.source),
+        "source_kind": record.source_kind.value,
+        "version": INGEST_RECORD_FINGERPRINT_VERSION,
+    }
+    digest = hashlib.sha256(deterministic_json_bytes(preimage)).hexdigest()
+    return f"sha256:{digest}"
+
+
+def _is_service_ingestion_provenance(value: object) -> bool:
+    return (
+        isinstance(value, Mapping) and value.get("schema_version") == INGESTION_PROVENANCE_VERSION
+    )
+
+
+def _append_event_inside_lock(
+    journal: LocalJournal,
+    event: EventEnvelope,
+    *,
+    previous_event_hash: str | None,
+) -> EventEnvelope:
+    redacted_event, canonical_bytes = prepare_event_for_append(
+        event,
+        previous_event_hash=previous_event_hash,
+        redaction_policy=journal.redaction_policy,
+    )
+    try:
+        _append_line(journal.path, canonical_bytes)
+    except OSError as exc:
+        raise JournalAppendError("failed to append event to journal") from exc
+    return redacted_event
 
 
 def _safe_error_message(exc: Exception) -> str:

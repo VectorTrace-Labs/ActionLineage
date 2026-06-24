@@ -25,7 +25,12 @@ from actionlineage.domain import (
     TrustLevel,
 )
 from actionlineage.errors import ActionLineageValidationError
-from actionlineage.evidence import EvidenceNormalizer, EvidenceRecord, import_evidence_batch
+from actionlineage.evidence import (
+    BatchImportResult,
+    EvidenceNormalizer,
+    EvidenceRecord,
+    import_evidence_batch_atomically,
+)
 from actionlineage.journal import JournalError, LocalJournal, VerifiedJournalSnapshot
 from actionlineage.projection import (
     ProjectionError,
@@ -161,12 +166,11 @@ def create_app(
         body: dict[str, Any],
         x_request_id: str | None = Header(default=None, alias="X-Request-ID"),
         service_principal: Any = principal_dependency,
-    ) -> dict[str, object]:
+    ) -> Any:
         try:
             require_capability(service_principal, ServiceCapability.EVENTS_WRITE)
             require_capability(service_principal, ServiceCapability.PROJECTIONS_REBUILD)
             journal = LocalJournal(journal_path)
-            snapshot = _verified_snapshot_or_503(journal_path)
             _reject_client_ingested_by(body)
             _reject_unprivileged_trusted_classification(body, _typed_principal(service_principal))
             ingested_by = _ingested_by(
@@ -177,24 +181,36 @@ def create_app(
             normalizer = _normalizer_from_request(
                 body,
                 service_principal=_typed_principal(service_principal),
-                initial_sequence=snapshot.record_count,
+                initial_sequence=0,
             )
             records = _evidence_records_from_request(body, ingested_by=ingested_by)
-            result = import_evidence_batch(
+            result = import_evidence_batch_atomically(
                 records,
                 normalizer=normalizer,
                 journal=journal,
-                existing_events=snapshot,
             )
             if result.imported_count:
-                rebuild_projection(journal_path, database_path)
+                try:
+                    rebuild_projection(journal_path, database_path)
+                except ProjectionError as exc:
+                    return JSONResponse(
+                        status_code=503,
+                        content=_ingest_response_body(
+                            result,
+                            projection_state="stale",
+                            projection_error=_safe_detail(exc),
+                        ),
+                    )
         except ServiceAuthError as exc:
             raise HTTPException(status_code=403, detail=str(exc)) from exc
         except JournalError as exc:
             raise HTTPException(status_code=503, detail=_integrity_detail_from_error(exc)) from exc
         except (ActionLineageValidationError, ValidationError, ValueError) as exc:
             raise HTTPException(status_code=400, detail=_safe_detail(exc)) from exc
-        return result.as_dict()
+        return JSONResponse(
+            status_code=_ingest_status_code(result),
+            content=_ingest_response_body(result, projection_state="rebuilt"),
+        )
 
     @app.post("/contracts/validate")
     def validate_contract_endpoint(
@@ -434,6 +450,34 @@ def _safe_detail(exc: Exception) -> str:
     if isinstance(exc, ValidationError):
         return "service request validation failed"
     return str(exc)
+
+
+def _ingest_status_code(result: BatchImportResult) -> int:
+    if result.imported_count and not result.ok:
+        return 207
+    if result.conflict_count:
+        return 409
+    if result.failed_count:
+        return 400
+    return 200
+
+
+def _ingest_response_body(
+    result: BatchImportResult,
+    *,
+    projection_state: str,
+    projection_error: str | None = None,
+) -> dict[str, object]:
+    body = result.as_dict()
+    if projection_state == "stale":
+        body["ok"] = False
+    body["journal_committed"] = result.imported_count > 0
+    projection: dict[str, object] = {"state": projection_state}
+    if projection_error is not None:
+        projection["error"] = "projection_rebuild_failed"
+        projection["detail"] = projection_error
+    body["projection"] = projection
+    return body
 
 
 def _service_export_dir(export_root: Path, requested_output_dir: str) -> Path:

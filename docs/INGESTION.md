@@ -41,19 +41,29 @@ result = import_evidence_batch(records, normalizer=normalizer, journal=journal)
 ```
 
 Records are imported in deterministic order by `sort_key`, then
-`idempotency_key`. The importer writes `payload.ingest.idempotency_key` and
-`payload.ingest.source_kind` so replayed batches can be detected against an
-existing journal.
+`idempotency_key`. The importer writes `payload.ingest.idempotency_key`,
+`payload.ingest.source_kind`, and a versioned
+`payload.ingest.record_fingerprint` so replayed batches can be detected against
+an existing journal and same-key/different-record conflicts fail explicitly.
 
 The journal remains the redaction boundary. Pass the desired redaction policy to
 the journal before importing evidence.
 
 ## Idempotency and failure behavior
 
-- Duplicate idempotency keys are skipped and reported as `duplicate`.
+- Duplicate idempotency keys with the same fingerprint are skipped and reported
+  as `duplicate`.
+- Duplicate idempotency keys with a different fingerprint are reported as
+  `conflict` and are not appended.
 - Imported records return the persisted event ID.
 - Import failures are reported per record with redacted error messages.
 - A failed record does not silently become successful evidence.
+
+Use `import_evidence_batch_atomically()` with `LocalJournal` when concurrent
+service-style writers need the idempotency scan, sequence assignment, and append
+to happen under one local journal lock. It still reports partial success per
+record; it does not make a multi-record transaction or a production service
+deployment claim.
 
 ## Adapter guidance
 

@@ -1,6 +1,6 @@
 # Quality Scorecard
 
-Last reviewed: 2026-06-23.
+Last reviewed: 2026-06-24.
 
 This scorecard maps public claims to implementation, tests, demo evidence, and
 maturity. It is the release-truth source for README, roadmap, security policy,
@@ -37,7 +37,7 @@ and checklist wording.
 | Projection is rebuildable, disposable, and verified against an explicit journal before trusted reads | `src/actionlineage/projection/sqlite.py`, `docs/ADR/0010-stable-journal-source-identity.md` | `tests/projection/test_sqlite_projection.py` | Demo `projection.sqlite` rebuilt from journal; verified reads use explicit `--journal-path`, read-only SQLite snapshots, complete projected-column comparison, path-independent journal source identity, moved-journal compatibility for byte-identical sources, and fail-closed checks for changed or legacy source identity | Alpha-supported |
 | Incident export, case bundle, graph export, grounded summary, static console | Projection and console modules | `tests/projection`, `tests/console` | Demo console/export commands; trace-ID and run-ID console selectors render through the CLI with explicit journal binding; invalid dual-selector use fails with JSON and writes no HTML; empty console selectors render explicit no-match rows through the renderer and CLI without proof-of-absence wording | Alpha-supported |
 | Static console annotations are bounded, redacted, escaped, and non-canonical | `src/actionlineage/console/static.py`, `docs/CONSOLE.md` | `tests/console/test_static_console.py` | Console context fails closed for oversized annotations, escapes hostile note and saved-view fields, redacts canaries, and renders CSP-protected HTML | Alpha-supported |
-| Source-neutral ingestion exists | `src/actionlineage/evidence` | `tests/evidence` | README API example | Alpha-supported |
+| Source-neutral ingestion exists | `src/actionlineage/evidence` | `tests/evidence`, service ingestion regressions | README API example; versioned idempotency fingerprints distinguish duplicate replay from same-key conflicts | Alpha-supported |
 | Evidence links include subject, evidence event, relationship, observer, confidence, status, and limitations | `EvidenceLink` model and schema | `tests/domain/test_evidence.py`, compatibility schema tests | Demo verified and conflicting events | Alpha-supported |
 | Ambiguous observer correlation remains unverified | `src/actionlineage/observers/local.py`, `tests/fixtures/adversarial/security-regressions.json` | `tests/observers/test_local_observers.py`, `tests/security/test_release_hardening.py` | Minimized `correlation_ambiguity` adversarial fixture keeps multiple plausible HTTP observations out of `verified` status | Local-proof |
 | Tool acknowledgement is not side-effect verification | Demo scenario and detection rules | `tests/demo`, `tests/detection/test_sequence.py` | Unverified HTTP send | Alpha-supported |
@@ -54,7 +54,7 @@ and checklist wording.
 | JSON Lineage Contracts validate events, fields, links, integrity, latency, and detection coverage | `src/actionlineage/contracts` | `tests/contracts` | Demo outbound HTTP contract | Alpha-supported |
 | YAML contract/rule examples are review aids | Optional PyYAML loader and docs | Detection YAML loader tests | YAML examples under `contracts`, `detections`, `scenarios` | Preview |
 | OpenTelemetry and SIEM/export integrations are non-canonical mirrors | `src/actionlineage/exporters` | `tests/exporters` | Local mapping tests | Preview |
-| Optional service mode exists | `src/actionlineage/service` | `tests/service` | Docker/Compose smoke in CI | Preview |
+| Optional service mode exists | `src/actionlineage/service` | `tests/service` | Docker/Compose smoke in CI; local service tests cover journal-locked ingest replay, conflicts, partial HTTP 207, and projection-stale-after-commit reporting | Preview |
 | Service-mode test client stays outside runtime scope | `pyproject.toml`, `docs/DEPENDENCY_POLICY.md` | `tests/release/test_release_readiness.py`, `tests/service` | Dev-only `httpx2` backend removes Starlette/FastAPI test warnings without adding to the alpha runtime TCB | Local-proof |
 | Optional Postgres projection schema exists | `src/actionlineage/projection/postgres.py` | `tests/projection/test_postgres_projection.py` | Local statement fixtures | Preview |
 | Cloud/Kubernetes observers exist as fixture-backed observers | `src/actionlineage/observers/cloud.py` | `tests/observers/test_cloud_observers.py` | No live cloud required | Preview |
@@ -99,6 +99,7 @@ and checklist wording.
 | Empty console selectors can be mistaken for no activity | Misleading review artifact | Static console renderer and CLI export path render explicit no-match rows and state missing observation only means no observation was recorded | Add case-context failure-path coverage if projection behavior changes |
 | Static console context can become an oversized or unsafe rendered artifact | Browser-side and review-bundle risk | Context file/item bounds, redaction/truncation markers, strict escaping, CSP tests, and a hostile note/saved-view context fixture | Extend hostile context fixtures when context fields or render surfaces change |
 | Similar or duplicated observer records can create false certainty | Incorrect investigation timeline | HTTP fixture observers return unverified ambiguity instead of selecting one plausible match | Extend ambiguity fixtures as new observer families are added |
+| Service ingest crash recovery and multi-record atomicity can be overinterpreted | Clients may assume all-or-nothing writes or production replay guarantees | Local service ingest reports duplicate/conflict/partial/projection-stale outcomes and keeps the journal canonical | Add crash/fault injection and decide whether future service APIs need transactional batches or an append index/checkpoint |
 | Review-readiness docs can be mistaken for validation | Misleading social proof | External-review docs and scorecard separate readiness from actual external evidence | Keep actual reviews, adoption, and production history external-validation until real artifacts exist |
 | Release-candidate preparation can be mistaken for publication | Broken release expectations | Publishing docs and release workflow keep publication behind explicit owner-triggered jobs | Do not push, tag, publish, or create release objects from local audit work |
 
