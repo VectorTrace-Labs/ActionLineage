@@ -117,7 +117,8 @@ If a multi-record batch commits an earlier record and a later journal append
 fails, the service reports the committed prefix and the failed record with HTTP
 207, keeps `journal_committed: true`, and attempts to rebuild the projection for
 the committed prefix. Storage exception details are bounded to an error type in
-the per-record outcome.
+the per-record outcome. Retrying the same multi-record body is idempotent for
+the committed prefix and can import the remaining suffix once storage recovers.
 
 Service-mode case exports are written under a configured export root. Set
 `ACTIONLINEAGE_EXPORT_ROOT` for environment-driven service startup; otherwise

@@ -780,6 +780,84 @@ def test_service_ingest_reports_partial_commit_on_later_append_failure(
     assert timeline.json()["event_count"] == 1
 
 
+def test_service_ingest_retry_after_partial_commit_completes_remaining_batch(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    demo = run_demo(tmp_path / "demo")
+    client = _client(
+        demo.journal_path,
+        demo.database_path,
+        token="writer",
+        roles=frozenset({ServiceRole.WRITE, ServiceRole.READ}),
+    )
+    initial_count = LocalJournal(demo.journal_path).verified_snapshot().record_count
+    original_append = ingestion_module._append_line
+    append_attempts = 0
+    body = {
+        "correlation": {"trace_id": "trace_service", "run_id": "run_service"},
+        "records": [
+            {
+                "idempotency_key": "service-record-retry-prefix-ok",
+                "event_type": "agent.intent.recorded",
+                "payload": {"intent": {"summary": "first commit"}},
+                "source_kind": "external_json",
+                "sort_key": "001",
+            },
+            {
+                "idempotency_key": "service-record-retry-suffix-ok",
+                "event_type": "agent.intent.recorded",
+                "payload": {"intent": {"summary": "second commit"}},
+                "source_kind": "external_json",
+                "sort_key": "002",
+            },
+        ],
+    }
+
+    def fail_second_append(path: Path, data: bytes) -> None:
+        nonlocal append_attempts
+        append_attempts += 1
+        if append_attempts == 2:
+            raise OSError("simulated disk full during first attempt")
+        original_append(path, data)
+
+    monkeypatch.setattr(ingestion_module, "_append_line", fail_second_append)
+    partial = client.post(
+        "/ingest",
+        headers={"Authorization": "Bearer writer", "X-Request-ID": "first-attempt"},
+        json=body,
+    )
+    monkeypatch.setattr(ingestion_module, "_append_line", original_append)
+
+    recovered = client.post(
+        "/ingest",
+        headers={"Authorization": "Bearer writer", "X-Request-ID": "retry-after-loss"},
+        json=body,
+    )
+    snapshot = LocalJournal(demo.journal_path).verified_snapshot()
+    timeline = client.get(
+        "/timeline",
+        params={"trace_id": "trace_service"},
+        headers={"Authorization": "Bearer writer"},
+    )
+
+    assert partial.status_code == 207
+    assert partial.json()["imported_count"] == 1
+    assert partial.json()["failed_count"] == 1
+    assert recovered.status_code == 200
+    assert recovered.json()["ok"] is True
+    assert recovered.json()["imported_count"] == 1
+    assert recovered.json()["duplicate_count"] == 1
+    assert recovered.json()["failed_count"] == 0
+    assert recovered.json()["journal_committed"] is True
+    assert recovered.json()["projection"]["state"] == "rebuilt"
+    assert recovered.json()["outcomes"][0]["status"] == "duplicate"
+    assert recovered.json()["outcomes"][1]["status"] == "imported"
+    assert snapshot.record_count == initial_count + 2
+    assert timeline.status_code == 200
+    assert timeline.json()["event_count"] == 2
+
+
 def test_service_ingest_reports_projection_stale_after_committed_append(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,
