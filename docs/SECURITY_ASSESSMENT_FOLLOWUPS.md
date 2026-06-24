@@ -170,8 +170,11 @@ and does not expand ActionLineage into a generic tracing platform.
   operating evidence, and production trust-root review remain open before
   stronger production independence claims.
 - **External trust root**: confirmed as future work. Local hash chains and local
-  anchors remain local tamper evidence only. Remote witness, KMS/HSM signing,
-  transparency log, or WORM storage support needs a checkpoint ADR before code.
+  anchors remain local tamper evidence only. ADR-0015 now defines the
+  provider-neutral checkpoint declaration, verifier failure semantics, outage
+  behavior, and external-validation boundary required before remote witness,
+  KMS/HSM signing, transparency log, trusted timestamp, or WORM storage support
+  can be claimed.
 - **Stable journal identity**: locally confirmed for projections. ADR-0010
   defines `actionlineage.dev/journal-source-identity-v1`, a path-independent
   digest over the verified journal byte digest, record count, and terminal event
@@ -189,9 +192,12 @@ and does not expand ActionLineage into a generic tracing platform.
   evidence-link bytes. Runtime policy rejects v1 for persisted event hashes
   until a future migration ADR adopts it, so stronger portability claims remain
   out of scope.
-- **Causality model evolution**: confirmed as schema-evolution work. Current
-  sequence handling still couples source sequence and journal order. Multi-parent
-  causal edges require a versioned schema change or migration path.
+- **Causality model evolution**: confirmed as schema-evolution work. ADR-0014 now defines
+  the future boundary for separating journal position from
+  producer/source sequence and for adding typed multi-parent causal edges.
+  Current `v1alpha1` evidence remains single-parent until a migration ADR,
+  compatibility fixtures, projection changes, and graph/detection/export tests
+  land.
 - **Input limits and redaction**: partially confirmed. Non-finite JSON numbers
   are rejected at the event and redaction boundaries. Event validation,
   normalization, and redaction now enforce default JSON nesting-depth,
@@ -245,5 +251,7 @@ and does not expand ActionLineage into a generic tracing platform.
 
 1. Use the captured 10k/100k/250k benchmark evidence before proposing segmented
    journals, checkpoint indexes, or ADR-0011 append-index cache work.
-2. Draft ADRs for causal edge evolution and external checkpoint trust roots.
-3. Audit redaction digest behavior across any future structured log surfaces.
+2. Audit redaction digest behavior across any future structured log surfaces.
+3. Draft a protected-kernel boundary ADR for event/evidence, journal
+   verification, anchoring, observer policy, projection contracts, and
+   query/export trust boundaries.

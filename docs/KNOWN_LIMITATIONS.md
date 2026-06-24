@@ -27,6 +27,13 @@ supported, local-proof, preview, planned, and external-validation labels.
   be rebuilt from supported journals when in doubt.
 - Hardware-backed signing, remote attestation, and managed evidence storage are
   not part of the public alpha.
+- The `v1alpha1` causality envelope is single-parent and uses
+  `causality.sequence` as local journal position. Typed multi-parent causal
+  edges require the ADR-0014 schema-evolution path before they are supported.
+- External checkpoint trust roots are not implemented. Existing anchors,
+  archive manifests, Git statements, and external-attestation sidecars do not
+  prove WORM enforcement, trusted timestamping, transparency-log inclusion, or
+  independent witnessing without future ADR-0015 verification work.
 - Journal records are byte-canonical under
   `actionlineage.dev/json-deterministic-v0`, but portable
   `json-canonicalization-v1` and RFC 8785/JCS-style claims remain planned until

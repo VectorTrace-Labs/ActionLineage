@@ -200,6 +200,43 @@ def test_canonicalization_v1_boundary_is_tracked() -> None:
     assert "Runtime policy rejects v1 for persisted event hashes" in followups
 
 
+def test_causality_evolution_boundary_is_tracked() -> None:
+    adr = (PROJECT_ROOT / "docs/ADR/0014-causality-model-evolution.md").read_text(encoding="utf-8")
+    data_model = (PROJECT_ROOT / "docs/DATA_MODEL.md").read_text(encoding="utf-8")
+    scorecard = (PROJECT_ROOT / "docs/QUALITY_SCORECARD.md").read_text(encoding="utf-8")
+    maturity = (PROJECT_ROOT / "docs/MATURITY.md").read_text(encoding="utf-8")
+    followups = (PROJECT_ROOT / "docs/SECURITY_ASSESSMENT_FOLLOWUPS.md").read_text(encoding="utf-8")
+
+    assert "- Status: Proposed" in adr
+    assert "Do not change `actionlineage.dev/v1alpha1` causality" in adr
+    assert "versioned schema change or migration ADR" in adr
+    assert "Local journal position" in adr
+    assert "Producer or source sequence" in adr
+    assert "typed multi-parent causal edges" in data_model
+    assert "ADR-0014" in scorecard
+    assert "Causality model evolution ADR" in maturity
+    assert "ADR-0014 now defines" in followups
+
+
+def test_external_checkpoint_trust_root_boundary_is_tracked() -> None:
+    adr = (PROJECT_ROOT / "docs/ADR/0015-external-checkpoint-trust-roots.md").read_text(
+        encoding="utf-8"
+    )
+    journal_integrity = (PROJECT_ROOT / "docs/JOURNAL_INTEGRITY.md").read_text(encoding="utf-8")
+    scorecard = (PROJECT_ROOT / "docs/QUALITY_SCORECARD.md").read_text(encoding="utf-8")
+    maturity = (PROJECT_ROOT / "docs/MATURITY.md").read_text(encoding="utf-8")
+    followups = (PROJECT_ROOT / "docs/SECURITY_ASSESSMENT_FOLLOWUPS.md").read_text(encoding="utf-8")
+
+    assert "- Status: Proposed" in adr
+    assert "Do not add a new external checkpoint implementation" in adr
+    assert "provider-neutral checkpoint declaration" in adr
+    assert "Outage behavior must be explicit" in adr
+    assert "ADR-0015" in journal_integrity
+    assert "External checkpoint trust roots remain planned" in scorecard
+    assert "External checkpoint trust-root ADR" in maturity
+    assert "ADR-0015 now defines" in followups
+
+
 def test_local_release_planning_docs_are_ignored_and_not_linked_publicly() -> None:
     gitignore = (PROJECT_ROOT / ".gitignore").read_text(encoding="utf-8")
     ignore_patterns = tuple(

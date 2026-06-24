@@ -223,6 +223,14 @@ model unless a future ADR changes that boundary. Local checkpoints do not make
 the journal resistant to an attacker who can rewrite every local artifact and
 trusted value.
 
+ADR-0015 defines the future external checkpoint trust-root boundary. Until an
+implementation and executable external-verification tests exist, ActionLineage
+does not claim WORM enforcement, hardware-backed signing, trusted timestamping,
+transparency-log inclusion, or independent witnessing. If an external verifier
+is unavailable in a future implementation, local journal verification may still
+succeed, but external checkpoint status must remain explicit rather than being
+silently treated as verified.
+
 ## Recovery
 
 Use verified-prefix export when a journal fails verification:

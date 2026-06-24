@@ -12,7 +12,8 @@ The JSON Schema lives at `schemas/actionlineage-event-v1alpha1.schema.json`.
 - `observed_at`: UTC recorder observation time.
 - `source`: component, instance, and version that recorded the event.
 - `correlation`: trace and run IDs.
-- `causality`: root event, parent event, and sequence.
+- `causality`: root event, single parent event, and local journal-position
+  sequence.
 - `principal`: human, agent, service, workload, model, or delegated identity.
 - `classification`: sensitivity and trust level.
 - `payload`: event-specific JSON object.
@@ -31,8 +32,8 @@ Evidence links are payload-level objects in `v1alpha1`:
 - `verification_status`
 - `limitations`
 
-Envelope-level evidence links are deferred to a future schema migration and
-require an ADR.
+Envelope-level evidence links and typed multi-parent causal edges are deferred
+to future schema migrations and require ADRs.
 
 ## Compatibility
 

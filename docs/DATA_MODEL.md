@@ -270,6 +270,14 @@ Event indexing is idempotent for an already indexed event with the same event ID
 
 Timeline queries support exactly one selector: `trace_id` or `run_id`. Results are ordered by `occurred_at`, then `causality.sequence`, then journal record number, then `event_id`.
 
+`v1alpha1` causality is intentionally single-parent: `parent_event_id`,
+`root_event_id`, and `sequence`. ADR-0014 defines the future boundary for typed
+multi-parent causal edges and for separating producer/source sequence from local
+journal position. In short, typed multi-parent causal edges are not current
+alpha behavior. Until a schema migration lands, `causality.sequence` remains the
+journal record position used by local append and verification paths, not a
+general source sequence.
+
 Incident export returns JSON containing the selector, event count, documented timeline order, and the full projected event objects.
 
 Case bundle export publishes a derived private directory containing

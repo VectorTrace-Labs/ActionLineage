@@ -97,6 +97,10 @@ evidence and limitations.
 - Homebrew tap and formula publication.
 - conda-forge recipe publication.
 - Portable canonicalization v1 as an active persisted hash format.
+- Causality model evolution ADR and future schema migration for typed
+  multi-parent causal edges.
+- External checkpoint trust-root ADR and provider-neutral verification
+  implementation.
 - Branch protection and GitHub security-control status.
 - Independent security review, outside user evaluation, production operating
   history, and public feedback.

@@ -50,6 +50,8 @@ Require a new ADR and, when applicable, a new schema version:
 
 - Renaming or removing envelope fields.
 - Changing the meaning of existing envelope fields.
+- Replacing single-parent `v1alpha1` causality with typed multi-parent causal
+  edges, or separating producer/source sequence from local journal position.
 - Changing canonical serialization or journal hash input.
 - Adopting `actionlineage.dev/json-canonicalization-v1` for persisted event
   hashes, because ADR-0013 keeps checked-in conformance vectors and migration

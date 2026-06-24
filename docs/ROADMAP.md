@@ -43,6 +43,10 @@ already delivered.
 7. Compatibility fixtures for future `v1alpha1` payload evolution.
 8. Canonicalization v1 adoption as an active persisted hash format after a
    migration ADR; conformance vectors and migration guardrails are checked in.
+9. Causality schema evolution for typed multi-parent causal edges after
+   ADR-0014 acceptance criteria are implemented.
+10. External checkpoint trust-root implementation after ADR-0015 provider-neutral
+    verification fixtures exist.
 
 ## Optional / Ecosystem Tracks
 
@@ -50,7 +54,8 @@ These areas are intentionally visible but remain preview, planned, or
 external-validation-required unless a future ADR moves them into the required
 release surface:
 
-- Hardware-backed signing or remote-attestation verification.
+- Hardware-backed signing, trusted timestamping, WORM/object-lock verification,
+  transparency-log inclusion, or remote-attestation verification.
 - Live eBPF, EDR, process, network, and file collectors.
 - Managed graph database backends.
 - Hosted multi-tenant SaaS control plane.
