@@ -131,12 +131,20 @@ def test_append_checkpoint_scope_decision_is_tracked() -> None:
 
     assert "- Status: Accepted" in adr
     assert "Do not add a trusted append index" in adr
+    assert "actionlineage.dev/journal-ingest-benchmark-analysis-v1" in adr
+    assert "`trusted_append_index` is `not_allowed`" in adr
+    assert "`future_append_index_scope` is\n`rebuildable_cache_only`" in adr
     assert "rebuildable cache" in adr
     assert "canonical evidence or trusted evidence" in architecture
     assert "A stale or mismatched" in journal_integrity
     assert "index must be ignored or rebuilt" in journal_integrity
-    assert "future append indexes are rebuildable caches" in scorecard
+    assert "actionlineage.dev/journal-ingest-benchmark-analysis-v1" in journal_integrity
+    assert "does not authorize a trusted append index" in journal_integrity
+    assert "machine-readable decision boundary" in scorecard
     assert "Append checkpoint/index scope" in followups
+    assert "Journal benchmark decision boundary" in followups
+    assert "trusted append indexes are not allowed" in followups
+    assert "Narrow the local durability threat model" in followups
 
 
 def test_observer_attestation_policy_boundary_is_tracked() -> None:

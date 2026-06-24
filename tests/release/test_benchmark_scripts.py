@@ -54,3 +54,30 @@ def test_journal_ingest_benchmark_script_outputs_json_report(tmp_path: Path) -> 
     assert snapshot.record_count == 3
     assert benchmark["verify_seconds"]["samples"]
     assert benchmark["duplicate_idempotency_scan_seconds"]["samples"]
+
+    analysis = report["analysis"]
+    assert analysis["schema_version"] == "actionlineage.dev/journal-ingest-benchmark-analysis-v1"
+    assert analysis["measured_operations"] == [
+        "verified_snapshot",
+        "duplicate_idempotency_scan",
+    ]
+    assert analysis["largest_record_count"] == 3
+    assert analysis["largest_verify_median_seconds"] == benchmark["verify_seconds"]["median"]
+    assert (
+        analysis["largest_duplicate_idempotency_scan_median_seconds"]
+        == benchmark["duplicate_idempotency_scan_seconds"]["median"]
+    )
+    assert analysis["median_seconds_per_10000_records"][0]["record_count"] == 3
+    assert analysis["decision_boundary"] == {
+        "trusted_append_index": "not_allowed",
+        "future_append_index_scope": "rebuildable_cache_only",
+        "canonical_evidence": "append_only_journal",
+        "required_future_cache_tests": [
+            "stale_index_fails_closed",
+            "tampered_index_fails_closed",
+            "mismatched_journal_identity_fails_closed",
+            "mismatched_journal_digest_fails_closed",
+            "mismatched_record_count_or_terminal_hash_fails_closed",
+            "cache_rebuilds_from_verified_journal",
+        ],
+    }

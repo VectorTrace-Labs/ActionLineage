@@ -34,6 +34,7 @@ from actionlineage.evidence import (
 from actionlineage.journal import LocalJournal
 
 SCHEMA_VERSION = "actionlineage.dev/journal-ingest-benchmark-v1"
+ANALYSIS_SCHEMA_VERSION = "actionlineage.dev/journal-ingest-benchmark-analysis-v1"
 BASE_TIME = datetime(2026, 6, 24, 12, 0, tzinfo=UTC)
 
 
@@ -153,6 +154,7 @@ def _run_benchmarks(
         "repetitions": repetitions,
         "temporary_output_dir": temporary_output_dir,
         "results": results,
+        "analysis": _analyze_results(results),
         "limitations": [
             "Synthetic local benchmark; not production performance evidence.",
             "Duplicate idempotency timing includes journal verification and scan work.",
@@ -238,6 +240,74 @@ def _summary(samples: tuple[float, ...]) -> dict[str, object]:
         "max": round(max(samples), 6),
         "samples": [round(sample, 6) for sample in samples],
     }
+
+
+def _analyze_results(results: list[dict[str, object]]) -> dict[str, object]:
+    rows = sorted(results, key=_record_count_from_result)
+    largest = rows[-1] if rows else None
+    return {
+        "schema_version": ANALYSIS_SCHEMA_VERSION,
+        "measured_operations": [
+            "verified_snapshot",
+            "duplicate_idempotency_scan",
+        ],
+        "largest_record_count": _record_count_from_result(largest) if largest is not None else 0,
+        "largest_verify_median_seconds": _median_seconds(largest, "verify_seconds")
+        if largest is not None
+        else None,
+        "largest_duplicate_idempotency_scan_median_seconds": _median_seconds(
+            largest,
+            "duplicate_idempotency_scan_seconds",
+        )
+        if largest is not None
+        else None,
+        "median_seconds_per_10000_records": [
+            {
+                "record_count": _record_count_from_result(row),
+                "verify_seconds": _seconds_per_10000(row, "verify_seconds"),
+                "duplicate_idempotency_scan_seconds": _seconds_per_10000(
+                    row,
+                    "duplicate_idempotency_scan_seconds",
+                ),
+            }
+            for row in rows
+        ],
+        "interpretation": [
+            "Full verified snapshots and duplicate idempotency scans are "
+            "linear-cost pressure points.",
+            "This benchmark is measurement evidence only, not production throughput evidence.",
+        ],
+        "decision_boundary": {
+            "trusted_append_index": "not_allowed",
+            "future_append_index_scope": "rebuildable_cache_only",
+            "canonical_evidence": "append_only_journal",
+            "required_future_cache_tests": [
+                "stale_index_fails_closed",
+                "tampered_index_fails_closed",
+                "mismatched_journal_identity_fails_closed",
+                "mismatched_journal_digest_fails_closed",
+                "mismatched_record_count_or_terminal_hash_fails_closed",
+                "cache_rebuilds_from_verified_journal",
+            ],
+        },
+    }
+
+
+def _record_count_from_result(result: dict[str, object]) -> int:
+    return int(result["record_count"])
+
+
+def _median_seconds(result: dict[str, object], key: str) -> float:
+    summary = result[key]
+    if not isinstance(summary, dict):
+        raise TypeError(f"benchmark result {key!r} summary is not an object")
+    return float(summary["median"])
+
+
+def _seconds_per_10000(result: dict[str, object], key: str) -> float:
+    record_count = _record_count_from_result(result)
+    median_seconds = _median_seconds(result, key)
+    return round(median_seconds / record_count * 10000, 6)
 
 
 def _parse_counts(raw: str) -> tuple[int, ...]:

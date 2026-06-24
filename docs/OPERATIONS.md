@@ -233,10 +233,19 @@ uv run python scripts/benchmark_journal_ingest.py \
 ```
 
 The benchmark emits JSON with setup time, verified snapshot timing, and duplicate
-idempotency-scan timing. Results are local performance evidence only; they are
-not production throughput guarantees and should not be committed unless a
-release or design review explicitly asks for the artifact. The `build/` path is
-ignored by git and is suitable for local design-review evidence.
+idempotency-scan timing. It also emits an
+`actionlineage.dev/journal-ingest-benchmark-analysis-v1` analysis block with the
+largest measured journal, per-10k-record median timings, and the required
+decision boundary for follow-up work: `trusted_append_index=not_allowed`,
+`future_append_index_scope=rebuildable_cache_only`, and
+`canonical_evidence=append_only_journal`.
+
+Results are local performance evidence only; they are not production throughput
+guarantees and should not be committed unless a release or design review
+explicitly asks for the artifact. The `build/` path is ignored by git and is
+suitable for local design-review evidence. A future append-cache proposal must
+define target workloads, acceptance thresholds, stale/tampered/mismatched-index
+tests, and rebuild behavior before it changes trusted read or ingest behavior.
 
 ## PostgreSQL Projection
 

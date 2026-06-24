@@ -217,6 +217,13 @@ must be treated as a rebuildable cache bound back to a verified journal source
 identity, byte digest, record count, and terminal hash. A stale or mismatched
 index must be ignored or rebuilt rather than trusted.
 
+Journal benchmark reports include an
+`actionlineage.dev/journal-ingest-benchmark-analysis-v1` analysis block so local
+performance evidence carries the trust boundary with the timing data. That block
+may justify a future rebuildable-cache proposal with explicit stale, tamper, and
+mismatched-journal tests; it does not authorize a trusted append index or let
+readers skip journal verification.
+
 Authenticated append checkpoints should use the existing anchor, optional HMAC,
 anchor-log, Git statement, archive manifest, or external-attestation sidecar
 model unless a future ADR changes that boundary. Local checkpoints do not make

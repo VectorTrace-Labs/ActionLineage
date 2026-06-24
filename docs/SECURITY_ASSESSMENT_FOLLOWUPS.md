@@ -92,6 +92,13 @@ and does not expand ActionLineage into a generic tracing platform.
   41.759091s, and median duplicate-idempotency scan timings of 1.519528s,
   16.827593s, and 42.519948s. This is synthetic local evidence, not production
   throughput evidence.
+- **Journal benchmark decision boundary**: benchmark reports now include
+  `actionlineage.dev/journal-ingest-benchmark-analysis-v1` with the measured
+  operations, largest measured record count, per-10k median timings, and an
+  explicit decision boundary: trusted append indexes are not allowed, future
+  append indexes must be rebuildable caches only, and the append-only journal
+  remains canonical evidence. Local regression tests assert the boundary is
+  emitted with every benchmark report.
 - **Capture digest scope**: local regression and property tests cover scoped
   capture digests for truncated text and byte values. Capture metadata now
   records `actionlineage.capture.v1/redaction-boundary` so bounded-content
@@ -182,9 +189,11 @@ and does not expand ActionLineage into a generic tracing platform.
   verify the existing journal before write, preserving local integrity. The
   2026-06-24 synthetic local benchmark captured 10k, 100k, and 250k journal
   timings and shows full verification plus duplicate idempotency scans remain
-  linear-cost pressure points before any larger journal cache design. ADR-0011
-  requires future append indexes to remain rebuildable caches bound to verified
-  journal state rather than trusted evidence.
+  linear-cost pressure points before any larger journal cache design. Benchmark
+  reports now carry a machine-readable decision boundary that keeps trusted
+  append indexes disallowed and requires any future append index to remain a
+  rebuildable cache bound to verified journal state rather than trusted
+  evidence.
 - **Observer independence**: partially confirmed. Observer records carry trust
   labels and limitations, ADR-0012 defines the structured attestation policy,
   and helper-generated `independent_observer` evidence links now require a
@@ -276,7 +285,9 @@ and does not expand ActionLineage into a generic tracing platform.
 
 ## Next implementation order
 
-1. Use the captured 10k/100k/250k benchmark evidence before proposing segmented
+1. Narrow the local durability threat model and failure semantics before adding
+   case-bundle signatures, longer-running recovery fault injection, segmented
    journals, checkpoint indexes, or ADR-0011 append-index cache work.
-2. Add case-bundle signature or longer-running recovery fault injection only
-   after the local durability threat model and failure semantics are narrowed.
+2. If future append-cache work is proposed, define target workloads, acceptance
+   thresholds, stale/tamper/mismatched-journal tests, and rebuild behavior
+   before implementing cache-backed ingest or read behavior.
